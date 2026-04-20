@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تقارير الميزان الشهرية - كسارة الحبردي</title>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .nav-link {
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: translateY(-2px);
+        }
+        .card {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(8px);
+            border-radius: 28px;
+            padding: 28px;
+            margin-bottom: 28px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .settings-row {
+            background: rgba(0,0,0,0.2);
+            padding: 15px 20px;
+            border-radius: 24px;
+            margin-bottom: 20px;
+        }
+        .vacation-control {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: flex-end;
+            gap: 20px;
+        }
+        .upload-field {
+            min-width: 140px;
+        }
+        .upload-field label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #a8b2d1;
+        }
+        .upload-field input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+        }
+        .btn-primary, .btn-secondary, .btn-advanced, .btn-warning {
+            border: none;
+            padding: 12px 24px;
+            border-radius: 28px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-primary { background: linear-gradient(135deg, #11998e, #38ef7d); color: #1a1a2e; }
+        .btn-secondary { background: #4facfe; color: #fff; }
+        .btn-advanced { background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff; }
+        .btn-warning { background: linear-gradient(135deg, #f6d365, #fda085); color: #1a1a2e; }
+        .status { background: rgba(0,0,0,0.3); padding: 14px; border-radius: 20px; margin: 16px 0; color: #38ef7d; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin: 24px 0; }
+        .stat-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 16px; }
+        .stat-label { font-size: 0.8rem; color: #a8b2d1; }
+        .stat-value { font-size: 26px; font-weight: 800; color: #38ef7d; }
+        .charts-row { display: flex; flex-wrap: wrap; gap: 24px; margin: 24px 0; }
+        .chart-card { flex: 1; min-width: 280px; background: rgba(255,255,255,0.05); border-radius: 24px; padding: 16px; }
+        .chart-title { font-weight: 800; color: #667eea; text-align: center; margin-bottom: 12px; }
+        .chart-wrap { height: 280px; position: relative; }
+        .driver-table { overflow-x: auto; margin-top: 28px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid rgba(255,255,255,0.1); padding: 10px; text-align: center; vertical-align: middle; }
+        th { background: rgba(102,126,234,0.3); }
+        .driver-table input { width: 70px; padding: 6px; border-radius: 8px; background: #2a2a4a; color: white; border: none; text-align: center; }
+        .reports-section { margin-top: 20px; background: rgba(0,0,0,0.3); border-radius: 24px; padding: 20px; }
+        .reports-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 20px;
+            max-height: 260px;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        .report-card {
+            background: linear-gradient(145deg, rgba(102,126,234,0.25), rgba(118,75,162,0.25));
+            backdrop-filter: blur(4px);
+            border-radius: 20px;
+            padding: 14px 16px;
+            min-width: 200px;
+            flex: 1 0 auto;
+            max-width: 260px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            position: relative;
+        }
+        .report-card:hover {
+            transform: translateY(-5px);
+            background: linear-gradient(145deg, rgba(102,126,234,0.4), rgba(118,75,162,0.4));
+            border-color: rgba(255,255,255,0.5);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .report-card.selected {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: 2px solid #38ef7d;
+            box-shadow: 0 0 0 2px rgba(56,239,125,0.3);
+        }
+        .report-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: block;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        .report-date {
+            font-size: 0.75rem;
+            color: #a8b2d1;
+            display: block;
+            margin-bottom: 12px;
+        }
+        .report-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-start;
+            margin-top: 8px;
+        }
+        .report-actions button {
+            background: rgba(0,0,0,0.4);
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            transition: 0.2s;
+        }
+        .report-actions button:hover {
+            background: rgba(0,0,0,0.7);
+            transform: scale(1.05);
+        }
+        .view-report-btn {
+            background: #4facfe;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-top: 8px;
+            width: 100%;
+            transition: 0.2s;
+        }
+        .view-report-btn:hover {
+            background: #11998e;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .toast-container { position: fixed; top: 20px; left: 20px; z-index: 3000; }
+        .toast { padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; animation: slideIn 0.3s ease; }
+        .toast-success { background: #11998e; }
+        .toast-error { background: #eb3349; }
+        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; }
+        .loading.active { display: flex; }
+        .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #667eea; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 700px) { .vacation-control { flex-wrap: wrap; } .report-card { min-width: 160px; } }
+    </style>
+</head>
+<body>
+<div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
+<div class="toast-container" id="toastContainer"></div>
+<div class="container">
+    <div class="header">
+        <h1>⚖️ تقارير الميزان الشهرية</h1>
+        <p>تحليل ملفات Excel وحفظها على الخادم - دمج تقارير متعددة مع جمع أيام العمل</p>
+        <div id="logout-btn-container" style="position: absolute; top: 20px; left: 20px;"></div>
+    </div>
+    <div class="nav-links" id="navLinks"></div>
+    <div class="card">
+        <!-- إعدادات أيام الشهر والإجازات -->
+        <div class="settings-row">
+            <div class="vacation-control">
+                <div class="upload-field"><label>📅 عدد أيام الشهر (للتقرير الحالي)</label><input type="number" id="monthDays" min="28" max="31" value="30" step="1"></div>
+                <div class="upload-field"><label>📅 أيام الإجازات الرسمية</label><input type="number" id="officialVacations" min="0" max="31" value="4" step="1"></div>
+                <button class="btn-warning" id="applyRodaCalc">🔄 احسب الرودات للتقرير الحالي</button>
+            </div>
+        </div>
+
+        <!-- رفع ملف Excel -->
+        <div class="flex-between" style="margin-bottom:20px; gap:15px; flex-wrap:wrap;">
+            <div style="flex:2; min-width:200px;"><label>📂 اختر ملف Excel</label><input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" style="width:100%; padding:10px; border-radius:16px; background:rgba(0,0,0,0.3); color:#fff; border:1px solid rgba(255,255,255,0.2);"></div>
+            <div style="flex:1; min-width:150px;"><label>📄 اسم التصدير</label><input type="text" id="outputName" value="Monthly_Report.xlsx" style="width:100%; padding:10px; border-radius:16px; background:rgba(0,0,0,0.3); color:#fff;"></div>
+            <div style="display:flex; gap:10px;"><button class="btn-primary" id="showResultsBtn">📊 عرض النتائج</button><button class="btn-secondary" id="exportExcelBtn">📥 تصدير بسيط</button><button class="btn-advanced" id="exportAdvancedBtn">📊 تصدير متقدم (8 أوراق)</button></div>
+        </div>
+        <div id="statusMsg" class="status">✅ انتظار رفع ملف Excel أو اختيار تقارير للدمج...</div>
+
+        <!-- قسم التقارير المحفوظة -->
+        <div class="reports-section">
+            <div class="flex-between">
+                <div class="chart-title">📚 التقارير المحفوظة (اختر للدمج أو اضغط "عرض التقرير")</div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-primary" id="mergeReportsBtn" style="background: linear-gradient(135deg,#f093fb,#4facfe);">🔗 دمج المحددة</button>
+                    <button class="btn-secondary" id="clearSelectionBtn">🗑️ إلغاء التحديد</button>
+                </div>
+            </div>
+            <div id="savedReportsList" class="reports-grid">جاري تحميل التقارير...</div>
+            <div class="flex-between" style="margin-top:15px;">
+                <div></div>
+                <button class="btn-primary" id="saveCurrentReportBtn" style="background: linear-gradient(135deg,#f093fb,#4facfe);">💾 حفظ التقرير الحالي</button>
+            </div>
+        </div>
+
+        <!-- إحصائيات وجداول ورسوم بيانية -->
+        <div id="metricsGrid" class="stats-grid" style="display:none;"></div>
+        <div id="chartsArea" style="display:none;">
+            <div class="charts-row"><div class="chart-card"><div class="chart-title">📦 الأوزان حسب نوع البحص</div><div class="chart-wrap"><canvas id="materialChart"></canvas></div></div><div class="chart-card"><div class="chart-title">🏆 أعلى 10 سائقين بالرحلات</div><div class="chart-wrap"><canvas id="topDriversChart"></canvas></div></div></div>
+            <div class="driver-table"><div class="chart-title">🚛 تفاصيل السائقين + إجمالي الرودات والنسبة (بعد الدمج أو العرض)</div><table id="driverTable"><thead><tr><th>السائق</th><th>عدد الرحلات</th><th>الوزن (كجم)</th><th>إجمالي أيام العمل الفعلية</th><th>الرودات المطلوبة</th><th>النسبة %</th></tr></thead><tbody></tbody></table></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------------------------------- الثوابت والوظائف الأساسية ----------------------------------
+    const VALID_TRUCK_NUMBERS = new Set(["1091","2757","2758","2759","2760","2762","2818","2927","2928","2929","3321","3322","3324","3325","3326","3461","3462","3963","4445","5324","5367","5520","5521","5522","5523","5524","5525","5526","5527","5528","5658","5796","5797","5800","6398","6428","6429","6430","6432","6612","6613","6614","6615","6616","6617","6618","6619","6620","6621","6622","6623","6624","6626","6629","6935","6939","7042","7043","7332","7682","7750","7837","7926","7927","7928","7929","7930","7974","7980","9103","9492","9493","9495","9496"]);
+    const EXCLUDED_NAMES = new Set(["eisam خ","eisam ح","عادل خ","عادل ح","mamoon","zeshan","برهان","ابراهيم"]);
+    function mapMaterialCode(code){ const m={"46089":"3/8","46085":"3/4","46097":"3/16"}; return m[code]||code; }
+    function normalizeText(v){ return String(v??"").trim().normalize("NFKC").replace(/\s+/g," ").toLowerCase(); }
+    function keepDigitsOnly(v){ const ad={"٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9"}; let t=String(v??"").replace(/[٠-٩]/g,d=>ad[d]); let m=t.match(/\d+/g); return m?m.join(""):""; }
+    function hasExcludedName(row){ return row.some(c=>EXCLUDED_NAMES.has(normalizeText(c))); }
+    function processData(rows){
+        let matched=0, notMatched=0, total=0;
+        const driverStats=new Map(), materialStats=new Map();
+        for(let i=1;i<rows.length;i++){
+            let row=(rows[i]||[]).slice();
+            if(!row.some(v=>v!==null&&v!==undefined&&v!=="")) continue;
+            total++;
+            let cleanedTruck=keepDigitsOnly(row[4]??"");
+            if(hasExcludedName(row)){ notMatched++; continue; }
+            if(VALID_TRUCK_NUMBERS.has(cleanedTruck)){
+                matched++;
+                let driver=String(row[3]??"").trim();
+                let weight=parseFloat(row[11])||0;
+                let materialName=mapMaterialCode(String(row[5]??"").trim());
+                if(driver){
+                    if(!driverStats.has(driver)) driverStats.set(driver,{trips:0,weight:0});
+                    let d=driverStats.get(driver); d.trips++; d.weight+=weight;
+                }
+                if(materialName) materialStats.set(materialName,(materialStats.get(materialName)||0)+weight);
+            } else notMatched++;
+        }
+        const driversArr=Array.from(driverStats.entries()).map(([n,d])=>({name:n, trips:d.trips, totalWeight:d.weight})).sort((a,b)=>b.trips-a.trips);
+        const materialsArr=Array.from(materialStats.entries()).map(([n,w])=>({name:n, weight:w})).sort((a,b)=>b.weight-a.weight);
+        return { matchedCount:matched, notMatchedCount:notMatched, totalRows:total, driversStats:driversArr, top10Drivers:driversArr.slice(0,10), materialsStats:materialsArr, totalWeightAll:materialsArr.reduce((s,m)=>s+m.weight,0) };
+    }
+
+    let materialChart=null, topDriversChart=null;
+    let currentResult=null;
+    let currentDriversWithDetails=[];
+    let currentMonthDays=30, currentOfficialVacations=4;
+
+    // ---------- API الاتصال بالخادم ----------
+    const API_BASE=window.location.origin+'/api';
+    async function saveReportToServer(reportName, reportData){
+        const res=await fetch(`${API_BASE}/scale-reports`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reportName,reportDate:new Date().toISOString().split('T')[0],data:reportData})});
+        if(!res.ok) throw new Error('فشل الحفظ');
+        return await res.json();
+    }
+    async function getReportsFromServer(){
+        const res=await fetch(`${API_BASE}/scale-reports`);
+        if(!res.ok) throw new Error('فشل التحميل');
+        return await res.json();
+    }
+    async function loadReportFromServer(reportId){
+        const res=await fetch(`${API_BASE}/scale-reports/${reportId}`);
+        if(!res.ok) throw new Error('فشل التحميل');
+        return await res.json();
+    }
+    async function deleteReportFromServer(reportId){
+        const res=await fetch(`${API_BASE}/scale-reports/${reportId}`,{method:'DELETE'});
+        if(!res.ok) throw new Error('فشل الحذف');
+        return await res.json();
+    }
+    async function renameReportOnServer(reportId, newName){
+        const res=await fetch(`${API_BASE}/scale-reports/${reportId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({reportName:newName})});
+        if(!res.ok) throw new Error('فشل التعديل');
+        return await res.json();
+    }
+
+    // حساب الرودات والنسبة لتقرير واحد
+    function computeRodaAndPercentageSingle(driversList, monthDays, officialVac){
+        const workDaysBase=Math.max(0, monthDays - officialVac);
+        return driversList.map(d=>{
+            const required=workDaysBase*2;
+            const percent=required>0 ? (d.trips/required)*100 : 0;
+            return { name:d.name, trips:d.trips, totalWeight:d.totalWeight, workDays:workDaysBase, requiredRoda:required, percentage:Math.min(100,percent).toFixed(2) };
+        });
+    }
+
+    function renderDriverTable(drivers){
+        const tbody=document.querySelector("#driverTable tbody");
+        tbody.innerHTML="";
+        for(let d of drivers){
+            let tr=tbody.insertRow();
+            tr.insertCell(0).textContent=d.name;
+            tr.insertCell(1).textContent=d.trips;
+            tr.insertCell(2).textContent=d.totalWeight.toLocaleString();
+            tr.insertCell(3).textContent=d.workDays || 0;
+            tr.insertCell(4).textContent=d.requiredRoda;
+            let perc=parseFloat(d.percentage);
+            let color=perc>=100?"#38ef7d":(perc>=70?"#ffd966":"#ff9999");
+            tr.insertCell(5).innerHTML=`<span style="font-weight:bold;color:${color};">${d.percentage}%</span>`;
+        }
+    }
+
+    function updateChartsAndStats(){
+        if(!currentResult) return;
+        document.getElementById("metricsGrid").innerHTML=`
+            <div class="stat-card"><div class="stat-label">إجمالي الصفوف</div><div class="stat-value">${currentResult.totalRows}</div></div>
+            <div class="stat-card"><div class="stat-label">رحلاتنا</div><div class="stat-value">${currentResult.matchedCount}</div></div>
+            <div class="stat-card"><div class="stat-label">غير تابعة</div><div class="stat-value">${currentResult.notMatchedCount}</div></div>
+            <div class="stat-card"><div class="stat-label">نسبة الإنجاز</div><div class="stat-value">${currentResult.totalRows?((currentResult.matchedCount/currentResult.totalRows)*100).toFixed(2):0}%</div></div>
+            <div class="stat-card"><div class="stat-label">عدد السائقين</div><div class="stat-value">${currentResult.driversStats.length}</div></div>
+            <div class="stat-card"><div class="stat-label">إجمالي الوزن (طن)</div><div class="stat-value">${(currentResult.totalWeightAll/1000).toFixed(1)} طن</div></div>
+        `;
+        if(materialChart) materialChart.destroy();
+        const topMats=currentResult.materialsStats.slice(0,10);
+        materialChart=new Chart(document.getElementById("materialChart"),{type:"bar",data:{labels:topMats.map(m=>m.name),datasets:[{label:"الوزن (طن)",data:topMats.map(m=>m.weight/1000),backgroundColor:"#38ef7d"}]},options:{responsive:true,maintainAspectRatio:false}});
+        if(topDriversChart) topDriversChart.destroy();
+        const top10=currentDriversWithDetails.slice(0,10);
+        topDriversChart=new Chart(document.getElementById("topDriversChart"),{type:"bar",data:{labels:top10.map(d=>d.name),datasets:[{label:"عدد الرحلات",data:top10.map(d=>d.trips),backgroundColor:"#4facfe"}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y'}});
+    }
+
+    async function processExcelFile(file){
+        let buf=await file.arrayBuffer();
+        let wb=new ExcelJS.Workbook();
+        await wb.xlsx.load(buf);
+        let sheet=wb.worksheets[0];
+        let rows=[];
+        sheet.eachRow({includeEmpty:true},(row)=>{ rows.push(row.values.slice(1).map(v=>v??"")); });
+        return processData(rows);
+    }
+
+    // عرض تقرير واحد محفوظ
+    async function displaySingleReport(reportId){
+        showLoading(true);
+        try{
+            const full=await loadReportFromServer(reportId);
+            const data=full.data;
+            const monthDays=data.monthDays||30;
+            const officialVac=data.officialVacations||4;
+            const driversStats=data.driversStats.map(d=>({name:d.name, trips:d.trips, totalWeight:d.totalWeight}));
+            const driversWithRoda=computeRodaAndPercentageSingle(driversStats, monthDays, officialVac);
+            currentResult={
+                totalRows:data.totalRows, matchedCount:data.matchedCount, notMatchedCount:data.notMatchedCount, totalWeightAll:data.totalWeightAll,
+                driversStats:driversStats, materialsStats:data.materialsStats, top10Drivers:driversStats.slice(0,10)
+            };
+            currentDriversWithDetails=driversWithRoda;
+            currentMonthDays=monthDays; currentOfficialVacations=officialVac;
+            document.getElementById("monthDays").value=monthDays;
+            document.getElementById("officialVacations").value=officialVac;
+            document.getElementById("metricsGrid").style.display="grid";
+            document.getElementById("chartsArea").style.display="block";
+            renderDriverTable(currentDriversWithDetails);
+            updateChartsAndStats();
+            document.getElementById("statusMsg").innerHTML=`✅ تم عرض التقرير: ${full.reportName}`;
+            showToast(`تم عرض التقرير: ${full.reportName}`,"success");
+        } catch(e){ showToast("خطأ في عرض التقرير: "+e.message,"error"); } finally{ showLoading(false); }
+    }
+
+    // دمج عدة تقارير مع جمع أيام العمل الفعلية
+    async function mergeReports(reportIds){
+        showLoading(true);
+        try{
+            let driversAgg=new Map();
+            let materialsAgg=new Map();
+            let totalRows=0, matchedCount=0, notMatchedCount=0, totalWeightAll=0;
+
+            for(let id of reportIds){
+                const full=await loadReportFromServer(id);
+                const data=full.data;
+                totalRows+=data.totalRows||0;
+                matchedCount+=data.matchedCount||0;
+                notMatchedCount+=data.notMatchedCount||0;
+                totalWeightAll+=data.totalWeightAll||0;
+
+                const monthDays=data.monthDays||30;
+                const officialVac=data.officialVacations||4;
+                const workDaysBase=Math.max(0, monthDays - officialVac);
+
+                for(let d of (data.driversStats||[])){
+                    const extraVac=d.extraVacationDays||0;
+                    const effectiveWorkDays=Math.max(0, workDaysBase - extraVac);
+                    let existing=driversAgg.get(d.name);
+                    if(existing){
+                        existing.trips+=d.trips;
+                        existing.weight+=d.totalWeight;
+                        existing.workDays+=effectiveWorkDays;
+                    } else {
+                        driversAgg.set(d.name,{trips:d.trips, weight:d.totalWeight, workDays:effectiveWorkDays});
+                    }
+                }
+                for(let m of (data.materialsStats||[])){
+                    let existing=materialsAgg.get(m.name);
+                    if(existing) existing.weight+=m.weight;
+                    else materialsAgg.set(m.name,{name:m.name, weight:m.weight});
+                }
+            }
+
+            const driversList=Array.from(driversAgg.entries()).map(([name,agg])=>({name, trips:agg.trips, totalWeight:agg.weight, workDays:agg.workDays})).sort((a,b)=>b.trips-a.trips);
+            const materialsList=Array.from(materialsAgg.values()).sort((a,b)=>b.weight-a.weight);
+
+            const driversWithRoda=driversList.map(d=>{
+                const requiredRoda=d.workDays * 2;
+                const percent=requiredRoda>0 ? (d.trips/requiredRoda)*100 : 0;
+                return { name:d.name, trips:d.trips, totalWeight:d.totalWeight, workDays:d.workDays, requiredRoda, percentage:Math.min(100,percent).toFixed(2) };
+            });
+
+            currentResult={
+                totalRows, matchedCount, notMatchedCount, totalWeightAll,
+                driversStats:driversList.map(d=>({name:d.name, trips:d.trips, totalWeight:d.totalWeight})),
+                materialsStats:materialsList,
+                top10Drivers:driversList.slice(0,10).map(d=>({name:d.name, trips:d.trips}))
+            };
+            currentDriversWithDetails=driversWithRoda;
+
+            document.getElementById("metricsGrid").style.display="grid";
+            document.getElementById("chartsArea").style.display="block";
+            renderDriverTable(currentDriversWithDetails);
+            updateChartsAndStats();
+            document.getElementById("statusMsg").innerHTML=`✅ تم دمج ${reportIds.length} تقرير بنجاح (تم جمع أيام العمل الفعلية).`;
+            showToast(`تم دمج ${reportIds.length} تقارير`, "success");
+        } catch(e){ showToast("خطأ في الدمج: "+e.message,"error"); } finally{ showLoading(false); }
+    }
+
+    // ================== دالة التصدير المتقدم (8 أوراق) مع تكريم السائقين ==================
+    async function exportAdvancedExcel(res, drivers, monthDays, officialVac, filename){
+        if(!res){ showToast("لا توجد بيانات للتصدير","error"); return; }
+        showLoading(true);
+        try{
+            const ExcelJS = window.ExcelJS;
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'نظام إدارة طلبات البحص - الميزان';
+            workbook.created = new Date();
+
+            const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+            const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+            const titleFont = { bold: true, color: { argb: 'FF1F4E79' }, size: 16 };
+            const dataFont = { size: 11 };
+            const centerAlign = { horizontal: 'center', vertical: 'middle' };
+            const rightAlign = { horizontal: 'right', vertical: 'middle' };
+            const thinBorder = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+            const totalTrips = res.matchedCount;
+            const totalWeightTons = (res.totalWeightAll / 1000).toFixed(2);
+            const avgTripsPerDriver = drivers.length ? (totalTrips / drivers.length).toFixed(2) : 0;
+            const workDays = monthDays - officialVac;
+            const requiredTotal = workDays * 2;
+            const completionRate = (totalTrips / requiredTotal * 100).toFixed(2);
+
+            // ================== الورقة 1: ملخص التقرير ==================
+            const ws1 = workbook.addWorksheet('ملخص التقرير', { views: [{ rightToLeft: true }] });
+            ws1.columns = [{ width: 35 }, { width: 25 }];
+            ws1.mergeCells('A1:B1');
+            ws1.getCell('A1').value = '📊 تقرير الميزان الشهري';
+            ws1.getCell('A1').font = { ...titleFont, size: 20 };
+            ws1.getCell('A1').alignment = centerAlign;
+            ws1.getRow(1).height = 45;
+            ws1.mergeCells('A2:B2');
+            ws1.getCell('A2').value = `تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`;
+            ws1.getCell('A2').font = { bold: true, size: 13, color: { argb: 'FF2E75B6' } };
+            ws1.getCell('A2').alignment = centerAlign;
+            const summ = [
+                ['إجمالي الصفوف في الملف', res.totalRows],
+                ['عدد الرحلات المطابقة (رحلاتنا)', totalTrips],
+                ['عدد الرحلات غير المطابقة', res.notMatchedCount],
+                ['نسبة الإنجاز الإجمالية (%)', completionRate + '%'],
+                ['عدد السائقين المميزين', drivers.length],
+                ['إجمالي الوزن (كجم)', res.totalWeightAll.toLocaleString()],
+                ['إجمالي الوزن (طن)', totalWeightTons + ' طن'],
+                ['عدد أيام الشهر', monthDays],
+                ['أيام الإجازات الرسمية', officialVac],
+                ['أيام العمل الفعلية', workDays],
+                ['الرودات المطلوبة لكل سائق (هدف)', `${requiredTotal} (2×${workDays})`],
+                ['متوسط الرحلات لكل سائق', avgTripsPerDriver],
+                ['أعلى عدد رحلات لسائق', drivers.length ? drivers[0].trips : 0],
+                ['أكثر مادة طلباً (بالوزن)', res.materialsStats.length ? res.materialsStats[0].name : '—']
+            ];
+            summ.forEach((item, idx) => {
+                let r = ws1.getRow(4 + idx);
+                r.values = item;
+                r.height = 25;
+                r.eachCell((cell, col) => {
+                    cell.font = col === 1 ? { ...dataFont, bold: true } : { ...dataFont, bold: true, color: { argb: 'FF2E75B6' } };
+                    cell.alignment = col === 1 ? rightAlign : centerAlign;
+                    cell.border = thinBorder;
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: idx % 2 === 0 ? 'FFF2F7FB' : 'FFFFFFFF' } };
+                });
+            });
+
+            // ================== الورقة 2: تكريم السائقين (ترتيب حسب النسبة) ==================
+            const ws2 = workbook.addWorksheet('تكريم السائقين', { views: [{ rightToLeft: true }] });
+            ws2.columns = [{ width: 8 }, { width: 28 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 22 }];
+            ws2.mergeCells('A1:G1');
+            ws2.getCell('A1').value = '🏆 تكريم السائقين حسب نسبة الإنجاز';
+            ws2.getCell('A1').font = { ...titleFont, size: 18, color: { argb: 'FFD4AF37' } };
+            ws2.getCell('A1').alignment = centerAlign;
+            ws2.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } };
+            ws2.getRow(1).height = 45;
+            let sortedByPerf = [...drivers].sort((a,b)=>parseFloat(b.percentage)-parseFloat(a.percentage));
+            const medalColors = {
+                1: { fill: 'FFD4AF37', font: 'FF8B5A2B' },
+                2: { fill: 'FFC0C0C0', font: 'FF555555' },
+                3: { fill: 'FFCD7F32', font: 'FF4A2F1D' },
+            };
+            const defaultColor = { fill: 'FFF2F7FB', font: 'FF000000' };
+            const altColor = { fill: 'FFFFFFFF', font: 'FF000000' };
+            ws2.getRow(2).values = ['المركز', 'اسم السائق', 'عدد الرحلات', 'الرودات المطلوبة', 'النسبة %', 'التقييم', 'الميدالية'];
+            ws2.getRow(2).height = 35;
+            ws2.getRow(2).eachCell(cell => { cell.font = { ...headerFont, size: 13 }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF34495E' } }; cell.alignment = centerAlign; cell.border = thinBorder; });
+            sortedByPerf.forEach((d, idx) => {
+                let rank = idx + 1;
+                let p = parseFloat(d.percentage);
+                let rating = p>=100 ? '🏆 ممتاز' : (p>=80 ? '⭐ جيد جداً' : (p>=60 ? '👍 جيد' : (p>=40 ? '⚠️ مقبول' : '❌ ضعيف')));
+                let medal = rank===1 ? '🥇 ذهبية' : (rank===2 ? '🥈 فضية' : (rank===3 ? '🥉 برونزية' : '📜 شرفي'));
+                let color = rank===1 ? medalColors[1] : (rank===2 ? medalColors[2] : (rank===3 ? medalColors[3] : (idx%2===0 ? defaultColor : altColor)));
+                let row = ws2.getRow(3 + idx);
+                row.values = [rank, d.name, d.trips, d.requiredRoda, d.percentage+'%', rating, medal];
+                row.height = 28;
+                row.eachCell(cell => {
+                    cell.font = { ...dataFont, bold: rank<=3, size: rank<=3 ? 12 : 11, color: { argb: color.font } };
+                    cell.alignment = centerAlign;
+                    cell.border = thinBorder;
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color.fill } };
+                });
+            });
+
+            // ================== الورقة 3: رسم السائقين ==================
+            const ws3 = workbook.addWorksheet('رسم السائقين', { views: [{ rightToLeft: true }] });
+            ws3.columns = [{ width: 28 }, { width: 12 }, { width: 60 }];
+            ws3.mergeCells('A1:C1');
+            ws3.getCell('A1').value = '📊 رسم بياني - عدد الرحلات لكل سائق (أفضل 20)';
+            ws3.getCell('A1').font = { ...titleFont, size: 16 };
+            ws3.getCell('A1').alignment = centerAlign;
+            ws3.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E4F0' } };
+            ws3.getRow(1).height = 38;
+            ws3.getRow(2).values = ['اسم السائق', 'عدد الرحلات', 'رسم بياني'];
+            ws3.getRow(2).height = 28;
+            ws3.getRow(2).eachCell(cell => { cell.font = headerFont; cell.fill = headerFill; cell.alignment = centerAlign; cell.border = thinBorder; });
+            let top20 = drivers.slice(0,20);
+            let maxTrips = top20.length ? top20[0].trips : 1;
+            top20.forEach((d,i)=>{
+                let bar = '█'.repeat(Math.round((d.trips / maxTrips) * 40));
+                let row = ws3.getRow(3+i);
+                row.values = [d.name, d.trips, bar + ` (${d.trips})`];
+                row.height = 22;
+                let bg = i%2===0 ? 'FFF2F7FB' : 'FFFFFFFF';
+                row.eachCell((cell,col)=>{
+                    cell.font = col===3 ? { name:'Consolas', size:10, bold:true, color:{ argb:'FF4472C4' } } : dataFont;
+                    cell.alignment = col===3 ? { horizontal:'left', vertical:'middle' } : centerAlign;
+                    cell.border = thinBorder;
+                    cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:bg } };
+                });
+            });
+
+            // ================== الورقة 4: تقرير المواد ==================
+            const ws4 = workbook.addWorksheet('تقرير المواد', { views: [{ rightToLeft: true }] });
+            ws4.columns = [{ width: 8 }, { width: 20 }, { width: 22 }, { width: 22 }, { width: 50 }];
+            ws4.mergeCells('A1:E1');
+            ws4.getCell('A1').value = '📦 توزيع الأوزان حسب نوع البحص';
+            ws4.getCell('A1').font = { ...titleFont, size: 18 };
+            ws4.getCell('A1').alignment = centerAlign;
+            ws4.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4D6' } };
+            ws4.getRow(1).height = 40;
+            ws4.getRow(2).values = ['#', 'نوع البحص', 'الوزن (كجم)', 'الوزن (طن)', 'رسم بياني'];
+            ws4.getRow(2).height = 30;
+            ws4.getRow(2).eachCell(cell => { cell.font = headerFont; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFED7D31' } }; cell.alignment = centerAlign; cell.border = thinBorder; });
+            let maxWeight = res.materialsStats.length ? res.materialsStats[0].weight : 1;
+            res.materialsStats.forEach((m,i)=>{
+                let bar = '▓'.repeat(Math.round((m.weight / maxWeight) * 35)) + ` (${(m.weight/1000).toFixed(1)} طن)`;
+                let row = ws4.getRow(3+i);
+                row.values = [i+1, m.name, m.weight, (m.weight/1000).toFixed(2), bar];
+                row.height = 22;
+                let bg = i%2===0 ? 'FFF2F7FB' : 'FFFFFFFF';
+                row.eachCell((cell,col)=>{
+                    cell.font = col===5 ? { name:'Consolas', size:10, bold:true, color:{ argb:'FF548235' } } : dataFont;
+                    cell.alignment = col===5 ? { horizontal:'left', vertical:'middle' } : (col===1 ? rightAlign : centerAlign);
+                    cell.border = thinBorder;
+                    cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:bg } };
+                });
+            });
+
+            // ================== الورقة 5: قائمة السائقين ==================
+            const ws5 = workbook.addWorksheet('قائمة السائقين', { views: [{ rightToLeft: true }] });
+            ws5.columns = [{ width: 8 }, { width: 28 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }];
+            ws5.mergeCells('A1:F1');
+            ws5.getCell('A1').value = '📋 قائمة جميع السائقين مع التفاصيل';
+            ws5.getCell('A1').font = { ...titleFont, size: 16 };
+            ws5.getCell('A1').alignment = centerAlign;
+            ws5.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
+            ws5.getRow(1).height = 38;
+            ws5.getRow(2).values = ['#', 'اسم السائق', 'عدد الرحلات', 'الوزن (كجم)', 'أيام العمل', 'الرودات المطلوبة'];
+            ws5.getRow(2).height = 28;
+            ws5.getRow(2).eachCell(cell => { cell.font = headerFont; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBF8F00' } }; cell.alignment = centerAlign; cell.border = thinBorder; });
+            drivers.forEach((d,i)=>{
+                let row = ws5.getRow(3+i);
+                row.values = [i+1, d.name, d.trips, d.totalWeight, d.workDays || 0, d.requiredRoda];
+                row.height = 22;
+                let bg = i%2===0 ? 'FFFFF2CC' : 'FFFFFFFF';
+                row.eachCell(cell => { cell.font = dataFont; cell.alignment = centerAlign; cell.border = thinBorder; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } }; });
+            });
+
+            // ================== الورقة 6: تفاصيل المواد ==================
+            const ws6 = workbook.addWorksheet('تفاصيل المواد', { views: [{ rightToLeft: true }] });
+            ws6.columns = [{ width: 8 }, { width: 20 }, { width: 22 }, { width: 22 }, { width: 16 }];
+            ws6.mergeCells('A1:E1');
+            ws6.getCell('A1').value = '📊 تحليل المواد - الوزن والنسبة';
+            ws6.getCell('A1').font = { ...titleFont, size: 16 };
+            ws6.getCell('A1').alignment = centerAlign;
+            ws6.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+            ws6.getRow(1).height = 38;
+            ws6.getRow(2).values = ['#', 'نوع البحص', 'الوزن (كجم)', 'الوزن (طن)', 'النسبة من الإجمالي'];
+            ws6.getRow(2).height = 28;
+            ws6.getRow(2).eachCell(cell => { cell.font = headerFont; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF548235' } }; cell.alignment = centerAlign; cell.border = thinBorder; });
+            res.materialsStats.forEach((m,i)=>{
+                let percent = res.totalWeightAll ? ((m.weight / res.totalWeightAll) * 100).toFixed(2) : 0;
+                let row = ws6.getRow(3+i);
+                row.values = [i+1, m.name, m.weight, (m.weight/1000).toFixed(2), percent+'%'];
+                row.height = 22;
+                row.eachCell(cell => {
+                    cell.font = dataFont;
+                    cell.alignment = centerAlign;
+                    cell.border = thinBorder;
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i%2===0 ? 'FFF2F7FB' : 'FFFFFFFF' } };
+                });
+            });
+
+            // ================== الورقة 7: ترتيب الأداء ==================
+            const ws7 = workbook.addWorksheet('ترتيب الأداء', { views: [{ rightToLeft: true }] });
+            ws7.columns = [{ width: 8 }, { width: 28 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }];
+            ws7.mergeCells('A1:G1');
+            ws7.getCell('A1').value = '🏆 ترتيب السائقين حسب نسبة الإنجاز (تفصيلي)';
+            ws7.getCell('A1').font = { ...titleFont, size: 16 };
+            ws7.getCell('A1').alignment = centerAlign;
+            ws7.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E4F0' } };
+            ws7.getRow(1).height = 38;
+            ws7.getRow(2).values = ['#', 'اسم السائق', 'عدد الرحلات', 'الرودات المطلوبة', 'النسبة %', 'التقييم', 'الفرق'];
+            ws7.getRow(2).height = 28;
+            ws7.getRow(2).eachCell(cell => { cell.font = headerFont; cell.fill = headerFill; cell.alignment = centerAlign; cell.border = thinBorder; });
+            sortedByPerf.forEach((d,idx)=>{
+                let rank = idx+1;
+                let p = parseFloat(d.percentage);
+                let rating = p>=100 ? '🏆 ممتاز' : (p>=80 ? '⭐ جيد جداً' : (p>=60 ? '👍 جيد' : (p>=40 ? '⚠️ مقبول' : '❌ ضعيف')));
+                let diff = d.requiredRoda - d.trips;
+                let row = ws7.getRow(3+idx);
+                row.values = [rank, d.name, d.trips, d.requiredRoda, d.percentage+'%', rating, diff>0 ? `ناقص ${diff}` : (diff<0 ? `زائد ${-diff}` : 'مكتمل')];
+                row.height = 22;
+                let bg = idx%2===0 ? 'FFF2F7FB' : 'FFFFFFFF';
+                row.eachCell(cell => {
+                    cell.font = dataFont;
+                    cell.alignment = centerAlign;
+                    cell.border = thinBorder;
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+                });
+            });
+
+            // ================== الورقة 8: إحصائيات سريعة ==================
+            const ws8 = workbook.addWorksheet('إحصائيات سريعة', { views: [{ rightToLeft: true }] });
+            ws8.columns = [{ width: 30 }, { width: 20 }];
+            ws8.mergeCells('A1:B1');
+            ws8.getCell('A1').value = '📌 أبرز المؤشرات';
+            ws8.getCell('A1').font = { ...titleFont, size: 16 };
+            ws8.getCell('A1').alignment = centerAlign;
+            ws8.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E4F0' } };
+            ws8.getRow(1).height = 38;
+            const quickStats = [
+                ['إجمالي عدد السائقين', drivers.length],
+                ['إجمالي عدد أنواع البحص', res.materialsStats.length],
+                ['متوسط عدد الرحلات لكل سائق', avgTripsPerDriver],
+                ['أكثر سائق نشاطاً (بالرحلات)', drivers.length ? drivers[0].name : '—'],
+                ['أعلى نسبة إنجاز', sortedByPerf.length ? sortedByPerf[0].percentage+'%' : '—'],
+                ['أكثر مادة طلباً (بالوزن)', res.materialsStats.length ? res.materialsStats[0].name : '—'],
+                ['متوسط نسبة الإنجاز (%)', (drivers.reduce((s,d)=>s+parseFloat(d.percentage),0)/(drivers.length||1)).toFixed(2) + '%'],
+                ['إجمالي الرودات المطلوبة', drivers.reduce((s,d)=>s+d.requiredRoda, 0)],
+                ['إجمالي الرحلات المحققة', totalTrips],
+                ['الفجوة (الرحلات المتبقية)', drivers.reduce((s,d)=>s+(d.requiredRoda - d.trips), 0)]
+            ];
+            quickStats.forEach((item, idx) => {
+                let r = ws8.getRow(3 + idx);
+                r.values = item;
+                r.height = 25;
+                r.eachCell((cell, col) => {
+                    cell.font = col === 1 ? { ...dataFont, bold: true } : { ...dataFont, bold: true, color: { argb: 'FF2E75B6' } };
+                    cell.alignment = col === 1 ? rightAlign : centerAlign;
+                    cell.border = thinBorder;
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: idx % 2 === 0 ? 'FFF2F7FB' : 'FFFFFFFF' } };
+                });
+            });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const finalName = filename.endsWith('.xlsx') ? filename.replace('.xlsx', '_advanced.xlsx') : filename + '_advanced.xlsx';
+            saveAs(new Blob([buffer]), finalName);
+            showToast('✅ تم تصدير التقرير المتقدم (8 أوراق) بنجاح', 'success');
+        } catch (e) {
+            console.error(e);
+            showToast('❌ خطأ في التصدير المتقدم: ' + e.message, 'error');
+        }
+        showLoading(false);
+    }
+
+    async function exportSimpleExcel(res, filename){
+        const wb=new ExcelJS.Workbook();
+        const ws=wb.addWorksheet("Report");
+        ws.getCell('A1').value='ملخص'; ws.getRow(2).values=['المؤشر','القيمة'];
+        const m=[['إجمالي الصفوف',res.totalRows],['رحلاتنا',res.matchedCount],['غير تابعة',res.notMatchedCount],['الوزن (طن)',(res.totalWeightAll/1000).toFixed(2)]];
+        m.forEach((v,i)=>ws.getRow(3+i).values=v);
+        ws.getRow(6).values=['اسم السائق','عدد الرحلات','الوزن'];
+        res.driversStats.forEach((d,i)=>ws.getRow(7+i).values=[d.name,d.trips,d.totalWeight]);
+        const buf=await wb.xlsx.writeBuffer();
+        saveAs(new Blob([buf]),filename.endsWith('.xlsx')?filename:filename+'.xlsx');
+    }
+
+    // ------------------- ربط الأحداث -------------------
+    document.getElementById("showResultsBtn").onclick=async()=>{
+        const file=document.getElementById("fileInput").files[0];
+        if(!file){ showToast("اختر ملف","error"); return; }
+        showLoading(true);
+        try{
+            const result=await processExcelFile(file);
+            currentResult=result;
+            const monthDays=parseInt(document.getElementById("monthDays").value)||30;
+            const officialVac=parseInt(document.getElementById("officialVacations").value)||0;
+            currentDriversWithDetails=computeRodaAndPercentageSingle(result.driversStats, monthDays, officialVac);
+            currentMonthDays=monthDays; currentOfficialVacations=officialVac;
+            document.getElementById("metricsGrid").style.display="grid";
+            document.getElementById("chartsArea").style.display="block";
+            renderDriverTable(currentDriversWithDetails);
+            updateChartsAndStats();
+            document.getElementById("statusMsg").innerHTML="✅ تم تحليل الملف وعرضه.";
+        } catch(e){ showToast(e.message,"error"); } finally{ showLoading(false); }
+    };
+    document.getElementById("applyRodaCalc").onclick=()=>{
+        if(currentResult){
+            const monthDays=parseInt(document.getElementById("monthDays").value)||30;
+            const officialVac=parseInt(document.getElementById("officialVacations").value)||0;
+            currentDriversWithDetails=computeRodaAndPercentageSingle(currentResult.driversStats, monthDays, officialVac);
+            renderDriverTable(currentDriversWithDetails);
+            showToast("تم تحديث الرودات للتقرير الحالي","success");
+        } else showToast("لا توجد بيانات","error");
+    };
+    document.getElementById("exportExcelBtn").onclick=async()=>{ if(currentResult) await exportSimpleExcel(currentResult, document.getElementById("outputName").value.trim()||"Monthly_Report.xlsx"); else showToast("لا توجد بيانات","error"); };
+    document.getElementById("exportAdvancedBtn").onclick=async()=>{
+        if(!currentResult){ showToast("⚠️ يرجى عرض النتائج أولاً","error"); return; }
+        const filename = document.getElementById("outputName").value.trim() || "Monthly_Report.xlsx";
+        await exportAdvancedExcel(currentResult, currentDriversWithDetails, currentMonthDays, currentOfficialVacations, filename);
+    };
+    document.getElementById("saveCurrentReportBtn").onclick=async()=>{
+        if(!currentResult){ showToast("لا توجد بيانات للحفظ","error"); return; }
+        let name=prompt("أدخل اسم التقرير (مثال: شهر فبراير):","");
+        if(!name) return;
+        showLoading(true);
+        try{
+            const reportData={
+                totalRows:currentResult.totalRows, matchedCount:currentResult.matchedCount, notMatchedCount:currentResult.notMatchedCount, totalWeightAll:currentResult.totalWeightAll,
+                driversStats:currentDriversWithDetails.map(d=>({name:d.name, trips:d.trips, totalWeight:d.totalWeight, extraVacationDays:0, requiredRoda:d.requiredRoda, percentage:d.percentage})),
+                materialsStats:currentResult.materialsStats, top10Drivers:currentDriversWithDetails.slice(0,10).map(d=>({name:d.name, trips:d.trips})),
+                monthDays:currentMonthDays, officialVacations:currentOfficialVacations
+            };
+            await saveReportToServer(name, reportData);
+            showToast(`تم حفظ "${name}"`,"success");
+            loadReportsList();
+        } catch(e){ showToast(e.message,"error"); } finally{ showLoading(false); }
+    };
+    document.getElementById("mergeReportsBtn").onclick=()=>{
+        const selected=Array.from(document.querySelectorAll('.report-card.selected')).map(card=>card.dataset.id);
+        if(selected.length<2){ showToast("اختر تقريرين على الأقل للدمج","error"); return; }
+        mergeReports(selected);
+    };
+    document.getElementById("clearSelectionBtn").onclick=()=>{ document.querySelectorAll('.report-card').forEach(c=>c.classList.remove('selected')); showToast("تم إلغاء التحديد","success"); };
+
+    async function loadReportsList(){
+        try{
+            const reports=await getReportsFromServer();
+            const container=document.getElementById("savedReportsList");
+            container.innerHTML="";
+            if(!reports.length){ container.innerHTML="<div style='color:#aaa; text-align:center; width:100%;'>لا توجد تقارير محفوظة</div>"; return; }
+            reports.forEach(r=>{
+                const card=document.createElement("div");
+                card.className="report-card";
+                card.dataset.id=r.id;
+                card.onclick=(e)=>{ if(e.target.tagName!='BUTTON' && !e.target.classList.contains('view-report-btn')) card.classList.toggle('selected'); };
+                const nameSpan=document.createElement("span");
+                nameSpan.className="report-name";
+                nameSpan.textContent=r.reportName;
+                const dateSpan=document.createElement("span");
+                dateSpan.className="report-date";
+                dateSpan.textContent=new Date(r.createdAt).toLocaleDateString('ar-SA');
+                const actionsDiv=document.createElement("div");
+                actionsDiv.className="report-actions";
+                const editBtn=document.createElement("button");
+                editBtn.textContent="✏️ تعديل";
+                editBtn.onclick=async(e)=>{ e.stopPropagation(); let newName=prompt("اسم جديد:",r.reportName); if(newName && newName!==r.reportName){ await renameReportOnServer(r.id,newName); loadReportsList(); showToast("تم التعديل","success"); } };
+                const delBtn=document.createElement("button");
+                delBtn.textContent="🗑️ حذف";
+                delBtn.onclick=async(e)=>{ e.stopPropagation(); if(confirm("حذف التقرير؟")){ await deleteReportFromServer(r.id); loadReportsList(); showToast("تم الحذف","success"); } };
+                actionsDiv.appendChild(editBtn);
+                actionsDiv.appendChild(delBtn);
+                const viewBtn=document.createElement("button");
+                viewBtn.textContent="👁️ عرض التقرير";
+                viewBtn.className="view-report-btn";
+                viewBtn.onclick=async(e)=>{ e.stopPropagation(); await displaySingleReport(r.id); };
+                card.appendChild(nameSpan);
+                card.appendChild(dateSpan);
+                card.appendChild(actionsDiv);
+                card.appendChild(viewBtn);
+                container.appendChild(card);
+            });
+        } catch(e){ document.getElementById("savedReportsList").innerHTML="<div style='color:#f00; text-align:center; width:100%;'>خطأ في تحميل التقارير</div>"; }
+    }
+
+    function showToast(msg,type){ let t=document.createElement('div'); t.className=`toast toast-${type}`; t.textContent=msg; document.getElementById('toastContainer').appendChild(t); setTimeout(()=>t.remove(),3000); }
+    function showLoading(show){ document.getElementById('loading').classList.toggle('active',show); }
+
+    window.onload=async()=>{
+        await loadReportsList();
+        const navContainer=document.getElementById('navLinks');
+        if(navContainer){
+            navContainer.innerHTML = `
+                <a class="nav-link" href="index.html">🏠 الرئيسية</a>
+                <a class="nav-link" href="orders.html">📦 الطلبات</a>
+                <a class="nav-link" href="distribution.html">🚛 التوزيع</a>
+                <a class="nav-link" href="reports.html">📊 التقارير</a>
+                <a class="nav-link active" href="scale_report.html">⚖️ الميزان</a>
+            `;
+        }
+    };
+</script>
+<script src="navbar.js"></script>
+</body>
+</html>

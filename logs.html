@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل النظام - نظام إدارة طلبات كسارة الحبردي</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin-bottom: 30px; position: relative; }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
+        .nav-link { padding: 12px 24px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; font-weight: 600; }
+        .nav-link:hover, .nav-link.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transform: translateY(-2px); }
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-info { background: #4facfe; color: #fff; }
+        .btn-success { background: #11998e; color: #fff; }
+        .btn-danger { background: #eb3349; color: #fff; }
+        .search-box {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            width: 250px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            overflow-x: auto;
+            display: block;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th { background: rgba(102,126,234,0.3); font-weight: 600; }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+        }
+        .pagination button.active { background: #667eea; }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 3000;
+        }
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            animation: slideIn 0.3s ease;
+        }
+        .toast-success { background: #11998e; }
+        .toast-error { background: #eb3349; }
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .loading.active { display: flex; }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .date-cell {
+            font-family: monospace;
+            font-size: 0.85em;
+            direction: ltr;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="container">
+        <div class="header">
+            <h1>📜 سجل النظام</h1>
+            <p>تتبع جميع الإجراءات التي تمت في النظام</p>
+            <div id="logout-btn-container" style="position: absolute; top: 20px; left: 20px;">
+                <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
+            </div>
+        </div>
+        <div class="nav-links" id="navLinks"></div>
+
+        <div class="controls">
+            <div>
+                <button class="btn btn-success" onclick="exportLogsToExcel()">📥 تصدير Excel</button>
+                <button class="btn btn-info" onclick="exportLogsToJSON()">📄 تصدير JSON</button>
+                <button class="btn btn-danger" onclick="clearLogs()" id="clearLogsBtn">🗑️ مسح السجلات</button>
+            </div>
+            <div>
+                <input type="text" id="searchInput" class="search-box" placeholder="🔍 بحث (مستخدم, إجراء, تفاصيل)" onkeyup="searchLogs()">
+            </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table id="logsTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>المستخدم</th>
+                        <th>الإجراء</th>
+                        <th>التفاصيل</th>
+                        <th>الموقع</th>
+                        <th>التاريخ والوقت</th>
+                    </tr>
+                </thead>
+                <tbody id="logsBody">
+                    <tr><td colspan="6" style="text-align:center;">جاري التحميل...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentPage = 1;
+        let totalPages = 1;
+        let allLogs = [];
+
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+            if (data) options.body = JSON.stringify(data);
+            const res = await fetch(`${API_BASE}${endpoint}`, options);
+            if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        // دالة تنسيق التاريخ بشكل جميل
+        function formatDate(dateString) {
+            if (!dateString) return '—';
+            try {
+                const date = new Date(dateString);
+                // تنسيق: 2026-04-11 07:42:14
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const seconds = String(date.getSeconds()).padStart(2, '0');
+                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            } catch(e) {
+                return dateString;
+            }
+        }
+
+        async function loadLogs(page = 1) {
+            showLoading(true);
+            try {
+                const data = await apiCall(`/logs?page=${page}&limit=50`);
+                allLogs = data.logs || [];
+                totalPages = data.totalPages || 1;
+                currentPage = data.currentPage || 1;
+                renderLogsTable(allLogs);
+                renderPagination();
+            } catch (err) {
+                console.error(err);
+                showToast('خطأ في تحميل السجلات', 'error');
+            }
+            showLoading(false);
+        }
+
+        function renderLogsTable(logs) {
+            const tbody = document.getElementById('logsBody');
+            if (!logs.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">لا توجد سجلات</td></tr>';
+                return;
+            }
+            tbody.innerHTML = logs.map((log, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${escapeHtml(log.username || '—')}</td>
+                    <td>${escapeHtml(log.action || '—')}</td>
+                    <td style="text-align:right;">${escapeHtml(log.details || '—')}</td>
+                    <td>${escapeHtml(log.location || '—')}</td>
+                    <td class="date-cell">${formatDate(log.created_at)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function searchLogs() {
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            if (!term) {
+                renderLogsTable(allLogs);
+                return;
+            }
+            const filtered = allLogs.filter(log =>
+                (log.username && log.username.toLowerCase().includes(term)) ||
+                (log.action && log.action.toLowerCase().includes(term)) ||
+                (log.details && log.details.toLowerCase().includes(term)) ||
+                (log.location && log.location.toLowerCase().includes(term))
+            );
+            renderLogsTable(filtered);
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) { container.innerHTML = ''; return; }
+            let html = '';
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="${i === currentPage ? 'active' : ''}" onclick="loadLogs(${i})">${i}</button>`;
+            }
+            container.innerHTML = html;
+        }
+
+        async function exportLogsToExcel() {
+            showLoading(true);
+            try {
+                const data = await apiCall('/logs/all');
+                const wsData = (data || []).map(log => ({
+                    'المستخدم': log.username || '',
+                    'الإجراء': log.action || '',
+                    'التفاصيل': log.details || '',
+                    'الموقع': log.location || '',
+                    'التاريخ': formatDate(log.created_at)
+                }));
+                const ws = XLSX.utils.json_to_sheet(wsData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'السجلات');
+                XLSX.writeFile(wb, `logs_${new Date().toISOString().slice(0,19)}.xlsx`);
+                showToast('✅ تم تصدير السجلات إلى Excel', 'success');
+            } catch (err) {
+                showToast('خطأ في التصدير', 'error');
+            }
+            showLoading(false);
+        }
+
+        async function exportLogsToJSON() {
+            showLoading(true);
+            try {
+                const data = await apiCall('/logs/all');
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `logs_${new Date().toISOString().slice(0,19)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('✅ تم تصدير السجلات إلى JSON', 'success');
+            } catch (err) {
+                showToast('خطأ في التصدير', 'error');
+            }
+            showLoading(false);
+        }
+
+        async function clearLogs() {
+            if (!confirm('⚠️ تحذير: هذا الإجراء سيمسح جميع السجلات نهائياً. لا يمكن التراجع. هل أنت متأكد؟')) return;
+            showLoading(true);
+            try {
+                await apiCall('/logs/clear', 'DELETE');
+                showToast('✅ تم مسح جميع السجلات', 'success');
+                loadLogs(1);
+            } catch (err) {
+                showToast('خطأ في مسح السجلات', 'error');
+            }
+            showLoading(false);
+        }
+
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+        
+        function showToast(msg, type) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
+        
+        function logout() {
+            const logoutBtn = document.querySelector('button[onclick="logout()"]');
+            if (logoutBtn) {
+                logoutBtn.disabled = true;
+                logoutBtn.style.opacity = '0.5';
+                logoutBtn.innerText = '⏳ جاري...';
+            }
+            fetch('/api/logout', { method: 'POST', credentials: 'include' })
+                .then(() => { localStorage.clear(); window.location.href = '/login.html'; })
+                .catch(() => { localStorage.clear(); window.location.href = '/login.html'; });
+        }
+
+        function loadNav() {
+            fetch('/api/me', { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.user) {
+                        document.getElementById('navLinks').innerHTML = `
+                            <a href="index.html" class="nav-link">📊 الرئيسية</a>
+                            <a href="orders.html" class="nav-link">📝 الطلبات</a>
+                            <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
+                            <a href="trucks.html" class="nav-link">🚛 السيارات</a>
+                            <a href="products.html" class="nav-link">📦 أنواع البحص</a>
+                            <a href="factories.html" class="nav-link">🏭 المصانع</a>
+                            <a href="reports.html" class="nav-link">📊 التقارير</a>
+                            <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
+                            <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
+                            <a href="users.html" class="nav-link">👥 المستخدمين</a>
+                            <a href="logs.html" class="nav-link active">📜 السجلات</a>
+                        `;
+                    } else { window.location.href = '/login.html'; }
+                })
+                .catch(() => { window.location.href = '/login.html'; });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNav();
+            loadLogs();
+        });
+    </script>
+    <script src="navbar.js"></script>
+</body>
+</html>

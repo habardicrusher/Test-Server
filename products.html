@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أنواع البحص - نظام إدارة طلبات البحص</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5em; }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
+        .nav-link { padding: 12px 24px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; transition: all 0.3s; font-weight: 600; }
+        .nav-link:hover, .nav-link.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transform: translateY(-2px); }
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #fff; }
+        .btn-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: #fff; }
+        .btn-sm { padding: 8px 15px; font-size: 0.9em; }
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        .list-item:hover { background: rgba(255,255,255,0.08); transform: translateX(-5px); }
+        .chip { display: inline-flex; align-items: center; padding: 8px 16px; background: rgba(102,126,234,0.3); border-radius: 25px; font-size: 1.1em; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #a8b2d1; }
+        .form-group input { width: 100%; padding: 10px; border-radius: 8px; border: none; background: rgba(255,255,255,0.1); color: #fff; }
+        .toast-container { position: fixed; top: 20px; left: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 15px 25px; border-radius: 10px; color: #fff; font-weight: 600; animation: slideIn 0.3s ease; }
+        .toast-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .toast-error { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
+        .loading { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center; flex-direction:column; }
+        .loading.active { display: flex; }
+        .spinner { width:50px; height:50px; border:4px solid rgba(255,255,255,0.3); border-top-color:#667eea; border-radius:50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .connection-status { position: fixed; bottom: 20px; right: 20px; padding: 8px 16px; border-radius: 25px; font-size: 0.8em; background: rgba(56,239,125,0.2); border:1px solid #38ef7d; color:#38ef7d; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="connection-status" id="connectionStatus">✅ متصل بالسيرفر</div>
+
+    <div class="container">
+        <div class="header"><h1>📦 إدارة أنواع البحص</h1><p>إضافة وحذف الأنواع المستخدمة في الطلبات</p></div>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">📊 الرئيسية</a>
+            <a href="orders.html" class="nav-link">📝 الطلبات</a>
+            <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
+            <a href="trucks.html" class="nav-link">🚛 السيارات</a>
+            <a href="products.html" class="nav-link active">📦 أنواع البحص</a>
+            <a href="factories.html" class="nav-link">🏭 المصانع</a>
+            <a href="reports.html" class="nav-link">📊 التقارير</a>
+            <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
+        </div>
+
+        <button class="btn btn-success" onclick="openAddMaterialModal()">➕ إضافة نوع بحص</button>
+        <div id="materialsList" style="margin-top: 20px;"></div>
+    </div>
+
+    <div class="modal" id="materialModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>➕ إضافة نوع بحص</h3><button class="close-modal" onclick="closeModal('materialModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>📦 اسم النوع (مثال: 1/2, 3/4, 3/8)</label><input type="text" id="materialName" placeholder="أدخل النوع"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-danger" onclick="closeModal('materialModal')">إلغاء</button><button class="btn btn-success" onclick="saveMaterial()">حفظ</button></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let materials = [];
+
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+            if (data && (method === 'POST' || method === 'PUT')) options.body = JSON.stringify(data);
+            const res = await fetch(`${API_BASE}${endpoint}`, options);
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        async function loadSettings() {
+            try {
+                const data = await apiCall('/settings');
+                materials = data.materials || [];
+                renderMaterialsList();
+            } catch (e) { console.error(e); showToast('خطأ في تحميل البيانات', 'error'); }
+        }
+
+        async function saveSettings() {
+            try {
+                const settings = await apiCall('/settings');
+                settings.materials = materials;
+                await apiCall('/settings', 'PUT', settings);
+                return true;
+            } catch (e) { showToast('خطأ في حفظ الإعدادات', 'error'); return false; }
+        }
+
+        function renderMaterialsList() {
+            const container = document.getElementById('materialsList');
+            if (!container) return;
+            if (materials.length === 0) {
+                container.innerHTML = '<p style="color:#a8b2d1; text-align:center;">لا توجد أنواع بحص</p>';
+                return;
+            }
+            container.innerHTML = materials.map((m, idx) => `
+                <div class="list-item">
+                    <span class="chip">📦 ${m}</span>
+                    <button class="btn btn-sm btn-danger" onclick="deleteMaterial(${idx})">🗑️ حذف</button>
+                </div>
+            `).join('');
+        }
+
+        function openAddMaterialModal() {
+            document.getElementById('materialName').value = '';
+            openModal('materialModal');
+        }
+
+        async function saveMaterial() {
+            const name = document.getElementById('materialName').value.trim();
+            if (!name) { showToast('أدخل الاسم', 'error'); return; }
+            if (materials.includes(name)) { showToast('النوع موجود بالفعل', 'error'); return; }
+            materials.push(name);
+            if (await saveSettings()) {
+                renderMaterialsList();
+                closeModal('materialModal');
+                showToast('✅ تم الإضافة', 'success');
+            }
+        }
+
+        async function deleteMaterial(idx) {
+            if (!confirm(`حذف "${materials[idx]}"؟`)) return;
+            materials.splice(idx, 1);
+            if (await saveSettings()) {
+                renderMaterialsList();
+                showToast('تم الحذف', 'info');
+            }
+        }
+
+        function showToast(msg, type) {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+        function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            showLoading(true);
+            try {
+                await loadSettings();
+                showToast('✅ تم تحميل البيانات', 'success');
+            } catch (e) { showToast('⚠️ خطأ في الاتصال', 'error'); }
+            showLoading(false);
+        });
+    </script>
+<script src="navbar.js"></script>
+</body>
+</html>

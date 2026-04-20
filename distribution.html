@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التوزيع - نظام إدارة طلبات كسارة الحبردي</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin-bottom: 30px; position: relative; }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
+        .nav-link { padding: 12px 24px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; font-weight: 600; }
+        .nav-link:hover, .nav-link.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transform: translateY(-2px); }
+        .date-section {
+            background: rgba(255,255,255,0.1);
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .date-section input[type="date"] { padding: 12px 20px; border-radius: 10px; border: none; background: #fff; color: #333; cursor: pointer; }
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #fff; }
+        .btn-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: #fff; }
+        .btn-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #fff; }
+        .btn-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #fff; }
+        .print-btn { background: linear-gradient(135deg, #757f9a 0%, #d7dde8 100%); color: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; overflow-x: auto; display: block; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        th { background: rgba(102,126,234,0.3); font-weight: 600; }
+        .road-badge { padding: 5px 15px; border-radius: 20px; font-size: 0.85em; font-weight: 600; display: inline-block; }
+        .road-1 { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .road-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .road-3 { background: linear-gradient(135deg, #ff9a44 0%, #fc6076 100%); }
+        .time-badge { padding: 5px 12px; border-radius: 20px; font-size: 0.8em; background: rgba(79,172,254,0.3); color: #4facfe; display: inline-block; }
+        .stats { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 15px; }
+        .stat-card { flex:1; min-width:150px; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px; text-align:center; }
+        .stat-card .number { font-size:1.8em; font-weight:bold; }
+        .toast-container { position: fixed; top: 20px; left: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 15px 25px; border-radius: 10px; color: #fff; font-weight: 600; animation: slideIn 0.3s ease; }
+        .toast-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .toast-error { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
+        .toast-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .loading { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center; flex-direction:column; }
+        .loading.active { display: flex; }
+        .spinner { width:50px; height:50px; border:4px solid rgba(255,255,255,0.3); border-top-color:#667eea; border-radius:50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; }
+        .modal.active { display: flex; }
+        .modal-content { background:#1a1a2e; border-radius:20px; padding:25px; max-width:450px; width:90%; border:1px solid #667eea; }
+        .form-group { margin-bottom:15px; }
+        .form-group label { display:block; margin-bottom:5px; color:#a8b2d1; }
+        .form-group select, .form-group input { width:100%; padding:10px; border-radius:8px; background:#2a2a4e; color:#fff; border:1px solid rgba(255,255,255,0.2); }
+        @media (max-width:768px){ th,td { font-size:0.75em; padding:8px; } }
+        @media print { .nav-links, .date-section .btn, .btn-danger, .btn-info, .print-btn, .toast-container, .loading { display: none; } .road-badge { -webkit-print-color-adjust: exact; } }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="container">
+        <div class="header"><h1>🚚 التوزيع الجغرافي المتوازن</h1><p>توزيع الطلبات بين الرياض والدمام مع تجنب تكرار نفس الموقع للسائق</p>
+            <div id="logout-btn-container" style="position: absolute; top: 20px; left: 20px;"></div>
+        </div>
+        <div class="nav-links" id="navLinks"></div>
+        <div class="date-section">
+            <div><label>📅 تاريخ العمل: </label><input type="date" id="orderDate" onchange="loadData()"></div>
+            <div>
+                <button class="btn btn-success" onclick="autoDistribute()">⚡ توزيع تلقائي (جغرافي)</button>
+                <button class="btn btn-danger" onclick="resetDistribution()">🔄 إعادة التعيين</button>
+                <button class="btn print-btn" onclick="window.print()">🖨️ طباعة</button>
+            </div>
+        </div>
+        <div class="stats" id="statsSection" style="display: none;">
+            <div class="stat-card"><h4>📋 الطلبات غير الموزعة</h4><div class="number" id="statUndistributed">0</div></div>
+            <div class="stat-card"><h4>🚛 عدد السيارات</h4><div class="number" id="statTrucks">0</div></div>
+            <div class="stat-card"><h4>✅ تم التوزيع</h4><div class="number" id="statDistributed">0</div></div>
+        </div>
+        
+        <h2>📋 الطلبات غير الموزعة</h2>
+        <div style="overflow-x: auto; margin-bottom: 30px;">
+            <table id="undistributedTable">
+                <thead><tr><th>#</th><th>المصنع</th><th>نوع البحص</th><th>التوقيت</th><th>وقت الإضافة</th><th>توزيع يدوي</th></tr></thead>
+                <tbody id="undistributedBody"><tr><td colspan="6" style="text-align:center;">لا توجد طلبات غير موزعة<\/td><\/tr> </tbody>
+            </table>
+        </div>
+
+        <h2>📋 قائمة التوزيع (المنفذة)</h2>
+        <div style="overflow-x: auto;">
+            <table id="distributionTable">
+                <thead><tr><th>#</th><th>رقم السيارة</th><th>السائق</th><th>المصنع</th><th>نوع البحص</th><th>التوقيت</th><th>الرود</th></tr></thead>
+                <tbody id="distributionBody"><tr><td colspan="7" style="text-align:center;">لا يوجد توزيع بعد<\/td><\/tr> </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal" id="manualDistributeModal">
+        <div class="modal-content">
+            <h3 style="color:#667eea; margin-bottom:20px;">🖐️ توزيع يدوي</h3>
+            <div class="form-group"><label>🏭 المصنع</label><input type="text" id="manualFactory" readonly style="background:#3a3a5e;"></div>
+            <div class="form-group"><label>📦 نوع البحص</label><input type="text" id="manualMaterial" readonly style="background:#3a3a5e;"></div>
+            <div class="form-group"><label>🚛 اختر السيارة</label><select id="manualTruckSelect"></select></div>
+            <div class="form-group"><label>🔢 الرود</label><input type="number" id="manualRoad" min="1" value="1"></div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                <button class="btn btn-danger" onclick="closeManualModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="confirmManualDistribute()">توزيع</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let trucks = [], orders = [], distribution = [], currentDate = '';
+        let currentOrderToDistribute = null;
+        let factoryLocations = {};
+
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+            if (data) options.body = JSON.stringify(data);
+            const res = await fetch(`${API_BASE}${endpoint}`, options);
+            if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        setInterval(async () => { try { await fetch('/api/me', { credentials: 'include' }); } catch(e) {} }, 4 * 60 * 1000);
+
+        async function loadSettings() {
+            try { 
+                const data = await apiCall('/settings'); 
+                trucks = data.trucks || []; 
+                document.getElementById('statTrucks').textContent = trucks.length;
+                factoryLocations = {};
+                (data.factories || []).forEach(f => {
+                    if (f.name && f.location) factoryLocations[f.name] = f.location;
+                });
+                console.log('مواقع المصانع:', factoryLocations);
+            } catch(e) { showToast('خطأ في تحميل السيارات', 'error'); }
+        }
+
+        async function loadData() {
+            currentDate = document.getElementById('orderDate').value;
+            try {
+                const data = await apiCall(`/day/${currentDate}`);
+                orders = data.orders || [];
+                distribution = data.distribution || [];
+                const distributedOrderIds = new Set(distribution.map(d => d.orderId));
+                const undistributed = orders.filter(o => !distributedOrderIds.has(o.id));
+                renderUndistributed(undistributed);
+                renderDistribution();
+                updateStats(undistributed.length);
+            } catch(e) { orders = []; distribution = []; renderUndistributed([]); renderDistribution(); updateStats(0); }
+        }
+
+        function updateStats(undistributedCount) {
+            const s = document.getElementById('statsSection');
+            if (orders.length || distribution.length) {
+                s.style.display = 'flex';
+                document.getElementById('statUndistributed').textContent = undistributedCount;
+                const uniqueDistributed = new Set(distribution.map(d => d.orderId)).size;
+                document.getElementById('statDistributed').textContent = uniqueDistributed;
+            } else { s.style.display = 'none'; }
+        }
+
+        async function saveData() {
+            try { await apiCall(`/day/${currentDate}`, 'PUT', { orders, distribution }); return true; } catch(e) { showToast('خطأ في الحفظ', 'error'); return false; }
+        }
+
+        function renderUndistributed(undistributed) {
+            const tbody = document.getElementById('undistributedBody');
+            if (!undistributed.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">لا توجد طلبات غير موزعة<\/td><\/tr>'; return; }
+            tbody.innerHTML = undistributed.map((order, i) => `
+                <tr>
+                    <td>${i+1}</td>
+                    <td>${order.factory}</td>
+                    <td>بحص ${order.material}</td>
+                    <td>${order.time && order.time !== 'undefined' ? order.time : '-'}</td>
+                    <td>${order.timestamp || '-'}</td>
+                    <td><button class="btn btn-sm btn-warning" onclick='openManualDistributeModalForOrder(${JSON.stringify(order).replace(/'/g, "&#39;")})'>🖐️ توزيع</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderDistribution() {
+            const tbody = document.getElementById('distributionBody');
+            if (!distribution.length) { tbody.innerHTML = '<td><td colspan="7" style="text-align:center;">لا يوجد توزيع<\/td><\/tr>'; return; }
+            const uniqueMap = new Map();
+            distribution.forEach(d => { if (!uniqueMap.has(d.orderId)) uniqueMap.set(d.orderId, d); });
+            const uniqueDistributions = Array.from(uniqueMap.values());
+            tbody.innerHTML = uniqueDistributions.map((d, i) => `
+                <tr>
+                    <td>${i+1}</td>
+                    <td><strong>${d.truck?.number || '?'}</strong></td>
+                    <td>${d.truck?.driver || '?'}</td>
+                    <td>${d.factory}</td>
+                    <td>بحص ${d.material}</td>
+                    <td>${d.time && d.time !== 'undefined' ? `<span class="time-badge">⏰ ${d.time}</span>` : '-'}</td>
+                    <td><span class="road-badge road-${d.road}">رود ${d.road}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function openManualDistributeModalForOrder(order) {
+            currentOrderToDistribute = order;
+            document.getElementById('manualFactory').value = order.factory;
+            document.getElementById('manualMaterial').value = order.material;
+            const truckSelect = document.getElementById('manualTruckSelect');
+            truckSelect.innerHTML = '<option value="">-- اختر سيارة --</option>' + trucks.map(t => `<option value="${t.number}">${t.number} - ${t.driver}</option>`).join('');
+            document.getElementById('manualRoad').value = 1;
+            document.getElementById('manualDistributeModal').classList.add('active');
+        }
+
+        function closeManualModal() { document.getElementById('manualDistributeModal').classList.remove('active'); currentOrderToDistribute = null; }
+
+        async function confirmManualDistribute() {
+            const truckNumber = document.getElementById('manualTruckSelect').value;
+            const road = parseInt(document.getElementById('manualRoad').value);
+            if (!truckNumber) { showToast('اختر سيارة', 'error'); return; }
+            const truck = trucks.find(t => t.number === truckNumber);
+            if (!truck) { showToast('سيارة غير موجودة', 'error'); return; }
+            if (!currentOrderToDistribute) { showToast('لا يوجد طلب محدد', 'error'); return; }
+            showLoading(true);
+            try {
+                const alreadyDistributed = distribution.some(d => d.orderId === currentOrderToDistribute.id);
+                if (alreadyDistributed) { showToast('هذا الطلب موزع بالفعل', 'warning'); closeManualModal(); showLoading(false); return; }
+                distribution.push({
+                    orderId: currentOrderToDistribute.id,
+                    orderIndex: distribution.length + 1,
+                    truck: truck,
+                    factory: currentOrderToDistribute.factory,
+                    material: currentOrderToDistribute.material,
+                    time: currentOrderToDistribute.time || '',
+                    road: road
+                });
+                await saveData();
+                await loadData();
+                closeManualModal();
+                showToast(`✅ تم توزيع الطلب على السيارة ${truckNumber} - ${truck.driver} (رود ${road})`, 'success');
+                localStorage.setItem('pendingOrdersCount', '0');
+            } catch(e) { showToast('خطأ في التوزيع', 'error'); }
+            showLoading(false);
+        }
+
+        async function autoDistribute() {
+            const distributedOrderIds = new Set(distribution.map(d => d.orderId));
+            const undistributed = orders.filter(o => !distributedOrderIds.has(o.id));
+            if (!undistributed.length) { showToast('لا توجد طلبات غير موزعة', 'error'); return; }
+            if (!trucks.length) { showToast('لا توجد سيارات', 'error'); return; }
+            showLoading(true);
+            
+            const truckTrips = {};
+            const truckLastLocation = {};
+            trucks.forEach(t => { truckTrips[t.number] = 0; truckLastLocation[t.number] = null; });
+            distribution.forEach(d => { 
+                if (d.truck) {
+                    truckTrips[d.truck.number]++;
+                    const location = factoryLocations[d.factory] || 'أخرى';
+                    truckLastLocation[d.truck.number] = location;
+                }
+            });
+            
+            let sortedTrucks = [...trucks].sort((a, b) => truckTrips[a.number] - truckTrips[b.number]);
+            let truckIndex = 0;
+            let newDistributions = [];
+            
+            for (let i = 0; i < undistributed.length; i++) {
+                const order = undistributed[i];
+                const orderLocation = factoryLocations[order.factory] || 'أخرى';
+                let selectedTruck = null;
+                let attempts = 0;
+                const maxAttempts = sortedTrucks.length * 3;
+                while (!selectedTruck && attempts < maxAttempts) {
+                    const candidate = sortedTrucks[truckIndex % sortedTrucks.length];
+                    const lastLocation = truckLastLocation[candidate.number];
+                    if (lastLocation !== orderLocation || lastLocation === null) {
+                        selectedTruck = candidate;
+                    }
+                    truckIndex++;
+                    attempts++;
+                }
+                if (!selectedTruck) {
+                    selectedTruck = sortedTrucks[0];
+                    showToast(`⚠️ اضطراري: تكرار موقع ${orderLocation} للسيارة ${selectedTruck.number}`, 'warning');
+                }
+                truckTrips[selectedTruck.number]++;
+                truckLastLocation[selectedTruck.number] = orderLocation;
+                sortedTrucks = [...trucks].sort((a, b) => truckTrips[a.number] - truckTrips[b.number]);
+                truckIndex = 0;
+                const currentRoad = Math.floor((distribution.length + newDistributions.length) / trucks.length) + 1;
+                newDistributions.push({
+                    orderId: order.id,
+                    orderIndex: distribution.length + newDistributions.length + 1,
+                    truck: selectedTruck,
+                    factory: order.factory,
+                    material: order.material,
+                    time: order.time || '',
+                    road: currentRoad
+                });
+            }
+            
+            if (newDistributions.length) {
+                distribution.push(...newDistributions);
+                await saveData();
+                await loadData();
+                const finalTrips = {};
+                const finalLocations = {};
+                trucks.forEach(t => { finalTrips[t.number] = 0; finalLocations[t.number] = []; });
+                distribution.forEach(d => { 
+                    if (d.truck) {
+                        finalTrips[d.truck.number]++; 
+                        const loc = factoryLocations[d.factory] || 'أخرى';
+                        if (!finalLocations[d.truck.number].includes(loc)) finalLocations[d.truck.number].push(loc);
+                    }
+                });
+                const minTrips = Math.min(...Object.values(finalTrips));
+                const maxTrips = Math.max(...Object.values(finalTrips));
+                const balancedCount = Object.values(finalLocations).filter(locs => locs.length >= 2).length;
+                showToast(`✅ تم توزيع ${newDistributions.length} طلب. أقل: ${minTrips}، أكثر: ${maxTrips} رحلة. ${balancedCount} سائق تنقل بين المنطقتين.`, 'success');
+                localStorage.setItem('pendingOrdersCount', '0');
+            } else { showToast('فشل التوزيع التلقائي', 'error'); }
+            showLoading(false);
+        }
+
+        async function resetDistribution() {
+            if (!confirm('إعادة تعيين التوزيع؟ سيتم حذف جميع التوزيعات الحالية.')) return;
+            distribution = [];
+            if (await saveData()) { await loadData(); showToast('تم إعادة التعيين', 'info'); }
+        }
+
+        function showToast(msg,type){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className=`toast toast-${type}`; t.innerText=msg; c.appendChild(t); setTimeout(()=>t.remove(),3000); }
+        function showLoading(show){ document.getElementById('loading').classList.toggle('active',show); }
+        function logout(){ if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html'); }
+        
+        function loadNav() {
+            fetch('/api/me',{credentials:'include'}).then(r=>r.json()).then(data=>{
+                if(data.user) {
+                    document.getElementById('navLinks').innerHTML = `
+                        <a href="index.html" class="nav-link">📊 الرئيسية</a>
+                        <a href="orders.html" class="nav-link">📝 الطلبات</a>
+                        <a href="distribution.html" class="nav-link active">🚚 التوزيع</a>
+                        <a href="trucks.html" class="nav-link">🚛 السيارات</a>
+                        <a href="products.html" class="nav-link">📦 أنواع البحص</a>
+                        <a href="factories.html" class="nav-link">🏭 المصانع</a>
+                        <a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>
+                        <a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان الشهرية</a>
+                        <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
+                        <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
+                        <a href="users.html" class="nav-link">👥 المستخدمين</a>
+                        <a href="logs.html" class="nav-link">📜 السجلات</a>
+                    `;
+                } else window.location.href='/login.html';
+            }).catch(()=>window.location.href='/login.html');
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            loadNav();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('orderDate').value = today;
+            currentDate = today;
+            showLoading(true);
+            await loadSettings();
+            await loadData();
+            showLoading(false);
+        });
+    </script>
+    <script src="navbar.js"></script>
+</body>
+</html>

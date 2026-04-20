@@ -1,0 +1,2070 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقارير - نظام إدارة طلبات كسارة الحبردي</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- إضافة مكتبات Excel المطلوبة للتصدير الكامل (8 أوراق) -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        .header {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .header h1 { font-size: 2em; margin-bottom: 10px; }
+        .header p { opacity: 0.9; }
+        
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .nav-link {
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: translateY(-2px);
+        }
+        
+        /* فلاتر التاريخ */
+        .filters-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .filters-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        .filters-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .filter-group label {
+            color: #a8b2d1;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        .filter-group input, .filter-group select {
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1em;
+            min-width: 160px;
+        }
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102,126,234,0.3);
+        }
+        
+        /* أزرار الفلاتر السريعة */
+        .quick-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .quick-filter-btn {
+            padding: 8px 16px;
+            border: 1px solid rgba(102,126,234,0.5);
+            background: rgba(102,126,234,0.1);
+            color: #a8b2d1;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .quick-filter-btn:hover, .quick-filter-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            border-color: transparent;
+            transform: translateY(-1px);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95em;
+            transition: all 0.3s;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: #fff;
+        }
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: #fff;
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: #fff;
+        }
+        
+        /* إحصائيات عامة */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-card h3 {
+            font-size: 2.5em;
+            color: #38ef7d;
+            margin-bottom: 10px;
+        }
+        .stat-card p {
+            color: #a8b2d1;
+            font-size: 1em;
+        }
+        .stat-card.blue h3 { color: #4facfe; }
+        .stat-card.purple h3 { color: #f093fb; }
+        .stat-card.orange h3 { color: #ffeaa7; }
+        .stat-card.red h3 { color: #f5576c; }
+        
+        /* الرسوم البيانية */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .chart-container {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .chart-container h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .chart-wrapper {
+            height: 300px;
+            width: 100%;
+        }
+        
+        /* الرسم البياني الكامل العرض */
+        .chart-full {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .chart-full h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .chart-full .chart-wrapper {
+            height: 350px;
+        }
+        
+        /* الجداول التفصيلية */
+        .detail-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow-x: auto;
+        }
+        .detail-section h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th {
+            background: rgba(102,126,234,0.3);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover { background: rgba(255,255,255,0.05); }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        .badge-green { background: rgba(56,239,125,0.2); color: #38ef7d; }
+        .badge-blue { background: rgba(79,172,254,0.2); color: #4facfe; }
+        .badge-purple { background: rgba(240,147,251,0.2); color: #f093fb; }
+        .badge-red { background: rgba(245,87,108,0.2); color: #f5576c; }
+        .badge-orange { background: rgba(255,234,167,0.2); color: #ffeaa7; }
+        
+        /* تبويبات التقارير */
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 25px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 8px;
+        }
+        .tab-btn {
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: #a8b2d1;
+            cursor: pointer;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95em;
+            transition: all 0.3s;
+        }
+        .tab-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Loading */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .loading.active { display: flex; }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 3000;
+        }
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            animation: slideIn 0.3s ease;
+            max-width: 350px;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* طباعة */
+        .print-section {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        /* سيارات التفصيل */
+        .truck-detail-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .truck-detail-card h4 {
+            color: #4facfe;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* No data */
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a8b2d1;
+        }
+        .no-data .icon { font-size: 4em; margin-bottom: 15px; }
+        .no-data p { font-size: 1.1em; }
+        
+        @media (max-width: 768px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .chart-wrapper { height: 250px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .filters-row { flex-direction: column; }
+            .filter-group input, .filter-group select { min-width: 100%; }
+            .header h1 { font-size: 1.4em; }
+        }
+        
+        @media print {
+            body { background: #fff !important; color: #000 !important; }
+            .header, .nav-links, .filters-section, .tabs, .print-section, .btn { display: none !important; }
+            .stat-card { border: 1px solid #ccc; }
+            .stat-card h3 { color: #333 !important; }
+            .stat-card p { color: #666 !important; }
+            .chart-container, .detail-section, .chart-full { border: 1px solid #ccc; background: #fff !important; }
+            th { background: #eee !important; color: #000 !important; }
+            td { color: #000 !important; }
+            .tab-content { display: block !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p style="margin-top: 15px;">جاري تحميل التقارير...</p>
+    </div>
+    
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>📊 التقارير والإحصائيات</h1>
+            <p>تقارير شاملة لكسارة الحبردي</p>
+        </div>
+        
+        <div class="nav-links" id="navLinks"></div>
+        
+        <!-- فلاتر التاريخ -->
+        <div class="filters-section">
+            <h3>📅 تحديد الفترة الزمنية</h3>
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label>من تاريخ:</label>
+                    <input type="date" id="dateFrom">
+                </div>
+                <div class="filter-group">
+                    <label>إلى تاريخ:</label>
+                    <input type="date" id="dateTo">
+                </div>
+                <div class="filter-group">
+                    <label>المصنع:</label>
+                    <select id="filterFactory">
+                        <option value="">الكل</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>نوع البحص:</label>
+                    <select id="filterMaterial">
+                        <option value="">الكل</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="justify-content: flex-end;">
+                    <button class="btn btn-primary" onclick="loadReport()">🔍 عرض التقرير</button>
+                </div>
+            </div>
+            <div class="quick-filters">
+                <button class="quick-filter-btn active" onclick="setQuickFilter('today', this)">📅 اليوم</button>
+                <button class="quick-filter-btn" onclick="setQuickFilter('yesterday', this)">📅 أمس</button>
+                <button class="quick-filter-btn" onclick="setQuickFilter('week', this)">📅 هذا الأسبوع</button>
+                <button class="quick-filter-btn" onclick="setQuickFilter('month', this)">📅 هذا الشهر</button>
+                <button class="quick-filter-btn" onclick="setQuickFilter('lastMonth', this)">📅 الشهر الماضي</button>
+                <button class="quick-filter-btn" onclick="setQuickFilter('custom', this)">📅 فترة مخصصة</button>
+            </div>
+        </div>
+        
+        <!-- أزرار الطباعة والتصدير -->
+        <div class="print-section">
+            <!-- زر تصدير Excel يستخدم الآن الدالة الكاملة (8 أوراق) -->
+            <button class="btn btn-success" onclick="exportFullExcel()">📥 تصدير Excel (8 أوراق)</button>
+            <button class="btn btn-info" onclick="window.print()">🖨️ طباعة التقرير</button>
+            <button class="btn btn-warning" onclick="exportToPDF()">📄 تصدير PDF</button>
+        </div>
+        
+        <!-- الإحصائيات العامة -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <h3 id="statTotalOrders">0</h3>
+                <p>📋 إجمالي الطلبات</p>
+            </div>
+            <div class="stat-card blue">
+                <h3 id="statDistributed">0</h3>
+                <p>🚚 الطلبات الموزعة</p>
+            </div>
+            <div class="stat-card purple">
+                <h3 id="statPending">0</h3>
+                <p>⏳ في الانتظار</p>
+            </div>
+            <div class="stat-card orange">
+                <h3 id="statFactories">0</h3>
+                <p>🏭 عدد المصانع</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="statTrucks">0</h3>
+                <p>🚛 سيارات نشطة</p>
+            </div>
+            <div class="stat-card red">
+                <h3 id="statMaterials">0</h3>
+                <p>📦 أنواع بحص</p>
+            </div>
+        </div>
+        
+        <!-- التبويبات -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('overview', this)">📊 نظرة عامة</button>
+            <button class="tab-btn" onclick="showTab('factories', this)">🏭 تقرير المصانع</button>
+            <button class="tab-btn" onclick="showTab('materials', this)">📦 تقرير البحص</button>
+            <button class="tab-btn" onclick="showTab('trucks', this)">🚛 تقرير السيارات</button>
+            <button class="tab-btn" onclick="showTab('daily', this)">📅 التقرير اليومي</button>
+            <button class="tab-btn" onclick="showTab('allOrders', this)">📋 كل الطلبات</button>
+        </div>
+        
+        <!-- تبويب: نظرة عامة -->
+        <div class="tab-content active" id="tab-overview">
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>📈 توزيع الطلبات حسب المصنع</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="factoriesChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3>📦 توزيع الطلبات حسب نوع البحص</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="materialsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-full">
+                <h3>📊 توزيع الطلبات يومياً</h3>
+                <div class="chart-wrapper">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>🚛 أكثر السيارات نشاطاً</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="trucksChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3>📊 نسبة التوزيع مقابل الطلبات</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="distributionRatioChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- تبويب: تقرير المصانع -->
+        <div class="tab-content" id="tab-factories">
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>📊 طلبات كل مصنع</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="factoryDetailChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3>📊 نسبة كل مصنع من الإجمالي</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="factoryPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="detail-section">
+                <h3>📋 تفاصيل طلبات المصانع</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المصنع</th>
+                            <th>عدد الطلبات</th>
+                            <th>تم التوزيع</th>
+                            <th>في الانتظار</th>
+                            <th>النسبة من الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody id="factoriesTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- تبويب: تقرير البحص -->
+        <div class="tab-content" id="tab-materials">
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>📊 طلبات كل نوع بحص</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="materialDetailChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3>📊 نسبة كل نوع بحص</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="materialPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="detail-section">
+                <h3>📋 تفاصيل أنواع البحص</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>نوع البحص</th>
+                            <th>عدد الطلبات</th>
+                            <th>عدد المصانع الطالبة</th>
+                            <th>النسبة من الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody id="materialsTableBody"></tbody>
+                </table>
+            </div>
+            
+            <!-- جدول تفصيلي: كل مصنع وما يطلبه من بحص -->
+            <div class="detail-section">
+                <h3>📋 تفصيل البحص حسب المصنع</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المصنع</th>
+                            <th>نوع البحص</th>
+                            <th>عدد الطلبات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="materialsByFactoryBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- تبويب: تقرير السيارات -->
+        <div class="tab-content" id="tab-trucks">
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>📊 رحلات كل سيارة</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="truckDetailChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3>📊 أنواع البحص لكل سيارة</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="truckMaterialChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="detail-section">
+                <h3>📋 تفاصيل رحلات السيارات</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>رقم السيارة</th>
+                            <th>اسم السائق</th>
+                            <th>عدد الرحلات</th>
+                            <th>المصانع</th>
+                            <th>أنواع البحص</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trucksTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- تبويب: التقرير اليومي -->
+        <div class="tab-content" id="tab-daily">
+            <div class="chart-full">
+                <h3>📊 مخطط الطلبات اليومية</h3>
+                <div class="chart-wrapper">
+                    <canvas id="dailyDetailChart"></canvas>
+                </div>
+            </div>
+            <div class="detail-section">
+                <h3>📋 تفاصيل كل يوم</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>التاريخ</th>
+                            <th>اليوم</th>
+                            <th>عدد الطلبات</th>
+                            <th>تم التوزيع</th>
+                            <th>في الانتظار</th>
+                            <th>عدد السيارات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dailyTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- تبويب: كل الطلبات -->
+        <div class="tab-content" id="tab-allOrders">
+            <div class="detail-section">
+                <h3>📋 جميع الطلبات (<span id="allOrdersCount">0</span>)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>التاريخ</th>
+                            <th>المصنع</th>
+                            <th>نوع البحص</th>
+                            <th>التوقيت</th>
+                            <th>الحالة</th>
+                            <th>السيارة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allOrdersBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        // متغيرات الرسوم البيانية
+        let charts = {};
+        
+        // بيانات التقرير
+        let reportData = {
+            allOrders: [],
+            allDistributions: [],
+            dateRange: { from: '', to: '' },
+            dates: []
+        };
+        
+        // متغير خاص بدالة Excel (مواقع المصانع)
+        let factoriesWithLocation = [];
+        
+        // ===== وظائف مساعدة =====
+        
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = { 
+                method, 
+                headers: { 'Content-Type': 'application/json' }, 
+                credentials: 'include' 
+            };
+            if (data) options.body = JSON.stringify(data);
+            const res = await fetch(`${API_BASE}${endpoint}`, options);
+            if (res.status === 401) { 
+                window.location.href = '/login.html'; 
+                throw new Error('غير مصرح'); 
+            }
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+        
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if (type === 'success') toast.style.background = '#11998e';
+            else if (type === 'error') toast.style.background = '#eb3349';
+            else if (type === 'warning') toast.style.background = '#f093fb';
+            else toast.style.background = '#4facfe';
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('active', show);
+        }
+        
+        function showTab(tabName, btn) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            if (btn) btn.classList.add('active');
+        }
+        
+        // ===== فلاتر التاريخ =====
+        
+        function setQuickFilter(type, btn) {
+            document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            
+            const today = new Date();
+            const dateFrom = document.getElementById('dateFrom');
+            const dateTo = document.getElementById('dateTo');
+            
+            switch(type) {
+                case 'today':
+                    dateFrom.value = formatDate(today);
+                    dateTo.value = formatDate(today);
+                    break;
+                case 'yesterday':
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    dateFrom.value = formatDate(yesterday);
+                    dateTo.value = formatDate(yesterday);
+                    break;
+                case 'week':
+                    const weekStart = new Date(today);
+                    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                    dateFrom.value = formatDate(weekStart);
+                    dateTo.value = formatDate(today);
+                    break;
+                case 'month':
+                    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                    dateFrom.value = formatDate(monthStart);
+                    dateTo.value = formatDate(today);
+                    break;
+                case 'lastMonth':
+                    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                    dateFrom.value = formatDate(lastMonthStart);
+                    dateTo.value = formatDate(lastMonthEnd);
+                    break;
+                case 'custom':
+                    return;
+            }
+            
+            loadReport();
+        }
+        
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+        
+        function getArabicDay(dateStr) {
+            const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+            const d = new Date(dateStr);
+            return days[d.getDay()];
+        }
+        
+        function getDatesBetween(startDate, endDate) {
+            const dates = [];
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const current = new Date(start);
+            
+            while (current <= end) {
+                dates.push(formatDate(current));
+                current.setDate(current.getDate() + 1);
+            }
+            return dates;
+        }
+        
+        // ===== تحميل البيانات =====
+        
+        async function loadReport() {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const filterFactory = document.getElementById('filterFactory').value;
+            const filterMaterial = document.getElementById('filterMaterial').value;
+            
+            if (!dateFrom || !dateTo) {
+                showToast('يرجى تحديد الفترة الزمنية', 'warning');
+                return;
+            }
+            
+            if (dateFrom > dateTo) {
+                showToast('تاريخ البداية يجب أن يكون قبل تاريخ النهاية', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const dates = getDatesBetween(dateFrom, dateTo);
+                let allOrders = [];
+                let allDistributions = [];
+                
+                // جلب بيانات كل يوم
+                for (const date of dates) {
+                    try {
+                        const dayData = await apiCall(`/day/${date}`);
+                        const orders = (dayData.orders || []).map(o => ({ ...o, date }));
+                        const distributions = (dayData.distribution || []).map(d => ({ ...d, date }));
+                        allOrders.push(...orders);
+                        allDistributions.push(...distributions);
+                    } catch(e) {
+                        // يوم بدون بيانات
+                    }
+                }
+                
+                // تطبيق الفلاتر
+                if (filterFactory) {
+                    allOrders = allOrders.filter(o => o.factory === filterFactory);
+                    allDistributions = allDistributions.filter(d => {
+                        const orderId = d.orderId;
+                        return allOrders.some(o => o.id === orderId);
+                    });
+                }
+                
+                if (filterMaterial) {
+                    allOrders = allOrders.filter(o => o.material === filterMaterial);
+                    allDistributions = allDistributions.filter(d => {
+                        const orderId = d.orderId;
+                        return allOrders.some(o => o.id === orderId);
+                    });
+                }
+                
+                reportData = { allOrders, allDistributions, dateRange: { from: dateFrom, to: dateTo }, dates };
+                
+                // تحديث جميع الأقسام
+                updateStats();
+                renderOverviewCharts();
+                renderFactoriesTab();
+                renderMaterialsTab();
+                renderTrucksTab();
+                renderDailyTab();
+                renderAllOrdersTab();
+                
+                showToast(`تم تحميل تقرير ${dates.length} يوم - ${allOrders.length} طلب`, 'success');
+                
+            } catch(e) {
+                showToast('خطأ في تحميل البيانات: ' + e.message, 'error');
+            }
+            
+            showLoading(false);
+        }
+        
+        // ===== تحديث الإحصائيات =====
+        
+        function updateStats() {
+            const { allOrders, allDistributions } = reportData;
+            
+            // حساب التوزيعات الفريدة
+            const distributedMap = new Map();
+            allDistributions.forEach(d => {
+                if (!distributedMap.has(d.orderId)) distributedMap.set(d.orderId, d);
+            });
+            const uniqueDistributions = Array.from(distributedMap.values());
+            const distributedOrderIds = new Set(uniqueDistributions.map(d => d.orderId));
+            
+            const totalOrders = allOrders.length;
+            const distributed = distributedOrderIds.size;
+            const pending = Math.max(0, totalOrders - distributed);
+            
+            const factoriesSet = new Set(allOrders.map(o => o.factory).filter(Boolean));
+            const materialsSet = new Set(allOrders.map(o => o.material).filter(Boolean));
+            const trucksSet = new Set(uniqueDistributions.map(d => d.truck?.number).filter(Boolean));
+            
+            document.getElementById('statTotalOrders').textContent = totalOrders;
+            document.getElementById('statDistributed').textContent = distributed;
+            document.getElementById('statPending').textContent = pending;
+            document.getElementById('statFactories').textContent = factoriesSet.size;
+            document.getElementById('statTrucks').textContent = trucksSet.size;
+            document.getElementById('statMaterials').textContent = materialsSet.size;
+        }
+        
+        // ===== الرسوم البيانية =====
+        
+        const chartColors = [
+            '#667eea', '#f5576c', '#38ef7d', '#4facfe', '#f093fb',
+            '#ffeaa7', '#fd79a8', '#a29bfe', '#00cec9', '#e17055',
+            '#6c5ce7', '#00b894', '#fdcb6e', '#e84393', '#0984e3',
+            '#55efc4', '#fab1a0', '#74b9ff', '#b2bec3', '#dfe6e9'
+        ];
+        
+        function destroyChart(chartName) {
+            if (charts[chartName]) {
+                charts[chartName].destroy();
+                charts[chartName] = null;
+            }
+        }
+        
+        // ===== نظرة عامة =====
+        
+        function renderOverviewCharts() {
+            const { allOrders, allDistributions, dates } = reportData;
+            
+            // 1. رسم المصانع (مثل index.html بالضبط)
+            const factoryStats = {};
+            allOrders.forEach(order => {
+                const f = order.factory || 'غير محدد';
+                factoryStats[f] = (factoryStats[f] || 0) + 1;
+            });
+            
+            destroyChart('factoriesChart');
+            const ctx1 = document.getElementById('factoriesChart').getContext('2d');
+            charts.factoriesChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(factoryStats),
+                    datasets: [{
+                        label: 'عدد الطلبات',
+                        data: Object.values(factoryStats),
+                        backgroundColor: 'rgba(102,126,234,0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#a8b2d1' } },
+                        y: { ticks: { color: '#a8b2d1' }, beginAtZero: true }
+                    }
+                }
+            });
+            
+            // 2. رسم أنواع البحص (مثل index.html بالضبط)
+            const materialStats = {};
+            allOrders.forEach(order => {
+                const m = order.material || 'غير محدد';
+                materialStats[m] = (materialStats[m] || 0) + 1;
+            });
+            
+            destroyChart('materialsChart');
+            const ctx2 = document.getElementById('materialsChart').getContext('2d');
+            charts.materialsChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(materialStats),
+                    datasets: [{
+                        data: Object.values(materialStats),
+                        backgroundColor: chartColors.slice(0, Object.keys(materialStats).length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#fff' }
+                        }
+                    }
+                }
+            });
+            
+            // 3. رسم يومي
+            if (dates && dates.length > 0) {
+                const dailyStats = {};
+                dates.forEach(d => dailyStats[d] = 0);
+                allOrders.forEach(o => {
+                    if (dailyStats.hasOwnProperty(o.date)) {
+                        dailyStats[o.date]++;
+                    }
+                });
+                
+                destroyChart('dailyChart');
+                const ctx3 = document.getElementById('dailyChart').getContext('2d');
+                charts.dailyChart = new Chart(ctx3, {
+                    type: 'line',
+                    data: {
+                        labels: Object.keys(dailyStats),
+                        datasets: [{
+                            label: 'عدد الطلبات',
+                            data: Object.values(dailyStats),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102,126,234,0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#667eea',
+                            pointBorderColor: '#fff',
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: '#fff' } } },
+                        scales: {
+                            x: { ticks: { color: '#a8b2d1', maxRotation: 45 } },
+                            y: { ticks: { color: '#a8b2d1' }, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+            
+            // 4. رسم السيارات الأكثر نشاطاً
+            const distributedMap = new Map();
+            allDistributions.forEach(d => {
+                if (!distributedMap.has(d.orderId)) distributedMap.set(d.orderId, d);
+            });
+            const uniqueDistributions = Array.from(distributedMap.values());
+            
+            const truckStats = {};
+            uniqueDistributions.forEach(d => {
+                const truckNum = d.truck?.number || 'غير محدد';
+                truckStats[truckNum] = (truckStats[truckNum] || 0) + 1;
+            });
+            
+            // ترتيب حسب عدد الرحلات
+            const sortedTrucks = Object.entries(truckStats).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            
+            destroyChart('trucksChart');
+            const ctx4 = document.getElementById('trucksChart').getContext('2d');
+            charts.trucksChart = new Chart(ctx4, {
+                type: 'bar',
+                data: {
+                    labels: sortedTrucks.map(t => t[0]),
+                    datasets: [{
+                        label: 'عدد الرحلات',
+                        data: sortedTrucks.map(t => t[1]),
+                        backgroundColor: chartColors.slice(0, sortedTrucks.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#a8b2d1' }, beginAtZero: true },
+                        y: { ticks: { color: '#a8b2d1' } }
+                    }
+                }
+            });
+            
+            // 5. نسبة التوزيع
+            const totalOrders = allOrders.length;
+            const distributed = uniqueDistributions.length;
+            const pending = Math.max(0, totalOrders - distributed);
+            
+            destroyChart('distributionRatioChart');
+            const ctx5 = document.getElementById('distributionRatioChart').getContext('2d');
+            charts.distributionRatioChart = new Chart(ctx5, {
+                type: 'doughnut',
+                data: {
+                    labels: ['تم التوزيع', 'في الانتظار'],
+                    datasets: [{
+                        data: [distributed, pending],
+                        backgroundColor: ['#38ef7d', '#f5576c']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#fff' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // ===== تبويب المصانع =====
+        
+        function renderFactoriesTab() {
+            const { allOrders, allDistributions } = reportData;
+            
+            const distributedMap = new Map();
+            allDistributions.forEach(d => {
+                if (!distributedMap.has(d.orderId)) distributedMap.set(d.orderId, d);
+            });
+            const distributedOrderIds = new Set(Array.from(distributedMap.keys()));
+            
+            // إحصائيات المصانع
+            const factoryStats = {};
+            allOrders.forEach(order => {
+                const f = order.factory || 'غير محدد';
+                if (!factoryStats[f]) {
+                    factoryStats[f] = { total: 0, distributed: 0 };
+                }
+                factoryStats[f].total++;
+                if (distributedOrderIds.has(order.id)) {
+                    factoryStats[f].distributed++;
+                }
+            });
+            
+            const labels = Object.keys(factoryStats);
+            const totals = labels.map(f => factoryStats[f].total);
+            const distrib = labels.map(f => factoryStats[f].distributed);
+            const totalAll = allOrders.length;
+            
+            // رسم بار
+            destroyChart('factoryDetailChart');
+            const ctx1 = document.getElementById('factoryDetailChart').getContext('2d');
+            charts.factoryDetailChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'إجمالي الطلبات', data: totals, backgroundColor: 'rgba(102,126,234,0.8)' },
+                        { label: 'تم التوزيع', data: distrib, backgroundColor: 'rgba(56,239,125,0.8)' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#a8b2d1' } },
+                        y: { ticks: { color: '#a8b2d1' }, beginAtZero: true }
+                    }
+                }
+            });
+            
+            // رسم دائري
+            destroyChart('factoryPieChart');
+            const ctx2 = document.getElementById('factoryPieChart').getContext('2d');
+            charts.factoryPieChart = new Chart(ctx2, {
+                type: 'pie',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: totals,
+                        backgroundColor: chartColors.slice(0, labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#fff' } }
+                    }
+                }
+            });
+            
+            // جدول المصانع
+            const tbody = document.getElementById('factoriesTableBody');
+            tbody.innerHTML = labels.map((f, i) => {
+                const total = factoryStats[f].total;
+                const dist = factoryStats[f].distributed;
+                const pend = total - dist;
+                const pct = totalAll > 0 ? ((total / totalAll) * 100).toFixed(1) : 0;
+                return `<tr>
+                    <td>${i + 1}</td>
+                    <td><strong>${f}</strong></td>
+                    <td><span class="badge badge-blue">${total}</span></td>
+                    <td><span class="badge badge-green">${dist}</span></td>
+                    <td><span class="badge ${pend > 0 ? 'badge-red' : 'badge-green'}">${pend}</span></td>
+                    <td>${pct}%</td>
+                </table>`;
+            }).join('');
+        }
+        
+        // ===== تبويب البحص =====
+        
+        function renderMaterialsTab() {
+            const { allOrders } = reportData;
+            
+            // إحصائيات أنواع البحص (مثل index.html بالضبط)
+            const materialStats = {};
+            allOrders.forEach(order => {
+                const m = order.material || 'غير محدد';
+                materialStats[m] = (materialStats[m] || 0) + 1;
+            });
+            
+            const labels = Object.keys(materialStats);
+            const data = Object.values(materialStats);
+            const totalAll = allOrders.length;
+            
+            // رسم بار
+            destroyChart('materialDetailChart');
+            const ctx1 = document.getElementById('materialDetailChart').getContext('2d');
+            charts.materialDetailChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'عدد الطلبات',
+                        data,
+                        backgroundColor: chartColors.slice(0, labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#a8b2d1' } },
+                        y: { ticks: { color: '#a8b2d1' }, beginAtZero: true }
+                    }
+                }
+            });
+            
+            // رسم دائري (مثل index.html بالضبط)
+            destroyChart('materialPieChart');
+            const ctx2 = document.getElementById('materialPieChart').getContext('2d');
+            charts.materialPieChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: chartColors.slice(0, labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#fff' } }
+                    }
+                }
+            });
+            
+            // جدول أنواع البحص
+            const tbody = document.getElementById('materialsTableBody');
+            tbody.innerHTML = labels.map((m, i) => {
+                const count = materialStats[m];
+                const pct = totalAll > 0 ? ((count / totalAll) * 100).toFixed(1) : 0;
+                // عدد المصانع الطالبة لهذا النوع
+                const factoriesForMaterial = new Set(
+                    allOrders.filter(o => (o.material || 'غير محدد') === m).map(o => o.factory)
+                );
+                return `<tr>
+                    <td>${i + 1}</td>
+                    <td><strong>${m}</strong></td>
+                    <td><span class="badge badge-blue">${count}</span></td>
+                    <td><span class="badge badge-purple">${factoriesForMaterial.size}</span></td>
+                    <td>${pct}%</td>
+                </tr>`;
+            }).join('');
+            
+            // جدول تفصيل البحص حسب المصنع
+            const materialsByFactory = {};
+            allOrders.forEach(order => {
+                const f = order.factory || 'غير محدد';
+                const m = order.material || 'غير محدد';
+                const key = `${f}|||${m}`;
+                materialsByFactory[key] = (materialsByFactory[key] || 0) + 1;
+            });
+            
+            const mbfBody = document.getElementById('materialsByFactoryBody');
+            let idx = 0;
+            mbfBody.innerHTML = Object.entries(materialsByFactory)
+                .sort((a, b) => b[1] - a[1])
+                .map(([key, count]) => {
+                    const [factory, material] = key.split('|||');
+                    idx++;
+                    return `<tr>
+                        <td>${idx}</td>
+                        <td>${factory}</td>
+                        <td><span class="badge badge-purple">${material}</span></td>
+                        <td><span class="badge badge-blue">${count}</span></td>
+                    </tr>`;
+                }).join('');
+        }
+        
+        // ===== تبويب السيارات =====
+        
+        function renderTrucksTab() {
+            const { allOrders, allDistributions } = reportData;
+            
+            const distributedMap = new Map();
+            allDistributions.forEach(d => {
+                if (!distributedMap.has(d.orderId)) distributedMap.set(d.orderId, d);
+            });
+            const uniqueDistributions = Array.from(distributedMap.values());
+            
+            // إحصائيات السيارات
+            const truckStats = {};
+            uniqueDistributions.forEach(d => {
+                const truckNum = d.truck?.number || 'غير محدد';
+                const driverName = d.truck?.driver || 'غير محدد';
+                if (!truckStats[truckNum]) {
+                    truckStats[truckNum] = {
+                        driver: driverName,
+                        trips: 0,
+                        factories: new Set(),
+                        materials: new Set()
+                    };
+                }
+                truckStats[truckNum].trips++;
+                
+                // البحث عن الطلب الأصلي
+                const order = allOrders.find(o => o.id === d.orderId);
+                if (order) {
+                    if (order.factory) truckStats[truckNum].factories.add(order.factory);
+                    if (order.material) truckStats[truckNum].materials.add(order.material);
+                }
+            });
+            
+            const sortedTrucks = Object.entries(truckStats).sort((a, b) => b[1].trips - a[1].trips);
+            
+            // رسم رحلات السيارات
+            destroyChart('truckDetailChart');
+            const ctx1 = document.getElementById('truckDetailChart').getContext('2d');
+            charts.truckDetailChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: sortedTrucks.map(t => t[0]),
+                    datasets: [{
+                        label: 'عدد الرحلات',
+                        data: sortedTrucks.map(t => t[1].trips),
+                        backgroundColor: chartColors.slice(0, sortedTrucks.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#a8b2d1' } },
+                        y: { ticks: { color: '#a8b2d1' }, beginAtZero: true }
+                    }
+                }
+            });
+            
+            // رسم أنواع البحص لكل سيارة (Stacked Bar)
+            const allMaterials = new Set();
+            uniqueDistributions.forEach(d => {
+                const order = allOrders.find(o => o.id === d.orderId);
+                if (order && order.material) allMaterials.add(order.material);
+            });
+            
+            const truckMaterialData = {};
+            sortedTrucks.slice(0, 10).forEach(([truckNum]) => {
+                truckMaterialData[truckNum] = {};
+                allMaterials.forEach(m => truckMaterialData[truckNum][m] = 0);
+            });
+            
+            uniqueDistributions.forEach(d => {
+                const truckNum = d.truck?.number || 'غير محدد';
+                if (truckMaterialData[truckNum]) {
+                    const order = allOrders.find(o => o.id === d.orderId);
+                    if (order && order.material) {
+                        truckMaterialData[truckNum][order.material]++;
+                    }
+                }
+            });
+            
+            const truckLabels = Object.keys(truckMaterialData);
+            const materialsList = Array.from(allMaterials);
+            const datasets = materialsList.map((material, idx) => ({
+                label: material,
+                data: truckLabels.map(t => truckMaterialData[t][material] || 0),
+                backgroundColor: chartColors[idx % chartColors.length]
+            }));
+            
+            destroyChart('truckMaterialChart');
+            const ctx2 = document.getElementById('truckMaterialChart').getContext('2d');
+            charts.truckMaterialChart = new Chart(ctx2, {
+                type: 'bar',
+                data: { labels: truckLabels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } },
+                    scales: {
+                        x: { stacked: true, ticks: { color: '#a8b2d1' } },
+                        y: { stacked: true, ticks: { color: '#a8b2d1' }, beginAtZero: true }
+                    }
+                }
+            });
+            
+            // جدول السيارات
+            const tbody = document.getElementById('trucksTableBody');
+            tbody.innerHTML = sortedTrucks.map(([truckNum, stats], i) => {
+                return `<tr>
+                    <td>${i + 1}</td>
+                    <td><strong>${truckNum}</strong></td>
+                    <td>${stats.driver}</td>
+                    <td><span class="badge badge-blue">${stats.trips}</span></td>
+                    <td>${Array.from(stats.factories).join(', ') || '—'}</td>
+                    <td>${Array.from(stats.materials).map(m => `<span class="badge badge-purple">${m}</span>`).join(' ') || '—'}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        // ===== التقرير اليومي =====
+        
+        function renderDailyTab() {
+            const { allOrders, allDistributions, dates } = reportData;
+            
+            if (!dates || dates.length === 0) return;
+            
+            const distributedMap = new Map();
+            allDistributions.forEach(d => {
+                if (!distributedMap.has(d.orderId)) distributedMap.set(d.orderId, d);
+            });
+            
+            const dailyStats = {};
+            dates.forEach(d => {
+                dailyStats[d] = { orders: 0, distributed: 0, trucks: new Set() };
+            });
+            
+            allOrders.forEach(o => {
+                if (dailyStats[o.date]) {
+                    dailyStats[o.date].orders++;
+                }
+            });
+            
+            Array.from(distributedMap.values()).forEach(d => {
+                if (dailyStats[d.date]) {
+                    dailyStats[d.date].distributed++;
+                    if (d.truck?.number) dailyStats[d.date].trucks.add(d.truck.number);
+                }
+            });
+            
+            const dateLabels = Object.keys(dailyStats);
+            const orderCounts = dateLabels.map(d => dailyStats[d].orders);
+            const distCounts = dateLabels.map(d => dailyStats[d].distributed);
+            
+            destroyChart('dailyDetailChart');
+            const ctx = document.getElementById('dailyDetailChart').getContext('2d');
+            charts.dailyDetailChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dateLabels,
+                    datasets: [
+                        {
+                            label: 'الطلبات',
+                            data: orderCounts,
+                            backgroundColor: 'rgba(102,126,234,0.8)'
+                        },
+                        {
+                            label: 'تم التوزيع',
+                            data: distCounts,
+                            backgroundColor: 'rgba(56,239,125,0.8)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#a8b2d1', maxRotation: 45 } },
+                        y: { ticks: { color: '#a8b2d1' }, beginAtZero: true }
+                    }
+                }
+            });
+            
+            // جدول يومي
+            const tbody = document.getElementById('dailyTableBody');
+            tbody.innerHTML = dateLabels.map((d, i) => {
+                const stats = dailyStats[d];
+                const pending = Math.max(0, stats.orders - stats.distributed);
+                return `<tr>
+                    <td>${i + 1}</td>
+                    <td>${d}</td>
+                    <td>${getArabicDay(d)}</td>
+                    <td><span class="badge badge-blue">${stats.orders}</span></td>
+                    <td><span class="badge badge-green">${stats.distributed}</span></td>
+                    <td><span class="badge ${pending > 0 ? 'badge-red' : 'badge-green'}">${pending}</span></td>
+                    <td>${stats.trucks.size}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        // ===== كل الطلبات =====
+        
+        function renderAllOrdersTab() {
+            const { allOrders, allDistributions } = reportData;
+            
+            const distributedMap = new Map();
+            allDistributions.forEach(d => {
+                if (!distributedMap.has(d.orderId)) distributedMap.set(d.orderId, d);
+            });
+            
+            document.getElementById('allOrdersCount').textContent = allOrders.length;
+            
+            const tbody = document.getElementById('allOrdersBody');
+            if (allOrders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data"><div class="icon">📭</div><p>لا توجد طلبات في هذه الفترة</p></td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = allOrders.map((order, i) => {
+                const dist = distributedMap.get(order.id);
+                const status = dist ? 'تم التوزيع' : 'في الانتظار';
+                const statusClass = dist ? 'badge-green' : 'badge-red';
+                const truckNum = dist ? (dist.truck?.number || '—') : '—';
+                const time = (order.time && order.time !== 'undefined') ? order.time : '—';
+                
+                return `<tr>
+                    <td>${i + 1}</td>
+                    <td>${order.date || '—'}</td>
+                    <td>${order.factory || '—'}</td>
+                    <td>${order.material || '—'}</td>
+                    <td>${time}</td>
+                    <td><span class="badge ${statusClass}">${status}</span></td>
+                    <td>${truckNum}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        // ========== دالة تصدير Excel الكاملة (8 أوراق) مقتبسة من الصفحة الأولى ==========
+        // تم تعديلها للعمل مع بيانات reportData الموجودة
+        
+        // دالة مساعدة للحصول على المصنع الأكثر تكراراً لسائق معين في رود محدد
+        function getMostFrequentFactoryForDriverByRoad(driverNumber, distributions, road) {
+            const factoryCount = {};
+            distributions.forEach(d => {
+                if(d.truck && d.truck.number === driverNumber && d.road === road) {
+                    // نبحث عن الطلب الأصلي لمعرفة المصنع
+                    const order = reportData.allOrders.find(o => o.id === d.orderId);
+                    if(order && order.factory) {
+                        factoryCount[order.factory] = (factoryCount[order.factory] || 0) + 1;
+                    }
+                }
+            });
+            let maxFactory = '', maxCount = 0;
+            for (const [f,c] of Object.entries(factoryCount)) if(c>maxCount) { maxCount=c; maxFactory=f; }
+            return maxFactory || '—';
+        }
+        
+        // دالة مساعدة للحصول على موقع المصنع (الرياض/الدمام/أخرى) من الإعدادات
+        function getFactoryLocation(factoryName) {
+            let f = factoriesWithLocation.find(f=>f.name === factoryName);
+            return f ? f.location : 'أخرى';
+        }
+        
+        // دالة تنسيق الوقت
+        function formatTime(time) {
+            if (!time || time === 'undefined' || time === 'null' || time.trim() === '') return '—';
+            return time;
+        }
+        
+        // دالة التصدير الرئيسية (8 أوراق)
+        async function exportFullExcel() {
+            const { allOrders, allDistributions, dateRange, dates } = reportData;
+            if (!allOrders.length && !allDistributions.length) {
+                showToast('لا توجد بيانات للتصدير', 'warning');
+                return;
+            }
+            
+            showLoading(true);
+            try {
+                // جلب إعدادات المصانع لتحديد المواقع
+                const settings = await apiCall('/settings');
+                factoriesWithLocation = settings.factories || [];
+                
+                // إحصائيات أساسية
+                const totalTrips = allDistributions.length;
+                // إحصائيات السائقين (من التوزيعات)
+                const driverStatsMap = new Map();
+                allDistributions.forEach(d => {
+                    if (d.truck && d.truck.number) {
+                        const num = d.truck.number;
+                        if (!driverStatsMap.has(num)) {
+                            driverStatsMap.set(num, {
+                                number: num,
+                                driver: d.truck.driver || 'غير معروف',
+                                total: 0
+                            });
+                        }
+                        driverStatsMap.get(num).total++;
+                    }
+                });
+                const driverStats = Object.fromEntries(driverStatsMap);
+                const totalDrivers = Object.keys(driverStats).length;
+                
+                // إحصائيات المصانع
+                const factoryStatsMap = new Map();
+                allOrders.forEach(order => {
+                    const f = order.factory || 'غير محدد';
+                    factoryStatsMap.set(f, (factoryStatsMap.get(f) || 0) + 1);
+                });
+                const factoryStats = Array.from(factoryStatsMap.entries()).map(([name, total]) => ({ name, total }));
+                
+                // إحصائيات أنواع البحص
+                const materialStatsMap = new Map();
+                allOrders.forEach(order => {
+                    const m = order.material || 'غير محدد';
+                    materialStatsMap.set(m, (materialStatsMap.get(m) || 0) + 1);
+                });
+                const materialStats = Array.from(materialStatsMap.entries()).map(([name, total]) => ({ name, total }));
+                
+                // إحصائيات رود
+                const road1Total = allDistributions.filter(d => d.road === 1).length;
+                const road2Total = allDistributions.filter(d => d.road === 2).length;
+                const road3Total = allDistributions.filter(d => d.road === 3).length;
+                
+                // إحصائيات الموقع
+                const locStats = { 'الرياض': 0, 'الدمام': 0, 'أخرى': 0 };
+                allOrders.forEach(order => {
+                    const loc = getFactoryLocation(order.factory);
+                    if (loc === 'الرياض') locStats['الرياض']++;
+                    else if (loc === 'الدمام') locStats['الدمام']++;
+                    else locStats['أخرى']++;
+                });
+                
+                // أيام العمل النشطة (أيام بها توزيعات)
+                const activeDaysSet = new Set();
+                allDistributions.forEach(d => { if(d.date) activeDaysSet.add(d.date); });
+                const totalActiveDays = activeDaysSet.size;
+                const requiredTotal = totalActiveDays * 2;
+                
+                // ترتيب السائقين
+                const sortedDrivers = Object.values(driverStats).sort((a,b) => b.total - a.total);
+                
+                // إحصائيات يومية
+                const dailyData = {};
+                dates.forEach(d => { dailyData[d] = 0; });
+                allOrders.forEach(o => { if(dailyData[o.date] !== undefined) dailyData[o.date]++; });
+                
+                // استخدام ExcelJS
+                const ExcelJS = window.ExcelJS;
+                const workbook = new ExcelJS.Workbook();
+                workbook.creator = 'نظام إدارة طلبات البحص';
+                workbook.created = new Date();
+                
+                // تعريف التنسيقات
+                const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+                const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+                const titleFont = { bold: true, color: { argb: 'FF1F4E79' }, size: 16 };
+                const dataFont = { size: 11 };
+                const centerAlign = { horizontal: 'center', vertical: 'middle' };
+                const rightAlign = { horizontal: 'right', vertical: 'middle' };
+                const thinBorder = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                
+                // الورقة 1: ملخص التقرير
+                let ws1 = workbook.addWorksheet('ملخص التقرير', { views: [{ rightToLeft: true }] });
+                ws1.columns = [{ width: 35 }, { width: 25 }];
+                ws1.mergeCells('A1:B1');
+                ws1.getCell('A1').value = '📊 التقرير الشامل';
+                ws1.getCell('A1').font = { ...titleFont, size: 20 };
+                ws1.getCell('A1').alignment = centerAlign;
+                ws1.getRow(1).height = 45;
+                ws1.mergeCells('A2:B2');
+                ws1.getCell('A2').value = `الفترة: من ${dateRange.from} إلى ${dateRange.to}`;
+                ws1.getCell('A2').font = { bold: true, size: 13, color: { argb: 'FF2E75B6' } };
+                ws1.getCell('A2').alignment = centerAlign;
+                
+                const summ = [
+                    ['إجمالي الطلبات', allOrders.length],
+                    ['إجمالي الرحلات (التوزيعات)', totalTrips],
+                    ['عدد السائقين', totalDrivers],
+                    ['عدد المصانع', factoryStats.length],
+                    ['أنواع البحص', materialStats.length],
+                    ['رحلات رود 1', road1Total],
+                    ['رحلات رود 2', road2Total],
+                    ['رحلات رود 3', road3Total],
+                    ['متوسط الرحلات/سائق', totalDrivers ? (totalTrips / totalDrivers).toFixed(2) : 0],
+                    ['أيام عمل نشطة', totalActiveDays],
+                    ['الهدف الأساسي (2 رود/يوم)', requiredTotal],
+                    ['طلبات الرياض', locStats['الرياض']],
+                    ['طلبات الدمام', locStats['الدمام']],
+                    ['طلبات أخرى', locStats['أخرى']]
+                ];
+                summ.forEach((item, idx) => {
+                    let r = ws1.getRow(4 + idx);
+                    r.values = item;
+                    r.height = 25;
+                    r.eachCell((cell, col) => {
+                        cell.font = col === 1 ? { ...dataFont, bold: true } : { ...dataFont, bold: true, color: { argb: 'FF2E75B6' } };
+                        cell.alignment = col === 1 ? rightAlign : centerAlign;
+                        cell.border = thinBorder;
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: idx % 2 === 0 ? 'FFF2F7FB' : 'FFFFFFFF' } };
+                    });
+                });
+                
+                // الورقة 2: تقرير السائقين
+                let ws2 = workbook.addWorksheet('تقرير السائقين', { views: [{ rightToLeft: true }] });
+                ws2.columns = [{ width: 8 }, { width: 14 }, { width: 22 }, { width: 14 }, { width: 30 }, { width: 30 }, { width: 30 }, { width: 12 }, { width: 14 }, { width: 18 }];
+                ws2.mergeCells('A1:J1');
+                ws2.getCell('A1').value = '🏆 تقرير السائقين مع نسبة الإنجاز (الهدف 2 رود/يوم)';
+                ws2.getCell('A1').font = { ...titleFont, size: 18 };
+                ws2.getCell('A1').alignment = centerAlign;
+                ws2.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E4F0' } };
+                ws2.getRow(1).height = 40;
+                const driverHeaders = ['#', 'رقم السيارة', 'السائق', 'إجمالي', 'المصنع (رود 1)', 'المصنع (رود 2)', 'المصنع (رود 3)', 'النسبة %', 'أيام عمل', 'الهدف'];
+                let hrow = ws2.getRow(2);
+                hrow.values = driverHeaders;
+                hrow.height = 30;
+                hrow.eachCell(cell => { cell.font = headerFont; cell.fill = headerFill; cell.alignment = centerAlign; cell.border = thinBorder; });
+                
+                for (let i = 0; i < sortedDrivers.length; i++) {
+                    let d = sortedDrivers[i];
+                    let perc = requiredTotal > 0 ? ((d.total / requiredTotal) * 100).toFixed(1) : 0;
+                    let f1 = getMostFrequentFactoryForDriverByRoad(d.number, allDistributions, 1);
+                    let f2 = getMostFrequentFactoryForDriverByRoad(d.number, allDistributions, 2);
+                    let f3 = getMostFrequentFactoryForDriverByRoad(d.number, allDistributions, 3);
+                    let row = ws2.getRow(3 + i);
+                    row.values = [i + 1, d.number, d.driver, d.total, f1, f2, f3, perc + '%', totalActiveDays, `${requiredTotal} (2×${totalActiveDays})`];
+                    row.height = 22;
+                    let bg = i % 2 === 0 ? 'FFF2F7FB' : 'FFFFFFFF';
+                    row.eachCell(cell => { cell.font = dataFont; cell.alignment = centerAlign; cell.border = thinBorder; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } }; });
+                }
+                
+                // الورقة 3: رسم السائقين
+                let ws3 = workbook.addWorksheet('رسم السائقين', { views: [{ rightToLeft: true }] });
+                ws3.columns = [{ width: 25 }, { width: 12 }, { width: 60 }];
+                ws3.mergeCells('A1:C1');
+                ws3.getCell('A1').value = '📊 رسم بياني - رحلات السائقين (أفضل 20)';
+                ws3.getCell('A1').font = { ...titleFont, size: 16 };
+                ws3.getCell('A1').alignment = centerAlign;
+                ws3.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E4F0' } };
+                ws3.getRow(1).height = 38;
+                let ch = ['السائق (رقم)', 'الإجمالي', 'رسم بياني'];
+                let chRow = ws3.getRow(2);
+                chRow.values = ch;
+                chRow.height = 28;
+                chRow.eachCell(cell => { cell.font = headerFont; cell.fill = headerFill; cell.alignment = centerAlign; cell.border = thinBorder; });
+                let top20 = sortedDrivers.slice(0, 20);
+                let maxTotal = top20.length ? top20[0].total : 1;
+                top20.forEach((d, i) => {
+                    let row = ws3.getRow(3 + i);
+                    let bar = '█'.repeat(Math.round((d.total / maxTotal) * 40));
+                    row.values = [`${d.driver} (${d.number})`, d.total, bar + ` (${d.total})`];
+                    row.height = 22;
+                    let bg = i % 2 === 0 ? 'FFF2F7FB' : 'FFFFFFFF';
+                    row.eachCell((cell, col) => {
+                        cell.font = col === 3 ? { name: 'Consolas', size: 10, bold: true, color: { argb: 'FF4472C4' } } : dataFont;
+                        cell.alignment = col === 3 ? { horizontal: 'left', vertical: 'middle' } : centerAlign;
+                        cell.border = thinBorder;
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+                    });
+                });
+                
+                // الورقة 4: رسم المصانع
+                let ws4 = workbook.addWorksheet('رسم المصانع', { views: [{ rightToLeft: true }] });
+                ws4.columns = [{ width: 35 }, { width: 14 }, { width: 14 }, { width: 55 }];
+                ws4.mergeCells('A1:D1');
+                ws4.getCell('A1').value = '🏭 رسم بياني - طلبات المصانع';
+                ws4.getCell('A1').font = { ...titleFont, size: 16 };
+                ws4.getCell('A1').alignment = centerAlign;
+                ws4.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } };
+                ws4.getRow(1).height = 38;
+                let fh = ['المصنع', 'الإجمالي', 'النسبة %', 'رسم بياني'];
+                let fhRow = ws4.getRow(2);
+                fhRow.values = fh;
+                fhRow.height = 28;
+                fhRow.eachCell(cell => { cell.font = headerFont; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF548235' } }; cell.alignment = centerAlign; cell.border = thinBorder; });
+                let sortedFactories = factoryStats.sort((a, b) => b.total - a.total);
+                let maxFactory = sortedFactories.length ? sortedFactories[0].total : 1;
+                sortedFactories.forEach((f, i) => {
+                    let percent = allOrders.length > 0 ? ((f.total / allOrders.length) * 100).toFixed(1) : 0;
+                    let bar = '▓'.repeat(Math.round((f.total / maxFactory) * 35)) + ` (${f.total})`;
+                    let row = ws4.getRow(3 + i);
+                    row.values = [f.name, f.total, percent + '%', bar];
+                    row.height = 22;
+                    row.eachCell((cell, col) => {
+                        cell.font = col === 4 ? { name: 'Consolas', size: 10, bold: true, color: { argb: 'FF548235' } } : dataFont;
+                        cell.alignment = col === 4 ? { horizontal: 'left', vertical: 'middle' } : (col === 1 ? rightAlign : centerAlign);
+                        cell.border = thinBorder;
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i % 2 === 0 ? 'FFF2F7FB' : 'FFFFFFFF' } };
+                    });
+                });
+                
+                // الورقة 5: رسم البحص
+                let ws5 = workbook.addWorksheet('رسم البحص', { views: [{ rightToLeft: true }] });
+                ws5.columns = [{ width: 20 }, { width: 16 }, { width: 16 }, { width: 50 }];
+                ws5.mergeCells('A1:D1');
+                ws5.getCell('A1').value = '📦 توزيع أنواع البحص';
+                ws5.getCell('A1').font = { ...titleFont, size: 16 };
+                ws5.getCell('A1').alignment = centerAlign;
+                ws5.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4D6' } };
+                ws5.getRow(1).height = 38;
+                let mh = ['نوع البحص', 'عدد الطلبات', 'النسبة %', 'رسم بياني'];
+                let mhRow = ws5.getRow(2);
+                mhRow.values = mh;
+                mhRow.height = 28;
+                mhRow.eachCell(cell => { cell.font = headerFont; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFED7D31' } }; cell.alignment = centerAlign; cell.border = thinBorder; });
+                let sortedMaterials = materialStats.sort((a, b) => b.total - a.total);
+                let matColors = ['FF4472C4', 'FFED7D31', 'FFA5A5A5', 'FFFFC000', 'FF5B9BD5'];
+                sortedMaterials.forEach((m, i) => {
+                    let percent = allOrders.length > 0 ? ((m.total / allOrders.length) * 100).toFixed(1) : 0;
+                    let pie = '●'.repeat(Math.round(parseFloat(percent) / 2.5)) + ` ${percent}%`;
+                    let row = ws5.getRow(3 + i);
+                    row.values = [`بحص ${m.name}`, m.total, percent + '%', pie];
+                    row.height = 30;
+                    let color = matColors[i % matColors.length];
+                    row.eachCell((cell, col) => {
+                        cell.font = col === 4 ? { name: 'Consolas', size: 12, bold: true, color: { argb: color } } : { ...dataFont, bold: true };
+                        cell.alignment = col === 4 ? { horizontal: 'left', vertical: 'middle' } : centerAlign;
+                        cell.border = thinBorder;
+                    });
+                    ws5.getCell(`A${3 + i}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
+                    ws5.getCell(`A${3 + i}`).font = { ...dataFont, bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+                });
+                
+                // الورقة 6: الرحلات اليومية
+                let ws6 = workbook.addWorksheet('الرحلات اليومية', { views: [{ rightToLeft: true }] });
+                ws6.columns = [{ width: 16 }, { width: 16 }, { width: 14 }, { width: 55 }];
+                ws6.mergeCells('A1:D1');
+                ws6.getCell('A1').value = '📅 الطلبات اليومية';
+                ws6.getCell('A1').font = { ...titleFont, size: 16 };
+                ws6.getCell('A1').alignment = centerAlign;
+                ws6.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E4F0' } };
+                ws6.getRow(1).height = 38;
+                let dh = ['التاريخ', 'اليوم', 'عدد الطلبات', 'رسم بياني'];
+                let dhRow = ws6.getRow(2);
+                dhRow.values = dh;
+                dhRow.height = 28;
+                dhRow.eachCell(cell => { cell.font = headerFont; cell.fill = headerFill; cell.alignment = centerAlign; cell.border = thinBorder; });
+                let sortedDates = Object.entries(dailyData).filter(([, v]) => v > 0).sort((a, b) => a[0].localeCompare(b[0]));
+                let maxDaily = Math.max(1, ...sortedDates.map(([, v]) => v));
+                sortedDates.forEach(([dateStr, count], i) => {
+                    let dayName = new Date(dateStr).toLocaleDateString('ar-SA', { weekday: 'long' });
+                    let bar = '▰'.repeat(Math.round((count / maxDaily) * 35)) + '▱'.repeat(35 - Math.round((count / maxDaily) * 35)) + ` (${count})`;
+                    let row = ws6.getRow(3 + i);
+                    row.values = [dateStr, dayName, count, bar];
+                    row.height = 22;
+                    row.eachCell((cell, col) => {
+                        cell.font = col === 4 ? { name: 'Consolas', size: 9, color: { argb: 'FF4472C4' } } : dataFont;
+                        cell.alignment = col === 4 ? { horizontal: 'left', vertical: 'middle' } : centerAlign;
+                        cell.border = thinBorder;
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i % 2 === 0 ? 'FFF2F7FB' : 'FFFFFFFF' } };
+                    });
+                });
+                
+                // الورقة 7: أفضل 10 سائقين
+                let ws7 = workbook.addWorksheet('أفضل 10 سائقين', { views: [{ rightToLeft: true }] });
+                ws7.columns = [{ width: 12 }, { width: 15 }, { width: 22 }, { width: 16 }, { width: 30 }, { width: 30 }, { width: 18 }];
+                ws7.mergeCells('A1:G1');
+                ws7.getCell('A1').value = '🏆 أفضل 10 سائقين (حسب عدد الرحلات)';
+                ws7.getCell('A1').font = { ...titleFont, size: 18 };
+                ws7.getCell('A1').alignment = centerAlign;
+                ws7.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
+                ws7.getRow(1).height = 42;
+                let th = ['الترتيب', 'رقم السيارة', 'السائق', 'عدد الرحلات', 'المصنع (رود 1)', 'المصنع (رود 2)', 'الميدالية'];
+                let thRow = ws7.getRow(2);
+                thRow.values = th;
+                thRow.height = 30;
+                thRow.eachCell(cell => { cell.font = headerFont; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBF8F00' } }; cell.alignment = centerAlign; cell.border = thinBorder; });
+                let medals = ['🥇 الأول', '🥈 الثاني', '🥉 الثالث'];
+                let medalColors = ['FFFFD700', 'FFC0C0C0', 'FFCD7F32'];
+                for (let i = 0; i < Math.min(10, sortedDrivers.length); i++) {
+                    let d = sortedDrivers[i];
+                    let f1 = getMostFrequentFactoryForDriverByRoad(d.number, allDistributions, 1);
+                    let f2 = getMostFrequentFactoryForDriverByRoad(d.number, allDistributions, 2);
+                    let row = ws7.getRow(3 + i);
+                    row.values = [i + 1, d.number, d.driver, d.total, f1, f2, i < 3 ? medals[i] : '⭐ متميز'];
+                    row.height = 32;
+                    row.eachCell(cell => {
+                        cell.font = { ...dataFont, bold: i < 3, size: i < 3 ? 13 : 11 };
+                        cell.alignment = centerAlign;
+                        cell.border = thinBorder;
+                    });
+                    if (i < 3) {
+                        row.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: medalColors[i] } }; });
+                    } else {
+                        row.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i % 2 === 0 ? 'FFFFF2CC' : 'FFFFFFFF' } }; });
+                    }
+                }
+                
+                // الورقة 8: تفاصيل الرحلات
+                let ws8 = workbook.addWorksheet('تفاصيل الرحلات', { views: [{ rightToLeft: true }] });
+                ws8.columns = [{ width: 8 }, { width: 14 }, { width: 14 }, { width: 20 }, { width: 35 }, { width: 15 }, { width: 12 }, { width: 15 }];
+                ws8.mergeCells('A1:H1');
+                ws8.getCell('A1').value = '📋 تفاصيل جميع الرحلات (مع التوقيت)';
+                ws8.getCell('A1').font = { ...titleFont, size: 16 };
+                ws8.getCell('A1').alignment = centerAlign;
+                ws8.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E4F0' } };
+                ws8.getRow(1).height = 38;
+                let trh = ['#', 'التاريخ', 'رقم السيارة', 'السائق', 'المصنع', 'نوع البحص', 'الرود', 'التوقيت'];
+                let trhRow = ws8.getRow(2);
+                trhRow.values = trh;
+                trhRow.height = 28;
+                trhRow.eachCell(cell => { cell.font = headerFont; cell.fill = headerFill; cell.alignment = centerAlign; cell.border = thinBorder; });
+                let sortedTrips = [...allDistributions].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+                for (let i = 0; i < sortedTrips.length; i++) {
+                    const trip = sortedTrips[i];
+                    // البحث عن الطلب الأصلي للحصول على المصنع ونوع البحص
+                    const order = allOrders.find(o => o.id === trip.orderId);
+                    const row = ws8.getRow(3 + i);
+                    row.values = [
+                        i + 1,
+                        trip.date || '',
+                        trip.truck?.number || '',
+                        trip.truck?.driver || '',
+                        order?.factory || '',
+                        order?.material || '',
+                        trip.road === 1 ? 'رود 1' : (trip.road === 2 ? 'رود 2' : 'رود ' + trip.road),
+                        formatTime(trip.time)
+                    ];
+                    row.height = 20;
+                    let bg = i % 2 === 0 ? 'FFF2F7FB' : 'FFFFFFFF';
+                    row.eachCell(cell => {
+                        cell.font = dataFont;
+                        cell.alignment = centerAlign;
+                        cell.border = thinBorder;
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+                    });
+                    // تلوين عمود الرود
+                    const roadCell = ws8.getCell(`G${3 + i}`);
+                    roadCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: trip.road === 1 ? 'FFD6E4F0' : (trip.road === 2 ? 'FFFCE4D6' : 'FFE2EFDA') } };
+                    roadCell.font = { ...dataFont, bold: true, color: { argb: trip.road === 1 ? 'FF2E75B6' : (trip.road === 2 ? 'FFED7D31' : 'FF548235') } };
+                }
+                
+                // حفظ الملف
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), `تقرير_شامل_${dateRange.from}_إلى_${dateRange.to}.xlsx`);
+                showToast('✅ تم تصدير التقرير الكامل (8 أوراق)', 'success');
+            } catch (e) {
+                console.error(e);
+                showToast('خطأ في التصدير: ' + e.message, 'error');
+            }
+            showLoading(false);
+        }
+        
+        // ===== تصدير PDF (طباعة مع إظهار كل التبويبات) =====
+        function exportToPDF() {
+            showToast('جاري تحضير الطباعة...', 'info');
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('active'));
+            setTimeout(() => {
+                window.print();
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                const activeBtn = document.querySelector('.tab-btn.active');
+                if (activeBtn) {
+                    const tabName = activeBtn.getAttribute('onclick').match(/'(\w+)'/)[1];
+                    document.getElementById('tab-' + tabName).classList.add('active');
+                }
+            }, 500);
+        }
+        
+        // ===== تحميل الفلاتر =====
+        
+        async function loadFilters() {
+            try {
+                const settings = await apiCall('/settings');
+                factoriesWithLocation = settings.factories || []; // تخزين لاستخدامه في دالة Excel
+                
+                // تحميل المصانع
+                const factorySelect = document.getElementById('filterFactory');
+                const factories = settings.factories || [];
+                factories.forEach(f => {
+                    const name = typeof f === 'string' ? f : f.name;
+                    if (name) {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name;
+                        factorySelect.appendChild(opt);
+                    }
+                });
+                
+                // تحميل أنواع البحص
+                const materialSelect = document.getElementById('filterMaterial');
+                const products = settings.products || [];
+                products.forEach(p => {
+                    const name = typeof p === 'string' ? p : p.name;
+                    if (name) {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name;
+                        materialSelect.appendChild(opt);
+                    }
+                });
+            } catch(e) {
+                console.error('خطأ في تحميل الفلاتر:', e);
+            }
+        }
+        
+        // ===== Navigation =====
+        
+        function loadNav() {
+            fetch('/api/me', { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.user) {
+                        const role = data.user.role;
+                        let navHtml = '';
+                        if (role === 'admin' || role === 'user') {
+                            navHtml = `
+                                <a href="index.html" class="nav-link">📊 الرئيسية</a>
+                                <a href="orders.html" class="nav-link">📝 الطلبات</a>
+                                <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
+                                <a href="trucks.html" class="nav-link">🚛 السيارات</a>
+                                <a href="products.html" class="nav-link">📦 أنواع البحص</a>
+                                <a href="factories.html" class="nav-link">🏭 المصانع</a>
+                                <a href="reports.html" class="nav-link active">📊 التقارير</a>
+                                <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
+                                <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
+                                <a href="users.html" class="nav-link">👥 المستخدمين</a>
+                                <a href="logs.html" class="nav-link">📜 السجلات</a>
+                            `;
+                        } else if (role === 'client') {
+                            window.location.href = '/orders.html';
+                            return;
+                        }
+                        document.getElementById('navLinks').innerHTML = navHtml;
+                    } else {
+                        window.location.href = '/login.html';
+                    }
+                })
+                .catch(() => window.location.href = '/login.html');
+        }
+        
+        // ===== التهيئة =====
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            loadNav();
+            
+            // تعيين تاريخ اليوم كافتراضي
+            const today = formatDate(new Date());
+            document.getElementById('dateFrom').value = today;
+            document.getElementById('dateTo').value = today;
+            
+            // تحميل الفلاتر
+            await loadFilters();
+            
+            // تحميل تقرير اليوم
+            await loadReport();
+        });
+    </script>
+    <script src="navbar.js"></script>
+</body>
+</html>

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>السيارات - نظام إدارة طلبات كسارة الحبردي</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:linear-gradient(135deg,#1a1a2e,#16213e); color:#fff; }
+        .container { max-width:1400px; margin:0 auto; padding:20px; }
+        .header { text-align:center; padding:30px; background:linear-gradient(135deg,#667eea,#764ba2); border-radius:20px; margin-bottom:30px; position:relative; }
+        .nav-links { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:30px; }
+        .nav-link { padding:12px 24px; background:rgba(255,255,255,0.1); border-radius:12px; text-decoration:none; color:#fff; font-weight:600; }
+        .nav-link:hover,.nav-link.active { background:linear-gradient(135deg,#667eea,#764ba2); }
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:20px; margin-bottom:30px; }
+        .stat-card { background:rgba(255,255,255,0.05); border-radius:15px; padding:20px; text-align:center; }
+        .stat-card h3 { font-size:2em; color:#667eea; }
+        .search-box { padding:12px; border-radius:10px; border:2px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; width:100%; max-width:400px; margin-bottom:20px; }
+        .trucks-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:15px; }
+        .truck-card { background:rgba(255,255,255,0.05); border-radius:12px; padding:15px; text-align:center; border:2px solid transparent; transition:0.3s; }
+        .truck-card.available { border-color:#38ef7d; }
+        .truck-card.assigned-road1 { border-color:#667eea; background:rgba(102,126,234,0.2); }
+        .truck-card.assigned-road2 { border-color:#f5576c; background:rgba(245,87,108,0.2); }
+        .truck-card.assigned-road3 { border-color:#ff9a44; background:rgba(255,154,68,0.2); }
+        .truck-card.assigned-road4 { border-color:#4facfe; background:rgba(79,172,254,0.2); }
+        .btn { padding:12px 25px; border:none; border-radius:12px; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:8px; }
+        .btn-success { background:linear-gradient(135deg,#11998e,#38ef7d); color:#fff; }
+        .btn-warning { background:linear-gradient(135deg,#f093fb,#f5576c); color:#fff; }
+        .btn-danger { background:linear-gradient(135deg,#eb3349,#f45c43); color:#fff; }
+        .btn-info { background:#4facfe; color:#fff; }
+        .btn-sm { padding:6px 12px; font-size:0.9em; }
+        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index:1000; }
+        .modal.active { display:flex; }
+        .modal-content { background:#1a1a2e; border-radius:20px; padding:30px; max-width:500px; width:90%; }
+        .form-group { margin-bottom:15px; }
+        .form-group input { width:100%; padding:10px; border-radius:8px; border:none; background:rgba(255,255,255,0.1); color:#fff; }
+        .toast-container { position:fixed; top:20px; left:20px; z-index:3000; }
+        .toast { padding:15px 25px; border-radius:10px; margin-bottom:10px; font-weight:600; }
+        .toast-success { background:#11998e; }
+        .toast-error { background:#eb3349; }
+        .toast-info { background:#4facfe; }
+        .loading { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; flex-direction:column; z-index:2000; }
+        .loading.active { display:flex; }
+        .spinner { width:50px; height:50px; border:4px solid rgba(255,255,255,0.3); border-top-color:#667eea; border-radius:50%; animation:spin 1s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .upload-section { display:flex; gap:15px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
+        .upload-label { background:#4facfe; padding:10px 20px; border-radius:30px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; font-weight:bold; transition:0.3s; }
+        .upload-label:hover { background:#2a7fbf; transform:scale(1.02); }
+        .file-name { color:#a8b2d1; font-size:0.9em; }
+        .btn-clear { background:#eb3349; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="container">
+        <div class="header"><h1>🚛 إدارة السيارات والسائقين</h1>
+            <div style="position: absolute; top: 20px; left: 20px;"><button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button></div>
+        </div>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">📊 الرئيسية</a>
+            <a href="orders.html" class="nav-link">📝 الطلبات</a>
+            <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
+            <a href="trucks.html" class="nav-link active">🚛 السيارات</a>
+            <a href="products.html" class="nav-link">📦 أنواع البحص</a>
+            <a href="factories.html" class="nav-link">🏭 المصانع</a>
+            <a href="reports.html" class="nav-link">📊 التقارير</a>
+            <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="upload-section">
+            <button class="btn btn-success" onclick="openAddTruckModal()">➕ إضافة سيارة</button>
+            <label class="upload-label">
+                📂 رفع ملف Excel/CSV
+                <input type="file" id="uploadFile" accept=".xlsx, .csv, .xls" style="display:none;" onchange="importTrucksFromFile(event)">
+            </label>
+            <button class="btn btn-danger btn-clear" onclick="clearAllTrucks()">🗑️ مسح جميع السيارات</button>
+            <span id="fileNameDisplay" class="file-name"></span>
+        </div>
+        <input type="text" class="search-box" id="truckSearch" placeholder="🔍 بحث..." onkeyup="renderTrucksGrid()">
+        <div class="trucks-grid" id="trucksGrid"></div>
+    </div>
+    <div class="modal" id="truckModal"><div class="modal-content"><h3 id="truckModalTitle">➕ إضافة سيارة</h3><input type="hidden" id="truckEditIndex"><div class="form-group"><label>🔢 رقم السيارة</label><input type="text" id="truckNumber"></div><div class="form-group"><label>👤 اسم السائق</label><input type="text" id="truckDriver"></div><div style="margin-top:20px;"><button class="btn btn-danger" onclick="closeModal()">إلغاء</button><button class="btn btn-success" onclick="saveTruck()">حفظ</button></div></div></div>
+
+    <script>
+        const API_BASE = '/api';
+        let trucks = [], distribution = [];
+
+        async function apiCall(endpoint, method='GET', data=null) {
+            const options = { method, headers:{'Content-Type':'application/json'}, credentials:'include' };
+            if(data && (method==='POST'||method==='PUT')) options.body = JSON.stringify(data);
+            const res = await fetch(`${API_BASE}${endpoint}`, options);
+            if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
+            if(!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        async function loadSettings() {
+            const data = await apiCall('/settings');
+            trucks = data.trucks || [];
+            console.log('✅ تم تحميل السيارات:', trucks.length);
+        }
+
+        async function loadTodayDistribution() {
+            const today = new Date().toISOString().split('T')[0];
+            const data = await apiCall(`/day/${today}`);
+            distribution = data.distribution || [];
+        }
+
+        async function saveSettings() {
+            const currentSettings = await apiCall('/settings');
+            const settings = { factories: currentSettings.factories, materials: currentSettings.materials, trucks };
+            await apiCall('/settings', 'PUT', settings);
+        }
+
+        function getRoadStats() {
+            const roadTrucks = new Map();
+            distribution.forEach(d => {
+                if (d.truck && d.road) {
+                    if (!roadTrucks.has(d.road)) roadTrucks.set(d.road, new Set());
+                    roadTrucks.get(d.road).add(d.truck.number);
+                }
+            });
+            const stats = {};
+            for (let [road, trucksSet] of roadTrucks.entries()) stats[road] = trucksSet.size;
+            const usedTrucks = new Set();
+            distribution.forEach(d => { if (d.truck) usedTrucks.add(d.truck.number); });
+            const available = trucks.length - usedTrucks.size;
+            return { stats, available, total: trucks.length };
+        }
+
+        function renderStatsGrid() {
+            const { stats, available, total } = getRoadStats();
+            const maxRoad = Math.max(1, ...Object.keys(stats).map(Number), 0);
+            const container = document.getElementById('statsGrid');
+            let html = `<div class="stat-card"><h3>${total}</h3><p>🚛 إجمالي السيارات</p></div>
+                        <div class="stat-card"><h3>${available}</h3><p>🟢 متاحة</p></div>`;
+            for (let r = 1; r <= maxRoad; r++) {
+                const count = stats[r] || 0;
+                let color = '';
+                if (r === 1) color = '🔵';
+                else if (r === 2) color = '🔴';
+                else if (r === 3) color = '🟠';
+                else if (r === 4) color = '🟣';
+                else color = `رود ${r}`;
+                html += `<div class="stat-card"><h3>${count}</h3><p>${color} رود ${r}</p></div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        async function renderTrucksGrid() {
+            const search = document.getElementById('truckSearch').value.toLowerCase();
+            const filtered = trucks.filter(t => t.number.toLowerCase().includes(search) || t.driver.toLowerCase().includes(search));
+            const truckRoads = new Map();
+            distribution.forEach(d => {
+                if (d.truck) {
+                    if (!truckRoads.has(d.truck.number)) truckRoads.set(d.truck.number, new Set());
+                    truckRoads.get(d.truck.number).add(d.road);
+                }
+            });
+            const container = document.getElementById('trucksGrid');
+            if (filtered.length === 0) { container.innerHTML='<p style="grid-column:1/-1; text-align:center;">لا توجد نتائج</p>'; return; }
+            container.innerHTML = filtered.map((t, idx) => {
+                const roads = truckRoads.get(t.number) || new Set();
+                let cls = 'available';
+                let statusText = '🟢 متاح';
+                if (roads.size > 0) {
+                    const roadArray = Array.from(roads).sort((a,b)=>a-b);
+                    const roadList = roadArray.join(', ');
+                    statusText = `🚚 شارك في ${roads.size} رود (${roadList})`;
+                    const maxRoad = Math.max(...roadArray);
+                    if (maxRoad === 1) cls = 'assigned-road1';
+                    else if (maxRoad === 2) cls = 'assigned-road2';
+                    else if (maxRoad === 3) cls = 'assigned-road3';
+                    else if (maxRoad === 4) cls = 'assigned-road4';
+                    else cls = 'assigned-road1';
+                }
+                const originalIdx = trucks.findIndex(tr => tr.number === t.number);
+                return `<div class="truck-card ${cls}">
+                            <div class="truck-number"><strong>${t.number}</strong></div>
+                            <div class="truck-driver">${t.driver}</div>
+                            <div style="margin:8px 0;">${statusText}</div>
+                            <div>
+                                <button class="btn btn-warning btn-sm" onclick="openEditTruckModal(${originalIdx})">✏️</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteTruck(${originalIdx})">🗑️</button>
+                            </div>
+                        </div>`;
+            }).join('');
+            renderStatsGrid();
+        }
+
+        async function importTrucksFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const fileNameSpan = document.getElementById('fileNameDisplay');
+            fileNameSpan.textContent = file.name;
+            showLoading(true);
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    if (!rows || rows.length < 2) {
+                        showToast('الملف فارغ أو لا يحتوي على بيانات', 'error');
+                        showLoading(false);
+                        return;
+                    }
+                    const headers = rows[0].map(cell => String(cell || '').trim().toLowerCase());
+                    let numberColIdx = -1, driverColIdx = -1;
+                    for (let i = 0; i < headers.length; i++) {
+                        const h = headers[i];
+                        if (h.includes('رقم') || h === 'number' || h === 'num' || h === 'id') numberColIdx = i;
+                        if (h.includes('سائق') || h === 'driver' || h === 'name') driverColIdx = i;
+                    }
+                    if (numberColIdx === -1) numberColIdx = 0;
+                    if (driverColIdx === -1) driverColIdx = 1;
+                    let addedCount = 0;
+                    let duplicateCount = 0;
+                    let duplicateNumbers = [];
+                    for (let i = 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.length < 2) continue;
+                        let number = row[numberColIdx] ? String(row[numberColIdx]).trim() : '';
+                        let driver = row[driverColIdx] ? String(row[driverColIdx]).trim() : '';
+                        if (number === '' || driver === '') continue;
+                        const existing = trucks.find(t => t.number === number);
+                        if (existing) {
+                            duplicateCount++;
+                            duplicateNumbers.push(number);
+                            continue;
+                        }
+                        trucks.push({ number, driver });
+                        addedCount++;
+                    }
+                    if (addedCount > 0) {
+                        await saveSettings();
+                        await renderTrucksGrid();
+                        showToast(`✅ تم إضافة ${addedCount} سيارة جديدة (تم تخطي ${duplicateCount} مكررة)`, 'success');
+                    } else {
+                        if (duplicateCount > 0) {
+                            showToast(`⚠️ لم تتم إضافة أي سيارة جديدة. كل السيارات مكررة (${duplicateCount} سيارة).`, 'warning');
+                        } else {
+                            showToast('لم يتم العثور على بيانات صالحة في الملف', 'error');
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast('خطأ في قراءة الملف: ' + err.message, 'error');
+                } finally {
+                    showLoading(false);
+                    event.target.value = '';
+                    setTimeout(() => { fileNameSpan.textContent = ''; }, 3000);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function clearAllTrucks() {
+            if (!confirm('⚠️ تحذير: هذا الإجراء سيمسح جميع السيارات الحالية. لا يمكن التراجع. هل أنت متأكد؟')) return;
+            showLoading(true);
+            try {
+                trucks = [];
+                await saveSettings();
+                await loadTodayDistribution();
+                await renderTrucksGrid();
+                showToast('✅ تم مسح جميع السيارات بنجاح', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('خطأ في المسح: ' + err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function openAddTruckModal() {
+            document.getElementById('truckModalTitle').innerText = '➕ إضافة سيارة';
+            document.getElementById('truckEditIndex').value = '';
+            document.getElementById('truckNumber').value = '';
+            document.getElementById('truckDriver').value = '';
+            document.getElementById('truckModal').classList.add('active');
+        }
+
+        function openEditTruckModal(idx) {
+            document.getElementById('truckModalTitle').innerText = '✏️ تعديل السيارة';
+            document.getElementById('truckEditIndex').value = idx;
+            document.getElementById('truckNumber').value = trucks[idx].number;
+            document.getElementById('truckDriver').value = trucks[idx].driver;
+            document.getElementById('truckModal').classList.add('active');
+        }
+
+        async function saveTruck() {
+            const number = document.getElementById('truckNumber').value.trim();
+            const driver = document.getElementById('truckDriver').value.trim();
+            const editIdx = document.getElementById('truckEditIndex').value;
+            if(!number || !driver) { showToast('املأ جميع الحقول','error'); return; }
+            if(trucks.some((t,i)=> t.number===number && i!=editIdx)) { showToast('الرقم موجود','error'); return; }
+            if(editIdx !== '') trucks[parseInt(editIdx)] = { number, driver };
+            else trucks.push({ number, driver });
+            await saveSettings();
+            await renderTrucksGrid();
+            closeModal();
+            showToast('✅ تم الحفظ','success');
+        }
+
+        async function deleteTruck(idx) {
+            if(!confirm(`حذف السيارة ${trucks[idx].number}؟`)) return;
+            trucks.splice(idx,1);
+            await saveSettings();
+            await renderTrucksGrid();
+            showToast('تم الحذف','info');
+        }
+
+        function logout() {
+            if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html');
+        }
+
+        function showToast(msg,type){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className=`toast toast-${type}`; t.innerText=msg; c.appendChild(t); setTimeout(()=>t.remove(),3000); }
+        function showLoading(show){ document.getElementById('loading').classList.toggle('active',show); }
+        function closeModal(){ document.getElementById('truckModal').classList.remove('active'); }
+
+        document.addEventListener('DOMContentLoaded', async ()=>{
+            showLoading(true);
+            try {
+                await loadSettings();
+                await loadTodayDistribution();
+                await renderTrucksGrid();
+                console.log('عدد السيارات الحالية:', trucks.length);
+                if (trucks.length === 0) {
+                    showToast('⚠️ لا توجد سيارات. يرجى إضافة سيارات أو استخدام زر "مسح جميع السيارات" ثم إعادة تحميل الصفحة.', 'warning');
+                }
+            } catch (err) {
+                console.error('خطأ في تحميل الصفحة:', err);
+                showToast('حدث خطأ في تحميل البيانات', 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+    </script>
+    <script src="navbar.js"></script>
+</body>
+</html>

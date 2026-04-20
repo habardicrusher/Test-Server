@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المصانع - نظام إدارة طلبات البحص</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:linear-gradient(135deg,#1a1a2e,#16213e); color:#fff; }
+        .container { max-width:1200px; margin:0 auto; padding:20px; }
+        .header { text-align:center; padding:30px; background:linear-gradient(135deg,#667eea,#764ba2); border-radius:20px; margin-bottom:30px; position:relative; }
+        .nav-links { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:30px; }
+        .nav-link { padding:12px 24px; background:rgba(255,255,255,0.1); border-radius:12px; text-decoration:none; color:#fff; font-weight:600; }
+        .nav-link:hover,.nav-link.active { background:linear-gradient(135deg,#667eea,#764ba2); }
+        .btn { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; font-weight:600; margin:5px; }
+        .btn-success { background:#11998e; color:#fff; }
+        .btn-danger { background:#eb3349; color:#fff; }
+        .btn-warning { background:#f093fb; color:#fff; }
+        .card { background:rgba(255,255,255,0.05); border-radius:15px; padding:20px; margin-bottom:25px; }
+        .form-row { display:flex; flex-wrap:wrap; gap:15px; align-items:flex-end; }
+        .form-group { flex:1; min-width:200px; display:flex; flex-direction:column; gap:5px; }
+        .form-group label { font-size:0.85em; color:#a8b2d1; }
+        .form-group input, .form-group select { padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); color:#fff; }
+        table { width:100%; border-collapse:collapse; margin-top:20px; }
+        th, td { padding:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.1); }
+        th { background:rgba(102,126,234,0.3); }
+        .toast-container { position:fixed; top:20px; left:20px; z-index:3000; }
+        .toast { padding:12px 20px; border-radius:8px; margin-bottom:10px; font-weight:600; }
+        .toast-success { background:#11998e; }
+        .toast-error { background:#eb3349; }
+        .loading { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; flex-direction:column; z-index:2000; }
+        .loading.active { display:flex; }
+        .spinner { width:40px; height:40px; border:4px solid rgba(255,255,255,0.3); border-top-color:#667eea; border-radius:50%; animation:spin 1s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index:1000; }
+        .modal.active { display:flex; }
+        .modal-content { background:#1a1a2e; border-radius:20px; padding:30px; max-width:500px; width:90%; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="container">
+        <div class="header"><h1>🏭 إدارة المصانع والمواقع</h1>
+            <div style="position:absolute; top:20px; left:20px;"><button onclick="logout()" style="background:linear-gradient(135deg,#f5576c,#eb3349); border:none; padding:8px 20px; border-radius:25px; color:white; font-weight:bold; cursor:pointer;">🚪 تسجيل الخروج</button></div>
+        </div>
+        <div class="nav-links" id="navLinks"></div>
+
+        <div class="card">
+            <h3>➕ إضافة مصنع جديد</h3>
+            <div class="form-row">
+                <div class="form-group"><label>اسم المصنع</label><input type="text" id="factoryName"></div>
+                <div class="form-group"><label>الموقع</label>
+                    <select id="factoryLocation">
+                        <option value="الرياض">الرياض</option>
+                        <option value="الدمام">الدمام</option>
+                        <option value="جدة">جدة</option>
+                        <option value="أخرى">أخرى</option>
+                    </select>
+                </div>
+                <div class="form-group"><button class="btn btn-success" onclick="addFactory()">➕ إضافة</button></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📋 قائمة المصانع</h3>
+            <table id="factoriesTable">
+                <thead><tr><th>#</th><th>اسم المصنع</th><th>الموقع</th><th>إجراءات</th></tr></thead>
+                <tbody id="factoriesBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal" id="editFactoryModal">
+        <div class="modal-content">
+            <h3>✏️ تعديل المصنع</h3>
+            <input type="hidden" id="editFactoryIndex">
+            <div class="form-group"><label>اسم المصنع</label><input type="text" id="editFactoryName"></div>
+            <div class="form-group"><label>الموقع</label>
+                <select id="editFactoryLocation">
+                    <option value="الرياض">الرياض</option>
+                    <option value="الدمام">الدمام</option>
+                    <option value="جدة">جدة</option>
+                    <option value="أخرى">أخرى</option>
+                </select>
+            </div>
+            <div style="margin-top:20px;"><button class="btn btn-danger" onclick="closeModal()">إلغاء</button><button class="btn btn-success" onclick="saveFactoryEdit()">حفظ</button></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let factories = [];
+
+        async function apiCall(endpoint, method='GET', data=null) {
+            const opts = { method, headers:{'Content-Type':'application/json'}, credentials:'include' };
+            if(data && (method==='POST'||method==='PUT')) opts.body = JSON.stringify(data);
+            const res = await fetch(`${API_BASE}${endpoint}`, opts);
+            if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
+            if(!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        async function loadFactories() {
+            showLoading(true);
+            try {
+                const settings = await apiCall('/settings');
+                factories = settings.factories || [];
+                renderFactoriesTable();
+            } catch(e) { showToast('خطأ في تحميل البيانات','error'); }
+            showLoading(false);
+        }
+
+        function renderFactoriesTable() {
+            const tbody = document.getElementById('factoriesBody');
+            if(!factories.length) { tbody.innerHTML='<tr><td colspan="4">لا توجد مصانع</td></tr>'; return; }
+            tbody.innerHTML = factories.map((f, idx) => `
+                <tr>
+                    <td>${idx+1}</td>
+                    <td>${escapeHtml(f.name)}</td>
+                    <td>${escapeHtml(f.location || 'الرياض')}</td>
+                    <td>
+                        <button class="btn btn-warning" onclick="openEditModal(${idx})">✏️ تعديل</button>
+                        <button class="btn btn-danger" onclick="deleteFactory(${idx})">🗑️ حذف</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function addFactory() {
+            const name = document.getElementById('factoryName').value.trim();
+            const location = document.getElementById('factoryLocation').value;
+            if(!name) { showToast('أدخل اسم المصنع','error'); return; }
+            factories.push({ name, location });
+            await saveFactories();
+            document.getElementById('factoryName').value = '';
+            renderFactoriesTable();
+            showToast('✅ تم إضافة المصنع','success');
+        }
+
+        function openEditModal(idx) {
+            const f = factories[idx];
+            document.getElementById('editFactoryIndex').value = idx;
+            document.getElementById('editFactoryName').value = f.name;
+            document.getElementById('editFactoryLocation').value = f.location || 'الرياض';
+            document.getElementById('editFactoryModal').classList.add('active');
+        }
+
+        async function saveFactoryEdit() {
+            const idx = parseInt(document.getElementById('editFactoryIndex').value);
+            const name = document.getElementById('editFactoryName').value.trim();
+            const location = document.getElementById('editFactoryLocation').value;
+            if(!name) { showToast('أدخل اسم المصنع','error'); return; }
+            factories[idx] = { name, location };
+            await saveFactories();
+            renderFactoriesTable();
+            closeModal();
+            showToast('✅ تم التعديل','success');
+        }
+
+        async function deleteFactory(idx) {
+            if(!confirm(`حذف المصنع "${factories[idx].name}"؟`)) return;
+            factories.splice(idx,1);
+            await saveFactories();
+            renderFactoriesTable();
+            showToast('تم الحذف','info');
+        }
+
+        async function saveFactories() {
+            try {
+                const currentSettings = await apiCall('/settings');
+                const newSettings = {
+                    factories: factories,
+                    materials: currentSettings.materials || [],
+                    trucks: currentSettings.trucks || []
+                };
+                await apiCall('/settings', 'PUT', newSettings);
+            } catch(e) { showToast('خطأ في حفظ البيانات','error'); }
+        }
+
+        function closeModal() { document.getElementById('editFactoryModal').classList.remove('active'); }
+        function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+        function showToast(msg,type){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className=`toast toast-${type}`; t.innerText=msg; c.appendChild(t); setTimeout(()=>t.remove(),3000); }
+        function showLoading(s){ document.getElementById('loading').classList.toggle('active',s); }
+        function logout(){ if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html'); }
+        function loadNav(){ fetch('/api/me',{credentials:'include'}).then(r=>r.json()).then(data=>{ if(data.user) document.getElementById('navLinks').innerHTML=`<a href="index.html" class="nav-link">📊 الرئيسية</a><a href="orders.html" class="nav-link">📝 الطلبات</a><a href="distribution.html" class="nav-link">🚚 التوزيع</a><a href="trucks.html" class="nav-link">🚛 السيارات</a><a href="products.html" class="nav-link">📦 أنواع البحص</a><a href="factories.html" class="nav-link active">🏭 المصانع</a><a href="reports.html" class="nav-link">📊 التقارير</a><a href="settings.html" class="nav-link">⚙️ الإعدادات</a><a href="restrictions.html" class="nav-link">⛔ الحظر</a><a href="users.html" class="nav-link">👥 المستخدمين</a><a href="logs.html" class="nav-link">📜 السجلات</a>`; else window.location.href='/login.html'; }).catch(()=>window.location.href='/login.html'); }
+        document.addEventListener('DOMContentLoaded', () => { loadNav(); loadFactories(); });
+    </script>
+    <script src="navbar.js"></script>
+</body>
+</html>

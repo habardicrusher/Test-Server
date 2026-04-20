@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>القيود - نظام إدارة طلبات كسارة الحبردي</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin-bottom: 30px; position: relative; }
+        .header h1 { font-size: 2em; margin-bottom: 8px; }
+        .header p { color: rgba(255,255,255,0.8); }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
+        .nav-link { padding: 12px 24px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; font-weight: 600; transition: all 0.3s; }
+        .nav-link:hover, .nav-link.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transform: translateY(-2px); }
+        .card { background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); border-radius: 20px; padding: 28px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.1); }
+        .card h2 { color: #667eea; margin-bottom: 10px; font-size: 1.4em; }
+        .btn { padding: 12px 25px; border: none; border-radius: 12px; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #1a1a2e; }
+        .btn-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: #fff; }
+        .btn-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #fff; }
+        .btn-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #1a1a2e; }
+        .btn-sm { padding: 8px 16px; font-size: 0.9em; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+        .form-group label { font-weight: 600; color: #a8b2d1; font-size: 0.95em; }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 12px 15px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05); color: #fff; font-size: 1em; font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none; border-color: #667eea;
+        }
+        .form-group select option { background: #1a1a2e; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .restriction-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-right: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+        .restriction-item:hover { background: rgba(255,255,255,0.08); transform: translateX(-3px); }
+        .restriction-item.inactive { border-right-color: #555; opacity: 0.6; }
+        .restriction-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; margin-bottom: 12px; }
+        .restriction-info h3 { font-size: 1.1em; color: #fff; margin-bottom: 5px; }
+        .restriction-info p { color: #a8b2d1; font-size: 0.9em; }
+        .restriction-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .factories-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .factory-tag {
+            background: rgba(235,51,73,0.2);
+            border: 1px solid rgba(235,51,73,0.4);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: #f45c43;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 700;
+        }
+        .status-active { background: rgba(17,153,142,0.3); color: #38ef7d; border: 1px solid rgba(17,153,142,0.4); }
+        .status-inactive { background: rgba(100,100,100,0.3); color: #aaa; border: 1px solid rgba(100,100,100,0.4); }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 30px; max-width: 600px; width: 90%; border: 1px solid rgba(255,255,255,0.1); max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .modal-header h3 { font-size: 1.3em; color: #667eea; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+        .close-modal { background: none; border: none; color: #fff; font-size: 1.5em; cursor: pointer; line-height: 1; }
+        .close-modal:hover { color: #f45c43; }
+        .factories-checkboxes { max-height: 200px; overflow-y: auto; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; border: 2px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 10px; }
+        .checkbox-item { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 6px 8px; border-radius: 8px; transition: background 0.2s; }
+        .checkbox-item:hover { background: rgba(255,255,255,0.05); }
+        .checkbox-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #667eea; }
+        .checkbox-item label { cursor: pointer; color: #fff; font-size: 0.95em; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #a8b2d1; }
+        .empty-state .icon { font-size: 4em; margin-bottom: 15px; }
+        .empty-state p { font-size: 1.1em; }
+        .toast-container { position: fixed; top: 20px; left: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 15px 25px; border-radius: 10px; color: #fff; font-weight: 600; animation: slideIn 0.3s ease; max-width: 350px; }
+        .toast-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #1a1a2e; }
+        .toast-error { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
+        .toast-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #1a1a2e; }
+        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; gap: 15px; }
+        .loading.active { display: flex; }
+        .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #667eea; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .stats-row { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        .stat-mini { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px 20px; border: 1px solid rgba(255,255,255,0.1); text-align: center; min-width: 130px; }
+        .stat-mini .num { font-size: 2em; font-weight: 800; color: #38ef7d; }
+        .stat-mini .lbl { font-size: 0.85em; color: #a8b2d1; margin-top: 4px; }
+        @media (max-width: 768px) { .header h1 { font-size: 1.4em; } .restriction-header { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1>⛔ إدارة القيود - كسارة الحبردي</h1>
+            <p>تحديد السائقين الممنوعين من الذهاب لمصانع معينة</p>
+            <div style="position: absolute; top: 20px; left: 20px;">
+                <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
+            </div>
+        </div>
+
+        <div class="nav-links" id="navLinks"></div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <h2>⛔ قيود السائقين</h2>
+                    <p style="color: #a8b2d1; margin-top: 5px;">إدارة القيود والمنع من المصانع</p>
+                </div>
+                <button class="btn btn-danger" onclick="openAddModal()">➕ إضافة قيد جديد</button>
+            </div>
+
+            <!-- إحصائيات سريعة -->
+            <div class="stats-row">
+                <div class="stat-mini"><div class="num" id="totalCount">0</div><div class="lbl">إجمالي القيود</div></div>
+                <div class="stat-mini"><div class="num" id="activeCount">0</div><div class="lbl">قيود نشطة</div></div>
+                <div class="stat-mini"><div class="num" id="inactiveCount">0</div><div class="lbl">قيود معطلة</div></div>
+            </div>
+
+            <div id="restrictionsList"></div>
+        </div>
+    </div>
+
+    <!-- Modal إضافة/تعديل قيد -->
+    <div class="modal" id="restrictionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">➕ إضافة قيد جديد</h3>
+                <button class="close-modal" onclick="closeModal()">×</button>
+            </div>
+
+            <input type="hidden" id="editId">
+
+            <div class="form-group">
+                <label>🚛 اختر السيارة</label>
+                <select id="truckSelect" onchange="onTruckChange()">
+                    <option value="">-- اختر السيارة --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>👤 السائق</label>
+                <input type="text" id="driverName" readonly placeholder="يتم تعبئته تلقائياً عند اختيار السيارة">
+            </div>
+
+            <div class="form-group">
+                <label>🏭 المصانع الممنوعة (اختر واحد أو أكثر)</label>
+                <div class="factories-checkboxes" id="factoriesCheckboxes">
+                    <p style="color: #a8b2d1; text-align: center;">جاري تحميل المصانع...</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>📝 سبب المنع</label>
+                <textarea id="restrictionReason" placeholder="اكتب سبب المنع..."></textarea>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-danger" onclick="closeModal()">❌ إلغاء</button>
+                <button class="btn btn-sm btn-success" onclick="saveRestriction()">💾 حفظ القيد</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let restrictions = [];
+        let trucks = [];
+        let factories = [];
+
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+            if (data) options.body = JSON.stringify(data);
+            const res = await fetch(`${API_BASE}${endpoint}`, options);
+            if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        // ==================== تحميل البيانات ====================
+        async function loadAll() {
+            showLoading(true);
+            try {
+                const [settingsData, restrictionsData] = await Promise.all([
+                    apiCall('/settings'),
+                    apiCall('/restrictions')
+                ]);
+                trucks = settingsData.trucks || [];
+                factories = (settingsData.factories || []).map(f =>
+                    typeof f === 'object' ? (f.name || '') : f
+                ).filter(f => f.trim());
+                restrictions = restrictionsData || [];
+                renderFactoriesCheckboxes();
+                renderTrucksSelect();
+                renderRestrictions();
+            } catch(e) {
+                showToast('خطأ في تحميل البيانات: ' + e.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        // ==================== Render ====================
+        function renderTrucksSelect() {
+            const select = document.getElementById('truckSelect');
+            select.innerHTML = '<option value="">-- اختر السيارة --</option>';
+            trucks.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.number;
+                opt.textContent = `${t.number} - ${t.driver || 'بدون سائق'}`;
+                opt.dataset.driver = t.driver || '';
+                select.appendChild(opt);
+            });
+        }
+
+        function renderFactoriesCheckboxes(selected = []) {
+            const container = document.getElementById('factoriesCheckboxes');
+            if (!factories.length) {
+                container.innerHTML = '<p style="color:#a8b2d1;text-align:center;">لا توجد مصانع</p>';
+                return;
+            }
+            container.innerHTML = factories.map(f => `
+                <div class="checkbox-item">
+                    <input type="checkbox" id="fac_${f.replace(/\s/g,'_')}" value="${f}"
+                        ${selected.includes(f) ? 'checked' : ''}>
+                    <label for="fac_${f.replace(/\s/g,'_')}">🏭 ${f}</label>
+                </div>
+            `).join('');
+        }
+
+        function renderRestrictions() {
+            const container = document.getElementById('restrictionsList');
+            // إحصائيات
+            const active = restrictions.filter(r => r.active !== false);
+            const inactive = restrictions.filter(r => r.active === false);
+            document.getElementById('totalCount').textContent = restrictions.length;
+            document.getElementById('activeCount').textContent = active.length;
+            document.getElementById('inactiveCount').textContent = inactive.length;
+
+            if (!restrictions.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">⛔</div>
+                        <p>لا توجد قيود مضافة</p>
+                        <p style="font-size:0.9em;margin-top:8px;">اضغط "إضافة قيد جديد" لإضافة أول قيد</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = restrictions.map(r => {
+                const isActive = r.active !== false;
+                const facList = Array.isArray(r.restricted_factories) ? r.restricted_factories : [];
+                return `
+                    <div class="restriction-item ${isActive ? '' : 'inactive'}">
+                        <div class="restriction-header">
+                            <div class="restriction-info">
+                                <h3>🚛 سيارة رقم: ${r.truck_number || '—'}
+                                    &nbsp;<span class="status-badge ${isActive ? 'status-active' : 'status-inactive'}">
+                                        ${isActive ? '✅ نشط' : '⏸ معطل'}
+                                    </span>
+                                </h3>
+                                <p>👤 السائق: <strong>${r.driver_name || '—'}</strong></p>
+                                ${r.reason ? `<p>📝 السبب: ${r.reason}</p>` : ''}
+                                <p style="font-size:0.8em;color:#666;margin-top:5px;">
+                                    🕐 ${r.created_at ? new Date(r.created_at).toLocaleDateString('ar-SA') : '—'}
+                                    ${r.created_by ? `&nbsp;|&nbsp; 👤 ${r.created_by}` : ''}
+                                </p>
+                            </div>
+                            <div class="restriction-actions">
+                                <button class="btn btn-sm btn-warning" onclick="openEditModal(${r.id})">✏️ تعديل</button>
+                                <button class="btn btn-sm ${isActive ? 'btn-info' : 'btn-success'}" onclick="toggleRestriction(${r.id}, ${!isActive})">
+                                    ${isActive ? '⏸ تعطيل' : '▶️ تفعيل'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteRestriction(${r.id})">🗑️ حذف</button>
+                            </div>
+                        </div>
+                        <div>
+                            <p style="color:#a8b2d1;font-size:0.9em;margin-bottom:8px;">🏭 المصانع الممنوعة:</p>
+                            <div class="factories-tags">
+                                ${facList.length
+                                    ? facList.map(f => `<span class="factory-tag">⛔ ${f}</span>`).join('')
+                                    : '<span style="color:#a8b2d1;font-size:0.9em;">لا توجد مصانع محددة</span>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== Modal ====================
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = '➕ إضافة قيد جديد';
+            document.getElementById('editId').value = '';
+            document.getElementById('truckSelect').value = '';
+            document.getElementById('driverName').value = '';
+            document.getElementById('restrictionReason').value = '';
+            renderFactoriesCheckboxes([]);
+            openModal();
+        }
+
+        function openEditModal(id) {
+            const r = restrictions.find(r => r.id === id);
+            if (!r) return;
+            document.getElementById('modalTitle').textContent = '✏️ تعديل القيد';
+            document.getElementById('editId').value = id;
+            document.getElementById('truckSelect').value = r.truck_number || '';
+            document.getElementById('driverName').value = r.driver_name || '';
+            document.getElementById('restrictionReason').value = r.reason || '';
+            const selected = Array.isArray(r.restricted_factories) ? r.restricted_factories : [];
+            renderFactoriesCheckboxes(selected);
+            openModal();
+        }
+
+        function onTruckChange() {
+            const select = document.getElementById('truckSelect');
+            const opt = select.options[select.selectedIndex];
+            document.getElementById('driverName').value = opt?.dataset?.driver || '';
+        }
+
+        function getSelectedFactories() {
+            return Array.from(document.querySelectorAll('#factoriesCheckboxes input[type="checkbox"]:checked'))
+                .map(cb => cb.value);
+        }
+
+        // ==================== CRUD ====================
+        async function saveRestriction() {
+            const editId = document.getElementById('editId').value;
+            const truckNumber = document.getElementById('truckSelect').value;
+            const driverName = document.getElementById('driverName').value;
+            const reason = document.getElementById('restrictionReason').value.trim();
+            const selectedFactories = getSelectedFactories();
+
+            if (!truckNumber) { showToast('اختر السيارة', 'error'); return; }
+            if (!selectedFactories.length) { showToast('اختر مصنعاً واحداً على الأقل', 'error'); return; }
+
+            showLoading(true);
+            try {
+                if (editId) {
+                    // تعديل: حذف القديم وإضافة جديد
+                    await apiCall(`/restrictions/${editId}`, 'DELETE');
+                    await apiCall('/restrictions', 'POST', {
+                        truckNumber,
+                        driverName,
+                        restrictedFactories: selectedFactories,
+                        reason
+                    });
+                    showToast('✅ تم تعديل القيد بنجاح', 'success');
+                } else {
+                    await apiCall('/restrictions', 'POST', {
+                        truckNumber,
+                        driverName,
+                        restrictedFactories: selectedFactories,
+                        reason
+                    });
+                    showToast('✅ تم إضافة القيد بنجاح', 'success');
+                }
+                closeModal();
+                await loadAll();
+            } catch(e) {
+                showToast('خطأ: ' + e.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        async function toggleRestriction(id, newActive) {
+            showLoading(true);
+            try {
+                await apiCall(`/restrictions/${id}`, 'PUT', { active: newActive });
+                showToast(newActive ? '✅ تم تفعيل القيد' : '⏸ تم تعطيل القيد', 'success');
+                await loadAll();
+            } catch(e) {
+                showToast('خطأ: ' + e.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        async function deleteRestriction(id) {
+            if (!confirm('هل تريد حذف هذا القيد نهائياً؟')) return;
+            showLoading(true);
+            try {
+                await apiCall(`/restrictions/${id}`, 'DELETE');
+                showToast('✅ تم حذف القيد', 'success');
+                await loadAll();
+            } catch(e) {
+                showToast('خطأ: ' + e.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        // ==================== دوال مساعدة ====================
+        function openModal() { document.getElementById('restrictionModal').classList.add('active'); }
+        function closeModal() { document.getElementById('restrictionModal').classList.remove('active'); }
+
+        function showToast(msg, type = 'success') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3500);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('active', show);
+        }
+
+        function logout() {
+            if (confirm('تسجيل الخروج؟'))
+                fetch('/api/logout', { method: 'POST', credentials: 'include' })
+                    .then(() => window.location.href = '/login.html');
+        }
+
+        function loadNav() {
+            fetch('/api/me', { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.user) {
+                        const role = data.user.role;
+                        let navHtml = '';
+                        if (role === 'admin' || role === 'user') {
+                            navHtml = `
+                                <a href="index.html" class="nav-link">📊 الرئيسية</a>
+                                <a href="orders.html" class="nav-link">📝 الطلبات</a>
+                                <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
+                                <a href="trucks.html" class="nav-link">🚛 السيارات</a>
+                                <a href="products.html" class="nav-link">📦 أنواع البحص</a>
+                                <a href="factories.html" class="nav-link">🏭 المصانع</a>
+                                <a href="reports.html" class="nav-link">📊 التقارير</a>
+                                <a href="scale_report.html" class="nav-link">📊 التقارير الشهرية</a>
+                                <a href="settings.html" class="nav-link">⚙�� الإعدادات</a>
+                                <a href="restrictions.html" class="nav-link active">⛔ الحظر</a>
+                                <a href="users.html" class="nav-link">👥 المستخدمين</a>
+                                <a href="logs.html" class="nav-link">📜 السجلات</a>
+                            `;
+                        } else if (role === 'client') {
+                            window.location.href = '/orders.html';
+                            return;
+                        }
+                        document.getElementById('navLinks').innerHTML = navHtml;
+                    } else {
+                        window.location.href = '/login.html';
+                    }
+                })
+                .catch(() => window.location.href = '/login.html');
+        }
+
+        // ==================== تشغيل ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNav();
+            loadAll();
+        });
+    </script>
+</body>
+</html>

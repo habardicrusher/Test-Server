@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المستخدمين - نظام إدارة طلبات البحص</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .nav-link {
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 600;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 3px;
+            font-size: 0.8rem;
+        }
+        .btn-success { background: #11998e; color: #fff; }
+        .btn-danger { background: #eb3349; color: #fff; }
+        .btn-warning { background: #f093fb; color: #fff; }
+        .btn-info { background: #4facfe; color: #fff; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: flex-end;
+        }
+        .form-group {
+            flex: 1;
+            min-width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .form-group label { font-size: 0.85em; color: #a8b2d1; }
+        .form-group input, .form-group select {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+        }
+        .password-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .password-wrapper input {
+            flex: 1;
+        }
+        .toggle-password {
+            background: #2d3e50;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        .toggle-password:hover {
+            background: #667eea;
+        }
+        .permissions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        th { background: rgba(102,126,234,0.3); }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 3000;
+        }
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .toast-success { background: #11998e; }
+        .toast-error { background: #eb3349; }
+        .toast-warning { background: #f093fb; }
+        .loading {
+            position: fixed;
+            top:0; left:0;
+            width:100%; height:100%;
+            background:rgba(0,0,0,0.8);
+            display: none;
+            align-items:center;
+            justify-content:center;
+            z-index:2000;
+        }
+        .loading.active { display: flex; }
+        .spinner {
+            width:40px; height:40px;
+            border:4px solid rgba(255,255,255,0.3);
+            border-top-color:#667eea;
+            border-radius:50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal {
+            display: none;
+            position: fixed;
+            top:0; left:0;
+            width:100%; height:100%;
+            background:rgba(0,0,0,0.8);
+            align-items:center;
+            justify-content:center;
+            z-index:1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+        }
+        .unauthorized {
+            text-align: center;
+            padding: 50px;
+            color: #f5576c;
+            font-size: 1.2em;
+        }
+        .hidden { display: none; }
+        .file-upload {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            border: 1px dashed #667eea;
+        }
+    </style>
+</head>
+<body>
+<div class="loading" id="loading"><div class="spinner"></div></div>
+<div class="toast-container" id="toastContainer"></div>
+<div class="container">
+    <div class="header">
+        <h1>👥 إدارة المستخدمين والصلاحيات</h1>
+        <div id="logout-btn-container" style="position: absolute; top: 20px; left: 20px;">
+            <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
+        </div>
+    </div>
+    <div class="nav-links" id="navLinks"></div>
+
+    <div id="unauthorizedMsg" class="unauthorized hidden"></div>
+    <div id="authorizedContent" class="hidden">
+        <div class="card">
+            <h3>➕ إضافة مستخدم جديد</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>اسم المستخدم</label>
+                    <input type="text" id="newUsername">
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="newPassword">
+                        <button type="button" class="toggle-password" id="toggleNewPassword" onclick="togglePasswordVisibility('newPassword', this)">👁️ إظهار</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>الدور</label>
+                    <select id="newRole">
+                        <option value="user">مستخدم عادي</option>
+                        <option value="admin">مدير</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button class="btn btn-success" onclick="addUser()">➕ إضافة</button>
+                </div>
+            </div>
+            <div class="permissions-grid" id="permissionsGrid"></div>
+        </div>
+
+        <div class="card">
+            <h3>📂 استيراد مستخدمين من Excel / CSV</h3>
+            <p style="color: #a8b2d1; margin-bottom: 10px;">ملف Excel أو CSV يحتوي على الأعمدة: <strong>Users, Password, Privileges</strong></p>
+            <div class="file-upload">
+                <input type="file" id="uploadExcel" accept=".xlsx, .csv, .xls" style="color: #fff; margin-bottom: 10px;">
+                <button class="btn btn-info" onclick="importUsersFromExcel()">📤 رفع وإضافة المستخدمين</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📋 قائمة المستخدمين</h3>
+            <table id="usersTable">
+                <thead>
+                <tr><th>#</th><th>اسم المستخدم</th><th>الدور</th><th>تاريخ الإنشاء</th><th>الإجراءات</th></tr>
+                </thead>
+                <tbody id="usersBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- مودال إعادة تعيين كلمة المرور -->
+<div class="modal" id="resetPasswordModal">
+    <div class="modal-content">
+        <h3>🔑 إعادة تعيين كلمة المرور</h3>
+        <input type="hidden" id="resetUserId">
+        <div class="form-group">
+            <label>المستخدم: <span id="resetUsername"></span></label>
+        </div>
+        <div class="form-group">
+            <label>كلمة المرور الجديدة</label>
+            <div class="password-wrapper">
+                <input type="password" id="resetPassword">
+                <button type="button" class="toggle-password" onclick="togglePasswordVisibility('resetPassword', this)">👁️ إظهار</button>
+            </div>
+        </div>
+        <div style="margin-top:20px;">
+            <button class="btn btn-danger" onclick="closeResetModal()">إلغاء</button>
+            <button class="btn btn-success" onclick="saveResetPassword()">حفظ كلمة المرور</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = '/api';
+    let users = [], currentUserRole = '', currentUserPermissions = {};
+
+    function togglePasswordVisibility(inputId, btnElement) {
+        if (currentUserRole !== 'admin') {
+            showToast("❌ غير مسموح لك بعرض كلمة المرور. هذه الخاصية للمدير فقط.", "error");
+            return;
+        }
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        btnElement.textContent = isPassword ? '🙈 إخفاء' : '👁️ إظهار';
+    }
+
+    async function apiCall(endpoint, method='GET', data=null) {
+        const opts = { method, headers:{'Content-Type':'application/json'}, credentials:'include' };
+        if(data && (method==='POST'||method==='PUT')) opts.body = JSON.stringify(data);
+        const res = await fetch(`${API_BASE}${endpoint}`, opts);
+        if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
+        if(!res.ok) {
+            const err = await res.text();
+            throw new Error(err || `HTTP ${res.status}`);
+        }
+        return res.json();
+    }
+
+    async function loadUsers() {
+        showLoading(true);
+        try {
+            const me = await apiCall('/me');
+            currentUserRole = me.user.role;
+            currentUserPermissions = me.user.permissions || {};
+            
+            const hasManageUsers = (currentUserRole === 'admin') || (currentUserPermissions && currentUserPermissions.manageUsers === true);
+            if (!hasManageUsers) {
+                document.getElementById('unauthorizedMsg').innerHTML = '⛔ غير مصرح لك بالوصول إلى إدارة المستخدمين. هذه الصفحة متاحة فقط للمديرين.';
+                document.getElementById('unauthorizedMsg').classList.remove('hidden');
+                document.getElementById('authorizedContent').classList.add('hidden');
+                showLoading(false);
+                return;
+            }
+            document.getElementById('unauthorizedMsg').classList.add('hidden');
+            document.getElementById('authorizedContent').classList.remove('hidden');
+            
+            users = await apiCall('/users');
+            renderUsersTable();
+            renderPermissionsCheckboxes();
+        } catch(e) { 
+            showToast('خطأ في تحميل البيانات: ' + e.message, 'error');
+            console.error(e);
+        }
+        showLoading(false);
+    }
+
+    function renderPermissionsCheckboxes() {
+        const permissions = ['viewOrders','addOrders','editOrders','deleteOrders','viewDistribution','manageDistribution','viewTrucks','manageTrucks','viewReports','exportReports','viewSettings','manageSettings','viewBackup','manageBackup','manageUsers','manageRestrictions'];
+        const container = document.getElementById('permissionsGrid');
+        container.innerHTML = permissions.map(p => `<label class="permission-item"><input type="checkbox" value="${p}" id="perm_${p}" checked> ${p}</label>`).join('');
+    }
+
+    function parsePrivileges(privText) {
+        const allPerms = ['viewOrders','addOrders','editOrders','deleteOrders','viewDistribution','manageDistribution','viewTrucks','manageTrucks','viewReports','exportReports','viewSettings','manageSettings','viewBackup','manageBackup','manageUsers','manageRestrictions'];
+        const permissions = {};
+        allPerms.forEach(p => { permissions[p] = true; });
+        if (privText && (privText.toLowerCase().includes('all except user') || privText.toLowerCase().includes('كل الصلاحيات ما عدا'))) {
+            permissions.manageUsers = false;
+        }
+        return permissions;
+    }
+
+    async function importUsersFromExcel() {
+        const fileInput = document.getElementById('uploadExcel');
+        if (!fileInput.files.length) {
+            showToast('الرجاء اختيار ملف Excel أو CSV', 'error');
+            return;
+        }
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(sheet);
+                if (!rows.length) {
+                    showToast('الملف فارغ أو لا يحتوي على بيانات', 'error');
+                    return;
+                }
+                let successCount = 0, failCount = 0;
+                showLoading(true);
+                for (const row of rows) {
+                    const username = row.Users || row.users || row.USER || row['اسم المستخدم'];
+                    const password = row.Password || row.password || row.PASS || row['كلمة المرور'];
+                    const privText = row.Privileges || row.privileges || row.PRIVILEGES || row['الصلاحيات'] || '';
+                    if (!username || !password) {
+                        failCount++;
+                        continue;
+                    }
+                    const role = 'user';
+                    const permissions = parsePrivileges(privText);
+                    try {
+                        await apiCall('/users', 'POST', { username, password, role, permissions });
+                        successCount++;
+                    } catch(err) {
+                        failCount++;
+                    }
+                }
+                showLoading(false);
+                showToast(`✅ تم إضافة ${successCount} مستخدم، ❌ فشل ${failCount}`, successCount > 0 ? 'success' : 'error');
+                if (successCount > 0) await loadUsers();
+                fileInput.value = '';
+            } catch(err) {
+                showLoading(false);
+                showToast('خطأ في قراءة الملف: ' + err.message, 'error');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    async function addUser() {
+        if (currentUserRole !== 'admin') {
+            showToast('غير مصرح لك بإضافة مستخدمين', 'error');
+            return;
+        }
+        const username = document.getElementById('newUsername').value.trim();
+        const password = document.getElementById('newPassword').value;
+        const role = document.getElementById('newRole').value;
+        if(!username || !password) { showToast('املأ جميع الحقول', 'error'); return; }
+        const permissions = {};
+        document.querySelectorAll('#permissionsGrid input[type="checkbox"]').forEach(cb => { permissions[cb.value] = cb.checked; });
+        showLoading(true);
+        try {
+            await apiCall('/users', 'POST', { username, password, role, permissions });
+            showToast('✅ تم إضافة المستخدم', 'success');
+            await loadUsers();
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newPassword').value = '';
+            const toggleBtn = document.getElementById('toggleNewPassword');
+            const passInput = document.getElementById('newPassword');
+            if (passInput.type !== 'password') {
+                passInput.type = 'password';
+                if (toggleBtn) toggleBtn.textContent = '👁️ إظهار';
+            }
+        } catch(e) { showToast('خطأ: '+e.message, 'error'); }
+        showLoading(false);
+    }
+
+    async function deleteUser(id, username) {
+        if (currentUserRole !== 'admin') { showToast('غير مصرح', 'error'); return; }
+        if(username === 'Admin') { showToast('لا يمكن حذف المدير الرئيسي', 'error'); return; }
+        if(!confirm(`حذف المستخدم ${username}؟`)) return;
+        showLoading(true);
+        try {
+            await apiCall(`/users/${id}`, 'DELETE');
+            showToast('تم الحذف', 'success');
+            await loadUsers();
+        } catch(e) { showToast('خطأ: ' + e.message, 'error'); }
+        showLoading(false);
+    }
+
+    // فتح مودال إعادة تعيين كلمة المرور
+    function openResetPasswordModal(userId, username) {
+        if (currentUserRole !== 'admin') {
+            showToast('غير مصرح لك بإعادة تعيين كلمة المرور', 'error');
+            return;
+        }
+        document.getElementById('resetUserId').value = userId;
+        document.getElementById('resetUsername').innerText = username;
+        document.getElementById('resetPassword').value = '';
+        const resetInput = document.getElementById('resetPassword');
+        const toggleBtn = resetInput.parentElement.querySelector('.toggle-password');
+        if (resetInput.type !== 'password') {
+            resetInput.type = 'password';
+            if (toggleBtn) toggleBtn.textContent = '👁️ إظهار';
+        }
+        document.getElementById('resetPasswordModal').classList.add('active');
+    }
+
+    async function saveResetPassword() {
+        const id = document.getElementById('resetUserId').value;
+        const newPassword = document.getElementById('resetPassword').value;
+        if (!newPassword) {
+            showToast('الرجاء إدخال كلمة المرور الجديدة', 'error');
+            return;
+        }
+        const user = users.find(u => u.id == id);
+        if (!user) { showToast('المستخدم غير موجود', 'error'); return; }
+        showLoading(true);
+        try {
+            await apiCall(`/users/${id}`, 'PUT', { username: user.username, role: user.role, permissions: user.permissions, password: newPassword });
+            showToast('✅ تم تغيير كلمة المرور بنجاح', 'success');
+            closeResetModal();
+        } catch(e) { showToast('خطأ: ' + e.message, 'error'); }
+        showLoading(false);
+    }
+
+    function openEditModal(user) {
+        if (currentUserRole !== 'admin') { showToast('غير مصرح', 'error'); return; }
+        document.getElementById('editUserId').value = user.id;
+        document.getElementById('editRole').value = user.role;
+        document.getElementById('editPassword').value = '';
+        const container = document.getElementById('editPermissionsGrid');
+        const perms = user.permissions || {};
+        const allPerms = ['viewOrders','addOrders','editOrders','deleteOrders','viewDistribution','manageDistribution','viewTrucks','manageTrucks','viewReports','exportReports','viewSettings','manageSettings','viewBackup','manageBackup','manageUsers','manageRestrictions'];
+        container.innerHTML = allPerms.map(p => `<label class="permission-item"><input type="checkbox" value="${p}" ${perms[p] ? 'checked' : ''}> ${p}</label>`).join('');
+        document.getElementById('editUserModal').classList.add('active');
+    }
+
+    async function saveUserEdit() {
+        if (currentUserRole !== 'admin') { showToast('غير مصرح', 'error'); return; }
+        const id = document.getElementById('editUserId').value;
+        const role = document.getElementById('editRole').value;
+        const password = document.getElementById('editPassword').value;
+        const permissions = {};
+        document.querySelectorAll('#editPermissionsGrid input[type="checkbox"]').forEach(cb => { permissions[cb.value] = cb.checked; });
+        const user = users.find(u => u.id == id);
+        if (!user) { showToast('المستخدم غير موجود', 'error'); return; }
+        const data = { username: user.username, role, permissions };
+        if(password) data.password = password;
+        showLoading(true);
+        try {
+            await apiCall(`/users/${id}`, 'PUT', data);
+            showToast('✅ تم التعديل', 'success');
+            closeModal();
+            await loadUsers();
+        } catch(e) { showToast('خطأ: ' + e.message, 'error'); }
+        showLoading(false);
+    }
+
+    function renderUsersTable() {
+        const tbody = document.getElementById('usersBody');
+        if(!users.length) { tbody.innerHTML = '<tr><td colspan="5">لا يوجد مستخدمين</td></tr>'; return; }
+        tbody.innerHTML = users.map((u,i) => {
+            let formattedDate = 'غير محدد';
+            if (u.created_at) {
+                try {
+                    const date = new Date(u.created_at);
+                    if (!isNaN(date.getTime())) formattedDate = date.toLocaleDateString('ar-SA');
+                } catch(e) {}
+            }
+            return `
+            <tr>
+                <td>${i+1}</td>
+                <td>${escapeHtml(u.username)}</td>
+                <td>${u.role === 'admin' ? 'مدير' : 'مستخدم'}</td>
+                <td>${formattedDate}</td>
+                <td>
+                    <button class="btn btn-warning btn-sm" onclick="openEditModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">✏️ تعديل</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')">🗑️ حذف</button>
+                    <button class="btn btn-secondary btn-sm" onclick="openResetPasswordModal(${u.id}, '${escapeHtml(u.username)}')">🔑 إعادة تعيين</button>
+                 </td>
+             </tr>
+        `}).join('');
+    }
+
+    function escapeHtml(str) { return str ? str.replace(/[&<>]/g, function(m){ return m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'; }) : ''; }
+    function showToast(msg,type) { const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className=`toast toast-${type}`; t.innerText=msg; c.appendChild(t); setTimeout(()=>t.remove(),3000); }
+    function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
+    function closeModal() { document.getElementById('editUserModal').classList.remove('active'); }
+    function closeResetModal() { document.getElementById('resetPasswordModal').classList.remove('active'); }
+    function logout() { if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html'); }
+    function loadNav() { fetch('/api/me', {credentials:'include'}).then(r=>r.json()).then(data=>{ if(data.user) document.getElementById('navLinks').innerHTML = `<a href="index.html" class="nav-link">📊 الرئيسية</a><a href="orders.html" class="nav-link">📝 الطلبات</a><a href="distribution.html" class="nav-link">🚚 التوزيع</a><a href="trucks.html" class="nav-link">🚛 السيارات</a><a href="products.html" class="nav-link">📦 أنواع البحص</a><a href="factories.html" class="nav-link">🏭 المصانع</a><a href="reports.html" class="nav-link">📊 التقارير</a><a href="settings.html" class="nav-link">⚙️ الإعدادات</a><a href="restrictions.html" class="nav-link">⛔ الحظر</a><a href="users.html" class="nav-link active">👥 المستخدمين</a><a href="logs.html" class="nav-link">📜 السجلات</a>`; }).catch(()=>{ window.location='/login.html'; }); }
+
+    document.addEventListener('DOMContentLoaded', () => { loadNav(); loadUsers(); });
+</script>
+
+<!-- مودال التعديل الأساسي (بدون زر إظهار) -->
+<div class="modal" id="editUserModal">
+    <div class="modal-content">
+        <h3>✏️ تعديل صلاحيات المستخدم</h3>
+        <input type="hidden" id="editUserId">
+        <div class="form-group"><label>الدور</label><select id="editRole"><option value="user">مستخدم</option><option value="admin">مدير</option></select></div>
+        <div class="form-group"><label>كلمة مرور جديدة (اختياري)</label><input type="password" id="editPassword"></div>
+        <div id="editPermissionsGrid"></div>
+        <div style="margin-top:20px;"><button class="btn btn-danger" onclick="closeModal()">إلغاء</button><button class="btn btn-success" onclick="saveUserEdit()">حفظ</button></div>
+    </div>
+</div>
+</body>
+</html>
