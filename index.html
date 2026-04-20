@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -91,6 +92,9 @@
         .alert-bar button { background: rgba(255,255,255,0.2); border: none; padding: 6px 15px; border-radius: 20px; color: white; cursor: pointer; font-weight: bold; }
         .alert-bar button:hover { background: rgba(255,255,255,0.4); }
         
+        .unauthorized { text-align: center; padding: 50px; background: rgba(235,51,73,0.2); border-radius: 20px; margin: 50px auto; max-width: 600px; }
+        .hidden { display: none; }
+        
         @media (max-width:768px){ .charts-grid { grid-template-columns:1fr; } .chart-wrapper { height:250px; } }
     </style>
 </head>
@@ -98,44 +102,54 @@
     <div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
     <div class="toast-container" id="toastContainer"></div>
     <div class="container">
-        <div class="header">
-            <h1>📊 لوحة التحكم الرئيسية - كسارة الحبردي</h1>
-            <p>نظام إدارة طلبات كسارة الحبردي</p>
-            <div style="position: absolute; top: 20px; left: 20px;">
-                <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
-                <button onclick="manualCheckOrders()" style="background: #4facfe; border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer; margin-right: 10px;">🔄 تحديث يدوي</button>
-                <button onclick="goToDistribution()" style="background: #f093fb; border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer; margin-right: 10px;">⚡ توزيع الطلبات</button>
+        <!-- المحتوى الذي سيظهر فقط إذا كان المستخدم مصرحاً له -->
+        <div id="authorizedContent">
+            <div class="header">
+                <h1>📊 لوحة التحكم الرئيسية - كسارة الحبردي</h1>
+                <p>نظام إدارة طلبات كسارة الحبردي</p>
+                <div style="position: absolute; top: 20px; left: 20px;">
+                    <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
+                    <!-- أزرار الإدارة تظهر فقط عند توفر الصلاحيات المناسبة -->
+                    <button id="manualUpdateBtn" onclick="manualCheckOrders()" style="background: #4facfe; border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer; margin-right: 10px;">🔄 تحديث يدوي</button>
+                    <button id="goDistBtn" onclick="goToDistribution()" style="background: #f093fb; border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer; margin-right: 10px;">⚡ توزيع الطلبات</button>
+                </div>
+                <div id="alertBadge" class="alert-badge hidden" onclick="goToDistribution()" title="طلبات جديدة غير موزعة - اضغط للتوزيع">
+                    <span id="alertCount">0</span>📬
+                </div>
             </div>
-            <div id="alertBadge" class="alert-badge hidden" onclick="goToDistribution()" title="طلبات جديدة غير موزعة - اضغط للتوزيع">
-                <span id="alertCount">0</span>📬
+            
+            <div id="alertBar" class="alert-bar hidden">
+                <div class="message">
+                    <span>📬</span>
+                    <span id="alertBarMessage">يوجد طلبات جديدة غير موزعة!</span>
+                </div>
+                <button onclick="goToDistribution()">الذهاب للتوزيع</button>
+            </div>
+            
+            <div class="nav-links" id="navLinks"></div>
+
+            <div class="stats-grid">
+                <div class="stat-card"><h3 id="totalOrders">0</h3><p>📋 إجمالي الطلبات اليوم</p></div>
+                <div class="stat-card"><h3 id="totalTrips">0</h3><p>🚚 الرحلات الموزعة</p></div>
+                <div class="stat-card"><h3 id="activeTrucks">0</h3><p>🚛 سيارات نشطة</p></div>
+                <div class="stat-card"><h3 id="completedPercentage">0%</h3><p>📈 نسبة الإنجاز</p></div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-container"><h3>📈 توزيع الطلبات حسب المصنع</h3><div class="chart-wrapper"><canvas id="factoriesChart"></canvas></div></div>
+                <div class="chart-container"><h3>📦 توزيع الطلبات حسب نوع البحص</h3><div class="chart-wrapper"><canvas id="materialsChart"></canvas></div></div>
+            </div>
+
+            <div class="recent-orders">
+                <h3>📋 آخر 10 طلبات اليوم</h3>
+                <table id="recentOrdersTable"><thead><tr><th>#</th><th>المصنع</th><th>نوع البحص</th><th>التوقيت</th><th>وقت الإضافة</th></tr></thead><tbody id="recentOrdersBody"></tbody>｜DSML｜
             </div>
         </div>
-        
-        <div id="alertBar" class="alert-bar hidden">
-            <div class="message">
-                <span>📬</span>
-                <span id="alertBarMessage">يوجد طلبات جديدة غير موزعة!</span>
-            </div>
-            <button onclick="goToDistribution()">الذهاب للتوزيع</button>
-        </div>
-        
-        <div class="nav-links" id="navLinks"></div>
 
-        <div class="stats-grid">
-            <div class="stat-card"><h3 id="totalOrders">0</h3><p>📋 إجمالي الطلبات اليوم</p></div>
-            <div class="stat-card"><h3 id="totalTrips">0</h3><p>🚚 الرحلات الموزعة</p></div>
-            <div class="stat-card"><h3 id="activeTrucks">0</h3><p>🚛 سيارات نشطة</p></div>
-            <div class="stat-card"><h3 id="completedPercentage">0%</h3><p>📈 نسبة الإنجاز</p></div>
-        </div>
-
-        <div class="charts-grid">
-            <div class="chart-container"><h3>📈 توزيع الطلبات حسب المصنع</h3><div class="chart-wrapper"><canvas id="factoriesChart"></canvas></div></div>
-            <div class="chart-container"><h3>📦 توزيع الطلبات حسب نوع البحص</h3><div class="chart-wrapper"><canvas id="materialsChart"></canvas></div></div>
-        </div>
-
-        <div class="recent-orders">
-            <h3>📋 آخر 10 طلبات اليوم</h3>
-            <table id="recentOrdersTable"><thead><tr><th>#</th><th>المصنع</th><th>نوع البحص</th><th>التوقيت</th><th>وقت الإضافة</th></tr></thead><tbody id="recentOrdersBody"></tbody></table>
+        <!-- رسالة عدم التصريح -->
+        <div id="unauthorizedMsg" class="unauthorized hidden">
+            ⛔ غير مصرح لك بالوصول إلى لوحة التحكم. <br>
+            يلزم صلاحية <strong>عرض الطلبات (viewOrders)</strong> أو <strong>عرض التقارير (viewReports)</strong>.
         </div>
     </div>
 
@@ -145,6 +159,7 @@
         let currentDate = new Date().toISOString().split('T')[0];
         let pendingOrdersCount = 0;
         let currentUserRole = null;
+        let currentUserPermissions = {};
         let lastOrderCount = 0;
         let pollingInterval = null;
 
@@ -157,6 +172,13 @@
             return res.json();
         }
 
+        // التحقق من الصلاحيات: هل يملك صلاحية viewOrders أو viewReports على الأقل لعرض الصفحة
+        function hasRequiredPermissions() {
+            return (currentUserRole === 'admin') || 
+                   (currentUserPermissions.viewOrders === true) || 
+                   (currentUserPermissions.viewReports === true);
+        }
+
         function updateAlertBadge() {
             const badge = document.getElementById('alertBadge');
             const alertBar = document.getElementById('alertBar');
@@ -164,13 +186,21 @@
             const barMessage = document.getElementById('alertBarMessage');
             if (!badge) return;
             
+            // فقط إذا كان المستخدم يملك صلاحية إدارة التوزيع أو هو admin يظهر له التنبيه
+            const canManageDist = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+            if (!canManageDist) {
+                badge.classList.add('hidden');
+                alertBar.classList.add('hidden');
+                return;
+            }
+            
             const totalOrdersElem = document.getElementById('totalOrders');
             const totalTripsElem = document.getElementById('totalTrips');
             const totalOrders = parseInt(totalOrdersElem?.textContent) || 0;
             const totalTrips = parseInt(totalTripsElem?.textContent) || 0;
             const pending = Math.max(0, totalOrders - totalTrips);
             
-            if ((currentUserRole === 'admin' || currentUserRole === 'user') && pending > 0) {
+            if (pending > 0) {
                 badge.classList.remove('hidden');
                 alertBar.classList.remove('hidden');
                 countSpan.textContent = pending;
@@ -203,11 +233,18 @@
         }
 
         function goToDistribution() {
+            // التحقق من صلاحية إدارة التوزيع قبل التوجيه
+            const canManageDist = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+            if (!canManageDist) {
+                showToast('غير مصرح لك بالوصول إلى صفحة التوزيع', 'error');
+                return;
+            }
             window.location.href = 'distribution.html';
         }
 
-        // تحديث البيانات في الخلفية (بدون تأثير على واجهة المستخدم)
         async function silentUpdate() {
+            // لا تقم بالتحديث إذا لم يكن المستخدم مصرحاً له برؤية البيانات أصلاً
+            if (!hasRequiredPermissions()) return;
             try {
                 const [settings, dayData] = await Promise.all([
                     apiCall('/settings'),
@@ -217,7 +254,6 @@
                 const distribution = dayData.distribution || [];
                 const trucks = settings.trucks || [];
 
-                // حساب التوزيعات الفريدة
                 const distributedMap = new Map();
                 distribution.forEach(d => { if (!distributedMap.has(d.orderId)) distributedMap.set(d.orderId, d); });
                 const uniqueDistributions = Array.from(distributedMap.values());
@@ -227,13 +263,11 @@
                 const target = trucks.length * 2;
                 const percentage = target > 0 ? Math.min(100, Math.round((distributedCount / target) * 100)) : 0;
 
-                // تحديث العناصر في الصفحة
                 document.getElementById('totalOrders').textContent = orders.length;
                 document.getElementById('totalTrips').textContent = distributedCount;
                 document.getElementById('activeTrucks').textContent = activeTrucksCount;
                 document.getElementById('completedPercentage').textContent = percentage + '%';
 
-                // إحصائيات للرسوم البيانية
                 const factoryStats = {};
                 orders.forEach(order => { const f = order.factory || 'غير محدد'; factoryStats[f] = (factoryStats[f] || 0) + 1; });
                 const materialStats = {};
@@ -252,7 +286,6 @@
                 if (!recent.length) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد طلبات اليوم<\/td><\/tr>';
                 else tbody.innerHTML = recent.map((o, i) => `<tr><td>${i+1}<\/td><td>${o.factory}<\/td><td>${o.material}<\/td><td>${o.time}<\/td><td>${o.timestamp}<\/td><\/tr>`).join('');
 
-                // التحقق من الطلبات الجديدة (لإظهار الإشعارات)
                 if (orders.length > lastOrderCount && lastOrderCount > 0) {
                     const newOrdersCount = orders.length - lastOrderCount;
                     playBeep();
@@ -264,19 +297,19 @@
             } catch(e) { console.error('خطأ في التحديث الخلفي:', e); }
         }
 
-        // التحديث اليدوي (يظهر رسالة)
         async function manualCheckOrders() {
+            if (!hasRequiredPermissions()) {
+                showToast('غير مصرح لك بتحديث البيانات', 'error');
+                return;
+            }
             showToast('جاري تحديث البيانات...', 'info');
             await silentUpdate();
             showToast('تم تحديث البيانات بنجاح', 'success');
         }
 
-        // بدء التحديث التلقائي في الخلفية (بدون إزعاج)
         function startBackgroundPolling() {
             if (pollingInterval) clearInterval(pollingInterval);
-            // تحديث فوري أول مرة
             setTimeout(() => silentUpdate(), 1000);
-            // ثم كل 10 ثوانٍ في الخلفية
             pollingInterval = setInterval(() => {
                 silentUpdate();
             }, 10000);
@@ -343,34 +376,82 @@
                 .catch(() => { localStorage.clear(); window.location.href = '/login.html'; });
         }
 
+        // دالة بناء روابط التنقل بناءً على الصلاحيات
+        function buildNavLinks() {
+            const links = [];
+            if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
+                links.push('<a href="index.html" class="nav-link active">📊 الرئيسية</a>');
+            if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
+                links.push('<a href="orders.html" class="nav-link">📝 الطلبات</a>');
+            if (currentUserPermissions.viewDistribution === true || currentUserRole === 'admin') 
+                links.push('<a href="distribution.html" class="nav-link">🚚 التوزيع</a>');
+            if (currentUserPermissions.viewTrucks === true || currentUserRole === 'admin') 
+                links.push('<a href="trucks.html" class="nav-link">🚛 السيارات</a>');
+            // المنتجات والمصانع: نعتمد على صلاحية viewSettings أو صلاحيات مخصصة (يمكن إضافتها لاحقاً)
+            if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') {
+                links.push('<a href="products.html" class="nav-link">📦 أنواع البحص</a>');
+                links.push('<a href="factories.html" class="nav-link">🏭 المصانع</a>');
+            }
+            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') 
+                links.push('<a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>');
+            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') 
+                links.push('<a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان الشهرية</a>');
+            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') 
+                links.push('<a href="trucks-failed.html" class="nav-link">⚠️ السيارات الغير مستوفية</a>');
+            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') 
+                links.push('<a href="distribution-quality.html" class="nav-link">📈 جودة التوزيع</a>');
+            if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') 
+                links.push('<a href="settings.html" class="nav-link">⚙️ الإعدادات</a>');
+            if (currentUserPermissions.manageRestrictions === true || currentUserRole === 'admin') 
+                links.push('<a href="restrictions.html" class="nav-link">⛔ الحظر</a>');
+            if (currentUserPermissions.manageUsers === true || currentUserRole === 'admin') 
+                links.push('<a href="users.html" class="nav-link">👥 المستخدمين</a>');
+            if (currentUserPermissions.viewBackup === true || currentUserRole === 'admin') 
+                links.push('<a href="logs.html" class="nav-link">📜 السجلات</a>');
+            
+            return links.join('');
+        }
+
         function loadNav() {
             fetch('/api/me', { credentials: 'include' })
                 .then(r => r.json())
                 .then(data => {
                     if (data.user) {
-                        const role = data.user.role;
-                        currentUserRole = role;
-                        let navHtml = '';
-                        if (role === 'admin' || role === 'user') {
-                            navHtml = `
-                                <a href="index.html" class="nav-link active">📊 الرئيسية</a>
-                                <a href="orders.html" class="nav-link">📝 الطلبات</a>
-                                <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
-                                <a href="trucks.html" class="nav-link">🚛 السيارات</a>
-                                <a href="products.html" class="nav-link">📦 أنواع البحص</a>
-                                <a href="factories.html" class="nav-link">🏭 المصانع</a>
-                                <a href="reports.html" class="nav-link">📊 التقارير</a>
-                                <a href="scale_report.html" class="nav-link">📊 تقارير الميزان الشهرية</a>
-                                <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
-                                <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
-                                <a href="users.html" class="nav-link">👥 المستخدمين</a>
-                                <a href="logs.html" class="nav-link">📜 السجلات</a>
-                            `;
-                        } else if (role === 'client') {
+                        currentUserRole = data.user.role;
+                        currentUserPermissions = data.user.permissions || {};
+                        
+                        // إذا كان العميل (client) يُعاد توجيهه إلى orders.html
+                        if (currentUserRole === 'client') {
                             window.location.href = '/orders.html';
                             return;
                         }
-                        document.getElementById('navLinks').innerHTML = navHtml;
+                        
+                        // التحقق من الصلاحيات لعرض الصفحة
+                        if (!hasRequiredPermissions()) {
+                            document.getElementById('authorizedContent').classList.add('hidden');
+                            document.getElementById('unauthorizedMsg').classList.remove('hidden');
+                            showLoading(false);
+                            return;
+                        }
+                        
+                        // إظهار المحتوى المصرح به
+                        document.getElementById('authorizedContent').classList.remove('hidden');
+                        document.getElementById('unauthorizedMsg').classList.add('hidden');
+                        
+                        // إظهار/إخفاء الأزرار الإدارية بناءً على صلاحية manageDistribution
+                        const canManageDist = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+                        const manualBtn = document.getElementById('manualUpdateBtn');
+                        const goDistBtn = document.getElementById('goDistBtn');
+                        if (manualBtn) manualBtn.style.display = canManageDist ? 'inline-block' : 'none';
+                        if (goDistBtn) goDistBtn.style.display = canManageDist ? 'inline-block' : 'none';
+                        
+                        // بناء روابط التنقل
+                        document.getElementById('navLinks').innerHTML = buildNavLinks();
+                        
+                        // بدء تحميل البيانات والتحديث الدوري
+                        showLoading(true);
+                        silentUpdate().finally(() => showLoading(false));
+                        startBackgroundPolling();
                     } else {
                         window.location.href = '/login.html';
                     }
@@ -378,13 +459,9 @@
                 .catch(() => window.location.href = '/login.html');
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadNav();
-            showLoading(true);
-            await silentUpdate(); // التحميل الأولي
-            showLoading(false);
-            startBackgroundPolling(); // بدء التحديث الخلفي
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNav();
         });
     </script>
-    </body>
+</body>
 </html>
