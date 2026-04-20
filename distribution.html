@@ -1,44 +1,21 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التوزيع - نظام إدارة طلبات كسارة الحبردي</title>
+    <title>التوزيع الجغرافي المتوازن - كسارة الحبردي</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            color: #fff;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; color: #fff; }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .header { text-align: center; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin-bottom: 30px; position: relative; }
         .nav-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
-        .nav-link { padding: 12px 24px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; font-weight: 600; }
+        .nav-link { padding: 12px 24px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; font-weight: 600; transition: all 0.3s; }
         .nav-link:hover, .nav-link.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transform: translateY(-2px); }
-        .date-section {
-            background: rgba(255,255,255,0.1);
-            padding: 15px 25px;
-            border-radius: 15px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
+        .date-section { background: rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; }
         .date-section input[type="date"] { padding: 12px 20px; border-radius: 10px; border: none; background: #fff; color: #333; cursor: pointer; }
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .btn { padding: 12px 25px; border: none; border-radius: 12px; cursor: pointer; font-size: 1em; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
         .btn-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #fff; }
         .btn-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: #fff; }
         .btn-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #fff; }
@@ -72,44 +49,83 @@
         .form-group select, .form-group input { width:100%; padding:10px; border-radius:8px; background:#2a2a4e; color:#fff; border:1px solid rgba(255,255,255,0.2); }
         @media (max-width:768px){ th,td { font-size:0.75em; padding:8px; } }
         @media print { .nav-links, .date-section .btn, .btn-danger, .btn-info, .print-btn, .toast-container, .loading { display: none; } .road-badge { -webkit-print-color-adjust: exact; } }
+        .distance-badge { background: rgba(56,239,125,0.2); padding: 4px 10px; border-radius: 15px; font-size: 0.8em; display: inline-block; }
+        .excluded-warning { background: rgba(235,51,73,0.2); border-right: 4px solid #eb3349; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .excluded-warning .message { display: flex; align-items: center; gap: 10px; }
+        .excluded-warning .count { font-weight: bold; font-size: 1.3em; color: #f5576c; }
+        .restriction-notice-panel { background: rgba(79,172,254,0.15); border-right: 4px solid #4facfe; border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; backdrop-filter: blur(5px); }
+        .restriction-notice-panel h4 { color: #4facfe; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .restriction-notice-panel ul { list-style: none; margin-top: 8px; }
+        .restriction-notice-panel li { padding: 8px 12px; margin: 5px 0; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.9rem; }
+        .restriction-notice-panel .reason-text { color: #f6d365; font-weight: bold; }
+        .unauthorized { text-align: center; padding: 50px; background: rgba(235,51,73,0.2); border-radius: 20px; margin: 50px auto; max-width: 600px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
     <div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
     <div class="toast-container" id="toastContainer"></div>
     <div class="container">
-        <div class="header"><h1>🚚 التوزيع الجغرافي المتوازن</h1><p>توزيع الطلبات بين الرياض والدمام مع تجنب تكرار نفس الموقع للسائق</p>
-            <div id="logout-btn-container" style="position: absolute; top: 20px; left: 20px;"></div>
-        </div>
-        <div class="nav-links" id="navLinks"></div>
-        <div class="date-section">
-            <div><label>📅 تاريخ العمل: </label><input type="date" id="orderDate" onchange="loadData()"></div>
-            <div>
-                <button class="btn btn-success" onclick="autoDistribute()">⚡ توزيع تلقائي (جغرافي)</button>
-                <button class="btn btn-danger" onclick="resetDistribution()">🔄 إعادة التعيين</button>
-                <button class="btn print-btn" onclick="window.print()">🖨️ طباعة</button>
+        <!-- المحتوى المصرح به -->
+        <div id="authorizedContent">
+            <div class="header">
+                <h1>🚚 التوزيع الجغرافي المتوازن (حسب المسافات)</h1>
+                <p>توزيع الطلبات بأولوية للأقل رحلات مع مراعاة قيود الحظر</p>
+                <div id="logout-btn-container" style="position: absolute; top: 20px; left: 20px;">
+                    <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
+                </div>
+            </div>
+            <div class="nav-links" id="navLinks"></div>
+            <div class="date-section">
+                <div><label>📅 تاريخ العمل: </label><input type="date" id="orderDate" onchange="loadData()"></div>
+                <div id="adminButtons">
+                    <button class="btn btn-success" id="autoDistributeBtn" onclick="autoDistribute()">⚡ توزيع تلقائي (عادل)</button>
+                    <button class="btn btn-danger" id="resetDistBtn" onclick="resetDistribution()">🔄 إعادة التعيين</button>
+                    <button class="btn btn-info" id="saveExcludedBtn" onclick="refreshExcludedLog()">💾 حفظ سجل الاستبعادات</button>
+                    <button class="btn print-btn" onclick="window.print()">🖨️ طباعة</button>
+                </div>
+            </div>
+            
+            <div id="restrictionNoticePanel" class="restriction-notice-panel" style="display: none;">
+                <h4>⛔ قيود الحظر المطبقة أثناء التوزيع</h4>
+                <ul id="restrictionNoticeList"></ul>
+                <p style="font-size:0.8rem; margin-top:8px; color:#a8b2d1;">ℹ️ تم استبعاد السيارات المذكورة أعلاه من الذهاب إلى المصانع المحددة تلقائياً لضمان الالتزام بسياسات المنع.</p>
+            </div>
+            
+            <div id="excludedWarning" class="excluded-warning" style="display: none;">
+                <div class="message"><span>⚠️</span><span>الطريق إلى <strong>مصنع دعم وحلول الدرعية</strong> مغلق حالياً (من 7 ص إلى 11 م). تم استبعاد <span id="excludedCount" class="count">0</span> طلب من التوزيع التلقائي. يرجى توزيعها يدوياً عند فتح الطريق.</span></div>
+                <button class="btn btn-warning" onclick="showExcludedOrders()">🔍 عرض الطلبات المستثناة</button>
+            </div>
+
+            <div class="stats" id="statsSection" style="display: none;">
+                <div class="stat-card"><h4>📋 الطلبات غير الموزعة</h4><div class="number" id="statUndistributed">0</div></div>
+                <div class="stat-card"><h4>🚛 عدد السيارات</h4><div class="number" id="statTrucks">0</div></div>
+                <div class="stat-card"><h4>✅ تم التوزيع</h4><div class="number" id="statDistributed">0</div></div>
+            </div>
+            
+            <h2>📋 الطلبات غير الموزعة</h2>
+            <div style="overflow-x: auto; margin-bottom: 30px;">
+                <table id="undistributedTable">
+                    <thead><tr><th>#</th><th>المصنع</th><th>نوع البحص</th><th>المسافة (كم)</th><th>الوقت</th><th>التوقيت</th><th>وقت الإضافة</th><th>توزيع يدوي</th></tr></thead>
+                    <tbody id="undistributedBody"><tr><td colspan="8" style="text-align:center;">لا توجد طلبات غير موزعة</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>📋 قائمة التوزيع (المنفذة)</h2>
+            <div style="overflow-x: auto;">
+                <table id="distributionTable">
+                    <thead><tr><th>#</th><th>رقم السيارة</th><th>السائق</th><th>المصنع</th><th>نوع البحص</th><th>المسافة (كم)</th><th>الوقت</th><th>التوقيت</th><th>الرود</th><th>ملاحظات</th></tr></thead>
+                    <tbody id="distributionBody"><tr><td colspan="10" style="text-align:center;">لا يوجد توزيع بعد</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div class="stats" id="statsSection" style="display: none;">
-            <div class="stat-card"><h4>📋 الطلبات غير الموزعة</h4><div class="number" id="statUndistributed">0</div></div>
-            <div class="stat-card"><h4>🚛 عدد السيارات</h4><div class="number" id="statTrucks">0</div></div>
-            <div class="stat-card"><h4>✅ تم التوزيع</h4><div class="number" id="statDistributed">0</div></div>
-        </div>
-        
-        <h2>📋 الطلبات غير الموزعة</h2>
-        <div style="overflow-x: auto; margin-bottom: 30px;">
-            <table id="undistributedTable">
-                <thead><tr><th>#</th><th>المصنع</th><th>نوع البحص</th><th>التوقيت</th><th>وقت الإضافة</th><th>توزيع يدوي</th></tr></thead>
-                <tbody id="undistributedBody"><tr><td colspan="6" style="text-align:center;">لا توجد طلبات غير موزعة<\/td><\/tr> </tbody>
-            </table>
-        </div>
 
-        <h2>📋 قائمة التوزيع (المنفذة)</h2>
-        <div style="overflow-x: auto;">
-            <table id="distributionTable">
-                <thead><tr><th>#</th><th>رقم السيارة</th><th>السائق</th><th>المصنع</th><th>نوع البحص</th><th>التوقيت</th><th>الرود</th></tr></thead>
-                <tbody id="distributionBody"><tr><td colspan="7" style="text-align:center;">لا يوجد توزيع بعد<\/td><\/tr> </tbody>
-            </table>
+        <!-- رسالة عدم التصريح -->
+        <div id="unauthorizedMsg" class="unauthorized hidden">
+            ⛔ غير مصرح لك بالوصول إلى صفحة التوزيع. <br>
+            يلزم صلاحية <strong>عرض التوزيع (viewDistribution)</strong>.
         </div>
     </div>
 
@@ -128,10 +144,46 @@
     </div>
 
     <script>
+        // بيانات المصانع (لم تتغير)
+        const FACTORY_DATA = {
+            "مصنع الفهد": { distance: 337.99, time: "3 س و 30 د" },
+            "مصنع قوة معمارية": { distance: 339.87, time: "3 س و 29 د" },
+            "مصنع سارمكس النظيم": { distance: 352.64, time: "3 س و 45 د" },
+            "مصنع القيشان 3": { distance: 396.22, time: "4 س و 8 د" },
+            "مصنع القيشان 1": { distance: 396.22, time: "4 س و 8 د" },
+            "شركة الحارث للمنتجات الاسمنيه حي المنار": { distance: 401.37, time: "4 س و 7 د" },
+            "شركة برينسا للخرسانة الجاهزه": { distance: 403.21, time: "4 س و 19 د" },
+            "مصنع الاحجار الشرقية": { distance: 416.11, time: "4 س و 36 د" },
+            "شركة ابتك للخرسانة الجاهزه": { distance: 418.11, time: "4 س و 20 د" },
+            "شركةالحارث للمنتجات الاسمنتية": { distance: 420.4, time: "4 س و 31 د" },
+            "مصنع باسل أبو الرب وشريكه": { distance: 420.6, time: "4 س و 43 د" },
+            "شركة عبر الخليج": { distance: 427.48, time: "4 س و 42 د" },
+            "مصنع المعجل": { distance: 431.01, time: "4 س و 31 د" },
+            "مصنع نبراس2": { distance: 439.61, time: "4 س و 35 د" },
+            "مصنع دعم وحلول الدرعية": { distance: 441.05, time: "4 س و 47 د" },
+            "مصنع نبراس الخليج": { distance: 448.99, time: "5 س" },
+            "الحارث العزيزية": { distance: 475.49, time: "5 س و 3 د" },
+            "انشاءات دبي": { distance: 522.92, time: "6 س و 3 د" },
+            "الشركة الصينية": { distance: 605.51, time: "7 س و 40 د" },
+            "شركة اعمار": { distance: 662.14, time: "7 س و 38 د" },
+            "شركة الحارث للمنتجات الاسمنيه": { distance: 401.37, time: "4 س و 7 د" }
+        };
+        function getFactoryDistance(f) { return FACTORY_DATA[f] ? FACTORY_DATA[f].distance : 150; }
+        function getFactoryTime(f) { return FACTORY_DATA[f] ? FACTORY_DATA[f].time : "—"; }
+
         const API_BASE = '/api';
         let trucks = [], orders = [], distribution = [], currentDate = '';
         let currentOrderToDistribute = null;
-        let factoryLocations = {};
+        let restrictions = [];
+        let excludedDriversLog = [];
+
+        // متغيرات الصلاحيات
+        let currentUserRole = null;
+        let currentUserPermissions = {};
+
+        const EXCLUDED_FACTORY = "مصنع دعم وحلول الدرعية";
+        const BLOCK_START_HOUR = 7, BLOCK_END_HOUR = 23;
+        function isRoadBlocked() { const hour = new Date().getHours(); return hour >= BLOCK_START_HOUR && hour < BLOCK_END_HOUR; }
 
         async function apiCall(endpoint, method = 'GET', data = null) {
             const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
@@ -145,16 +197,19 @@
         setInterval(async () => { try { await fetch('/api/me', { credentials: 'include' }); } catch(e) {} }, 4 * 60 * 1000);
 
         async function loadSettings() {
-            try { 
-                const data = await apiCall('/settings'); 
-                trucks = data.trucks || []; 
-                document.getElementById('statTrucks').textContent = trucks.length;
-                factoryLocations = {};
-                (data.factories || []).forEach(f => {
-                    if (f.name && f.location) factoryLocations[f.name] = f.location;
-                });
-                console.log('مواقع المصانع:', factoryLocations);
-            } catch(e) { showToast('خطأ في تحميل السيارات', 'error'); }
+            try { const data = await apiCall('/settings'); trucks = data.trucks || []; document.getElementById('statTrucks').textContent = trucks.length; } catch(e) { showToast('خطأ في تحميل السيارات', 'error'); }
+        }
+
+        async function loadRestrictions() {
+            try { const data = await apiCall('/restrictions'); restrictions = data.filter(r => r.active !== false); } catch(e) { restrictions = []; }
+        }
+
+        function getTruckRestriction(truckNumber, factory) {
+            const r = restrictions.find(r => r.truck_number === truckNumber);
+            if (!r) return null;
+            const facs = Array.isArray(r.restricted_factories) ? r.restricted_factories : [];
+            if (facs.includes(factory)) return { restricted: true, reason: r.reason || 'لا يوجد سبب محدد' };
+            return null;
         }
 
         async function loadData() {
@@ -168,7 +223,12 @@
                 renderUndistributed(undistributed);
                 renderDistribution();
                 updateStats(undistributed.length);
-            } catch(e) { orders = []; distribution = []; renderUndistributed([]); renderDistribution(); updateStats(0); }
+                updateExcludedWarning(undistributed);
+                const savedLog = sessionStorage.getItem(`excluded_log_${currentDate}`);
+                if (savedLog) excludedDriversLog = JSON.parse(savedLog);
+                else excludedDriversLog = [];
+                updateRestrictionNoticePanel();
+            } catch(e) { orders = []; distribution = []; renderUndistributed([]); renderDistribution(); updateStats(0); updateExcludedWarning([]); }
         }
 
         function updateStats(undistributedCount) {
@@ -181,131 +241,165 @@
             } else { s.style.display = 'none'; }
         }
 
+        function updateExcludedWarning(undistributed) {
+            const blocked = isRoadBlocked();
+            const excludedOrders = undistributed.filter(o => o.factory === EXCLUDED_FACTORY);
+            const warningDiv = document.getElementById('excludedWarning');
+            if (blocked && excludedOrders.length > 0) {
+                document.getElementById('excludedCount').textContent = excludedOrders.length;
+                warningDiv.style.display = 'flex';
+            } else { warningDiv.style.display = 'none'; }
+        }
+
+        function showExcludedOrders() {
+            const excluded = orders.filter(o => o.factory === EXCLUDED_FACTORY && !distribution.some(d => d.orderId === o.id));
+            if (excluded.length === 0) { showToast('لا توجد طلبات مستثناة حالياً', 'info'); return; }
+            alert('الطلبات المستثناة:\n' + excluded.map((o,i)=>`${i+1}. ${o.factory} - ${o.material}`).join('\n'));
+        }
+
         async function saveData() {
             try { await apiCall(`/day/${currentDate}`, 'PUT', { orders, distribution }); return true; } catch(e) { showToast('خطأ في الحفظ', 'error'); return false; }
         }
 
         function renderUndistributed(undistributed) {
             const tbody = document.getElementById('undistributedBody');
-            if (!undistributed.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">لا توجد طلبات غير موزعة<\/td><\/tr>'; return; }
-            tbody.innerHTML = undistributed.map((order, i) => `
-                <tr>
+            if (!undistributed.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">لا توجد طلبات غير موزعة</td></tr>'; return; }
+            // التحكم في ظهور زر التوزيع اليدوي بناءً على صلاحية manageDistribution
+            const canManage = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+            tbody.innerHTML = undistributed.map((order, i) => {
+                const dist = getFactoryDistance(order.factory);
+                const time = getFactoryTime(order.factory);
+                const isExcluded = (order.factory === EXCLUDED_FACTORY && isRoadBlocked());
+                const rowStyle = isExcluded ? 'style="background: rgba(235,51,73,0.2);"' : '';
+                const manualBtn = canManage ? `<button class="btn btn-sm btn-warning" onclick='openManualDistributeModalForOrder(${JSON.stringify(order).replace(/'/g, "&#39;")})'>🖐️ توزيع</button>` : '—';
+                return `<tr ${rowStyle}>
                     <td>${i+1}</td>
                     <td>${order.factory}</td>
                     <td>بحص ${order.material}</td>
+                    <td><span class="distance-badge">${dist} كم</span></td>
+                    <td><span class="time-badge">⏱️ ${time}</span></td>
                     <td>${order.time && order.time !== 'undefined' ? order.time : '-'}</td>
                     <td>${order.timestamp || '-'}</td>
-                    <td><button class="btn btn-sm btn-warning" onclick='openManualDistributeModalForOrder(${JSON.stringify(order).replace(/'/g, "&#39;")})'>🖐️ توزيع</button></td>
-                </tr>
-            `).join('');
+                    <td>${manualBtn}</td>
+                </tr>`;
+            }).join('');
         }
 
         function renderDistribution() {
             const tbody = document.getElementById('distributionBody');
-            if (!distribution.length) { tbody.innerHTML = '<td><td colspan="7" style="text-align:center;">لا يوجد توزيع<\/td><\/tr>'; return; }
+            if (!distribution.length) { tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">لا يوجد توزيع بعد</td></tr>'; return; }
             const uniqueMap = new Map();
             distribution.forEach(d => { if (!uniqueMap.has(d.orderId)) uniqueMap.set(d.orderId, d); });
             const uniqueDistributions = Array.from(uniqueMap.values());
-            tbody.innerHTML = uniqueDistributions.map((d, i) => `
-                <tr>
+            tbody.innerHTML = uniqueDistributions.map((d, i) => {
+                const dist = getFactoryDistance(d.factory);
+                const time = getFactoryTime(d.factory);
+                let note = d.manualOverride ? '⚠️ توزيع يدوي مخالف للعدالة' : '';
+                if (d.restrictionApplied) note = `⛔ تم تجنب سيارة ${d.skippedTruck} (ممنوع من المصنع) - السبب: ${d.restrictionReason || 'غير محدد'}`;
+                return `<tr>
                     <td>${i+1}</td>
                     <td><strong>${d.truck?.number || '?'}</strong></td>
                     <td>${d.truck?.driver || '?'}</td>
                     <td>${d.factory}</td>
                     <td>بحص ${d.material}</td>
+                    <td><span class="distance-badge">${dist} كم</span></td>
+                    <td><span class="time-badge">⏱️ ${time}</span></td>
                     <td>${d.time && d.time !== 'undefined' ? `<span class="time-badge">⏰ ${d.time}</span>` : '-'}</td>
                     <td><span class="road-badge road-${d.road}">رود ${d.road}</span></td>
-                </tr>
+                    <td style="color:#f5576c;">${note}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function updateRestrictionNoticePanel() {
+            const panel = document.getElementById('restrictionNoticePanel');
+            const list = document.getElementById('restrictionNoticeList');
+            if (!excludedDriversLog.length) { panel.style.display = 'none'; return; }
+            panel.style.display = 'block';
+            list.innerHTML = excludedDriversLog.map(log => `
+                <li>
+                    🚛 <strong>${log.truckNumber} (${log.driver})</strong> - ممنوع من الذهاب إلى <strong>${log.factory}</strong><br>
+                    <span class="reason-text">📝 السبب: ${log.reason}</span><br>
+                    <span style="font-size:0.8rem;">⏱️ تم استبعاده تلقائياً أثناء التوزيع العادل في يوم ${log.date}</span>
+                </li>
             `).join('');
         }
 
-        function openManualDistributeModalForOrder(order) {
-            currentOrderToDistribute = order;
-            document.getElementById('manualFactory').value = order.factory;
-            document.getElementById('manualMaterial').value = order.material;
-            const truckSelect = document.getElementById('manualTruckSelect');
-            truckSelect.innerHTML = '<option value="">-- اختر سيارة --</option>' + trucks.map(t => `<option value="${t.number}">${t.number} - ${t.driver}</option>`).join('');
-            document.getElementById('manualRoad').value = 1;
-            document.getElementById('manualDistributeModal').classList.add('active');
-        }
-
-        function closeManualModal() { document.getElementById('manualDistributeModal').classList.remove('active'); currentOrderToDistribute = null; }
-
-        async function confirmManualDistribute() {
-            const truckNumber = document.getElementById('manualTruckSelect').value;
-            const road = parseInt(document.getElementById('manualRoad').value);
-            if (!truckNumber) { showToast('اختر سيارة', 'error'); return; }
-            const truck = trucks.find(t => t.number === truckNumber);
-            if (!truck) { showToast('سيارة غير موجودة', 'error'); return; }
-            if (!currentOrderToDistribute) { showToast('لا يوجد طلب محدد', 'error'); return; }
-            showLoading(true);
-            try {
-                const alreadyDistributed = distribution.some(d => d.orderId === currentOrderToDistribute.id);
-                if (alreadyDistributed) { showToast('هذا الطلب موزع بالفعل', 'warning'); closeManualModal(); showLoading(false); return; }
-                distribution.push({
-                    orderId: currentOrderToDistribute.id,
-                    orderIndex: distribution.length + 1,
-                    truck: truck,
-                    factory: currentOrderToDistribute.factory,
-                    material: currentOrderToDistribute.material,
-                    time: currentOrderToDistribute.time || '',
-                    road: road
-                });
-                await saveData();
-                await loadData();
-                closeManualModal();
-                showToast(`✅ تم توزيع الطلب على السيارة ${truckNumber} - ${truck.driver} (رود ${road})`, 'success');
-                localStorage.setItem('pendingOrdersCount', '0');
-            } catch(e) { showToast('خطأ في التوزيع', 'error'); }
-            showLoading(false);
-        }
-
         async function autoDistribute() {
+            // التحقق من صلاحية إدارة التوزيع
+            const canManage = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+            if (!canManage) {
+                showToast('❌ غير مصرح لك بتوزيع الطلبات', 'error');
+                return;
+            }
+            await loadRestrictions();
             const distributedOrderIds = new Set(distribution.map(d => d.orderId));
-            const undistributed = orders.filter(o => !distributedOrderIds.has(o.id));
+            let undistributed = orders.filter(o => !distributedOrderIds.has(o.id));
             if (!undistributed.length) { showToast('لا توجد طلبات غير موزعة', 'error'); return; }
             if (!trucks.length) { showToast('لا توجد سيارات', 'error'); return; }
+            
+            let excludedOrders = [];
+            if (isRoadBlocked()) {
+                excludedOrders = undistributed.filter(o => o.factory === EXCLUDED_FACTORY);
+                undistributed = undistributed.filter(o => o.factory !== EXCLUDED_FACTORY);
+                if (excludedOrders.length > 0) showToast(`⚠️ تم استبعاد ${excludedOrders.length} طلب لمصنع الدرعية`, 'warning');
+            }
+            if (!undistributed.length) { showToast('جميع الطلبات المتبقية مستثناة حالياً (مصنع الدرعية).', 'info'); return; }
+            
             showLoading(true);
-            
-            const truckTrips = {};
-            const truckLastLocation = {};
-            trucks.forEach(t => { truckTrips[t.number] = 0; truckLastLocation[t.number] = null; });
-            distribution.forEach(d => { 
-                if (d.truck) {
-                    truckTrips[d.truck.number]++;
-                    const location = factoryLocations[d.factory] || 'أخرى';
-                    truckLastLocation[d.truck.number] = location;
-                }
-            });
-            
-            let sortedTrucks = [...trucks].sort((a, b) => truckTrips[a.number] - truckTrips[b.number]);
-            let truckIndex = 0;
+            let truckTrips = {}, truckTotalDistance = {}, truckLastFactory = {};
+            trucks.forEach(t => { truckTrips[t.number] = 0; truckTotalDistance[t.number] = 0; truckLastFactory[t.number] = null; });
+            distribution.forEach(d => { if (d.truck) { truckTrips[d.truck.number]++; truckTotalDistance[d.truck.number] += getFactoryDistance(d.factory); truckLastFactory[d.truck.number] = d.factory; } });
+
             let newDistributions = [];
-            
-            for (let i = 0; i < undistributed.length; i++) {
-                const order = undistributed[i];
-                const orderLocation = factoryLocations[order.factory] || 'أخرى';
-                let selectedTruck = null;
-                let attempts = 0;
-                const maxAttempts = sortedTrucks.length * 3;
-                while (!selectedTruck && attempts < maxAttempts) {
-                    const candidate = sortedTrucks[truckIndex % sortedTrucks.length];
-                    const lastLocation = truckLastLocation[candidate.number];
-                    if (lastLocation !== orderLocation || lastLocation === null) {
-                        selectedTruck = candidate;
+            let remainingOrders = [...undistributed];
+            let tempExcluded = [];
+
+            function getFilteredSortedTrucks(factory) {
+                let available = trucks.filter(t => {
+                    const restriction = getTruckRestriction(t.number, factory);
+                    if (restriction) {
+                        const alreadyLogged = tempExcluded.some(e => e.truckNumber === t.number && e.factory === factory);
+                        if (!alreadyLogged) {
+                            tempExcluded.push({
+                                truckNumber: t.number,
+                                driver: t.driver,
+                                factory: factory,
+                                reason: restriction.reason,
+                                date: currentDate
+                            });
+                        }
+                        return false;
                     }
-                    truckIndex++;
-                    attempts++;
+                    return true;
+                });
+                if (available.length === 0) {
+                    console.warn(`جميع السيارات ممنوعة من الذهاب إلى ${factory}، سيتم تجاهل القيود مؤقتاً.`);
+                    available = [...trucks];
                 }
-                if (!selectedTruck) {
-                    selectedTruck = sortedTrucks[0];
-                    showToast(`⚠️ اضطراري: تكرار موقع ${orderLocation} للسيارة ${selectedTruck.number}`, 'warning');
+                return available.sort((a,b) => {
+                    if (truckTrips[a.number] !== truckTrips[b.number]) return truckTrips[a.number] - truckTrips[b.number];
+                    return truckTotalDistance[a.number] - truckTotalDistance[b.number];
+                });
+            }
+
+            while (remainingOrders.length > 0) {
+                const order = remainingOrders[0];
+                const sorted = getFilteredSortedTrucks(order.factory);
+                let selectedTruck = null;
+                for (let t of sorted) {
+                    if (truckLastFactory[t.number] !== order.factory) { selectedTruck = t; break; }
                 }
+                if (!selectedTruck && sorted.length) selectedTruck = sorted[0];
+                if (!selectedTruck) break;
+                
+                const orderDistance = getFactoryDistance(order.factory);
                 truckTrips[selectedTruck.number]++;
-                truckLastLocation[selectedTruck.number] = orderLocation;
-                sortedTrucks = [...trucks].sort((a, b) => truckTrips[a.number] - truckTrips[b.number]);
-                truckIndex = 0;
-                const currentRoad = Math.floor((distribution.length + newDistributions.length) / trucks.length) + 1;
+                truckTotalDistance[selectedTruck.number] += orderDistance;
+                truckLastFactory[selectedTruck.number] = order.factory;
+                const currentRoad = truckTrips[selectedTruck.number];
+                
+                const restriction = getTruckRestriction(selectedTruck.number, order.factory);
                 newDistributions.push({
                     orderId: order.id,
                     orderIndex: distribution.length + newDistributions.length + 1,
@@ -313,75 +407,234 @@
                     factory: order.factory,
                     material: order.material,
                     time: order.time || '',
-                    road: currentRoad
+                    road: currentRoad,
+                    manualOverride: false,
+                    restrictionApplied: restriction !== null,
+                    restrictionReason: restriction ? restriction.reason : '',
+                    skippedTruck: null
                 });
+                remainingOrders.shift();
             }
-            
+
             if (newDistributions.length) {
                 distribution.push(...newDistributions);
                 await saveData();
                 await loadData();
-                const finalTrips = {};
-                const finalLocations = {};
-                trucks.forEach(t => { finalTrips[t.number] = 0; finalLocations[t.number] = []; });
-                distribution.forEach(d => { 
-                    if (d.truck) {
-                        finalTrips[d.truck.number]++; 
-                        const loc = factoryLocations[d.factory] || 'أخرى';
-                        if (!finalLocations[d.truck.number].includes(loc)) finalLocations[d.truck.number].push(loc);
-                    }
-                });
-                const minTrips = Math.min(...Object.values(finalTrips));
-                const maxTrips = Math.max(...Object.values(finalTrips));
-                const balancedCount = Object.values(finalLocations).filter(locs => locs.length >= 2).length;
-                showToast(`✅ تم توزيع ${newDistributions.length} طلب. أقل: ${minTrips}، أكثر: ${maxTrips} رحلة. ${balancedCount} سائق تنقل بين المنطقتين.`, 'success');
+                for (let ex of tempExcluded) {
+                    const exists = excludedDriversLog.some(e => e.truckNumber === ex.truckNumber && e.factory === ex.factory);
+                    if (!exists) excludedDriversLog.push(ex);
+                }
+                sessionStorage.setItem(`excluded_log_${currentDate}`, JSON.stringify(excludedDriversLog));
+                updateRestrictionNoticePanel();
+                let tripsCount = {};
+                for (let d of distribution) if (d.truck) tripsCount[d.truck.number] = (tripsCount[d.truck.number] || 0) + 1;
+                let summary = trucks.slice(0,5).map(t => `${t.number}: ${tripsCount[t.number] || 0} رحلة`).join(' | ');
+                showToast(`✅ تم توزيع ${newDistributions.length} طلب مع مراعاة قيود الحظر.`, 'success');
                 localStorage.setItem('pendingOrdersCount', '0');
-            } else { showToast('فشل التوزيع التلقائي', 'error'); }
+            } else {
+                showToast('فشل التوزيع التلقائي', 'error');
+            }
             showLoading(false);
         }
 
         async function resetDistribution() {
+            const canManage = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+            if (!canManage) {
+                showToast('❌ غير مصرح لك بإعادة تعيين التوزيع', 'error');
+                return;
+            }
             if (!confirm('إعادة تعيين التوزيع؟ سيتم حذف جميع التوزيعات الحالية.')) return;
             distribution = [];
+            excludedDriversLog = [];
+            sessionStorage.removeItem(`excluded_log_${currentDate}`);
+            updateRestrictionNoticePanel();
             if (await saveData()) { await loadData(); showToast('تم إعادة التعيين', 'info'); }
+        }
+
+        function refreshExcludedLog() {
+            const canManage = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+            if (!canManage) {
+                showToast('❌ غير مصرح لك بحفظ سجل الاستبعادات', 'error');
+                return;
+            }
+            if (excludedDriversLog.length) {
+                sessionStorage.setItem(`excluded_log_${currentDate}`, JSON.stringify(excludedDriversLog));
+                showToast('تم تحديث سجل الاستبعادات', 'success');
+            } else {
+                showToast('لا توجد استبعادات لحفظها', 'info');
+            }
+        }
+
+        function openManualDistributeModalForOrder(order) {
+            const canManage = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+            if (!canManage) {
+                showToast('❌ غير مصرح لك بالتوزيع اليدوي', 'error');
+                return;
+            }
+            currentOrderToDistribute = order;
+            document.getElementById('manualFactory').value = order.factory;
+            document.getElementById('manualMaterial').value = order.material;
+            const select = document.getElementById('manualTruckSelect');
+            select.innerHTML = '<option value="">-- اختر سيارة --</option>' + trucks.map(t => `<option value="${t.number}">${t.number} - ${t.driver}</option>`).join('');
+            document.getElementById('manualRoad').value = 1;
+            document.getElementById('manualDistributeModal').classList.add('active');
+        }
+
+        function closeManualModal() { document.getElementById('manualDistributeModal').classList.remove('active'); currentOrderToDistribute = null; }
+
+        async function confirmManualDistribute() {
+            const canManage = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+            if (!canManage) {
+                showToast('❌ غير مصرح لك بالتوزيع اليدوي', 'error');
+                return;
+            }
+            const truckNumber = document.getElementById('manualTruckSelect').value;
+            const road = parseInt(document.getElementById('manualRoad').value);
+            if (!truckNumber) { showToast('اختر سيارة', 'error'); return; }
+            const selectedTruck = trucks.find(t => t.number === truckNumber);
+            if (!selectedTruck) { showToast('سيارة غير موجودة', 'error'); return; }
+            if (!currentOrderToDistribute) { showToast('لا يوجد طلب محدد', 'error'); return; }
+            
+            let currentTrips = {}, currentDistances = {}, currentLastFactory = {};
+            trucks.forEach(t => { currentTrips[t.number] = 0; currentDistances[t.number] = 0; currentLastFactory[t.number] = null; });
+            distribution.forEach(d => {
+                if (d.truck) {
+                    currentTrips[d.truck.number]++;
+                    currentDistances[d.truck.number] += getFactoryDistance(d.factory);
+                    currentLastFactory[d.truck.number] = d.factory;
+                }
+            });
+            
+            let fairTruck = null;
+            let sorted = [...trucks].sort((a, b) => {
+                const tripsA = currentTrips[a.number] || 0;
+                const tripsB = currentTrips[b.number] || 0;
+                if (tripsA !== tripsB) return tripsA - tripsB;
+                const distA = currentDistances[a.number] || 0;
+                const distB = currentDistances[b.number] || 0;
+                return distB - distA;
+            });
+            for (let t of sorted) {
+                if (currentLastFactory[t.number] !== currentOrderToDistribute.factory) { fairTruck = t; break; }
+            }
+            if (!fairTruck) fairTruck = sorted[0];
+            const isFair = (fairTruck.number === selectedTruck.number);
+            let manualOverride = false, overrideReason = '';
+            if (!isFair) {
+                const confirmMsg = `⚠️ تحذير: التوزيع العادل يوصي بالسائق ${fairTruck.number} - ${fairTruck.driver} (عدد رحلاته: ${currentTrips[fairTruck.number]}، مسافة: ${currentDistances[fairTruck.number].toFixed(1)} كم).\nأنت تختار السائق ${selectedTruck.number} - ${selectedTruck.driver}.\n\nإذا واصلت، سيتم تسجيل هذا كتوزيع يدوي مخالف للعدالة وقد يظهر في تقرير الجودة.\n\nهل تريد المتابعة؟`;
+                if (!confirm(confirmMsg)) return;
+                manualOverride = true;
+                overrideReason = `تم اختيار السائق ${selectedTruck.number} (${selectedTruck.driver}) بدلاً من الموصى به ${fairTruck.number} (${fairTruck.driver})`;
+            }
+            
+            showLoading(true);
+            try {
+                const alreadyDistributed = distribution.some(d => d.orderId === currentOrderToDistribute.id);
+                if (alreadyDistributed) { showToast('هذا الطلب موزع بالفعل', 'warning'); closeManualModal(); showLoading(false); return; }
+                distribution.push({
+                    orderId: currentOrderToDistribute.id,
+                    orderIndex: distribution.length + 1,
+                    truck: selectedTruck,
+                    factory: currentOrderToDistribute.factory,
+                    material: currentOrderToDistribute.material,
+                    time: currentOrderToDistribute.time || '',
+                    road: road,
+                    manualOverride: manualOverride,
+                    overrideReason: overrideReason,
+                    recommendedTruck: fairTruck.number,
+                    timestamp: new Date().toISOString()
+                });
+                await saveData();
+                await loadData();
+                closeManualModal();
+                if (manualOverride) showToast(`⚠️ تم توزيع الطلب على السيارة ${truckNumber} (رود ${road}) مع مخالفة للتوزيع العادل. تم تسجيل المخالفة.`, 'warning');
+                else showToast(`✅ تم توزيع الطلب على السيارة ${truckNumber} - ${selectedTruck.driver} (رود ${road})`, 'success');
+                localStorage.setItem('pendingOrdersCount', '0');
+            } catch(e) { showToast('خطأ في التوزيع', 'error'); }
+            showLoading(false);
+        }
+
+        // بناء شريط التنقل ديناميكياً (مثل index و orders)
+        function buildNavLinks() {
+            const links = [];
+            if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
+                links.push('<a href="index.html" class="nav-link">📊 الرئيسية</a>');
+            if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
+                links.push('<a href="orders.html" class="nav-link">📝 الطلبات</a>');
+            if (currentUserPermissions.viewDistribution === true || currentUserRole === 'admin') 
+                links.push('<a href="distribution.html" class="nav-link active">🚚 التوزيع</a>');
+            if (currentUserPermissions.viewTrucks === true || currentUserRole === 'admin') 
+                links.push('<a href="trucks.html" class="nav-link">🚛 السيارات</a>');
+            if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') {
+                links.push('<a href="products.html" class="nav-link">📦 أنواع البحص</a>');
+                links.push('<a href="factories.html" class="nav-link">🏭 المصانع</a>');
+            }
+            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') {
+                links.push('<a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>');
+                links.push('<a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان الشهرية</a>');
+                links.push('<a href="trucks-failed.html" class="nav-link">⚠️ السيارات غير المستوفية</a>');
+                links.push('<a href="distribution-quality.html" class="nav-link">📈 جودة التوزيع</a>');
+            }
+            if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') 
+                links.push('<a href="settings.html" class="nav-link">⚙️ الإعدادات</a>');
+            if (currentUserPermissions.manageRestrictions === true || currentUserRole === 'admin') 
+                links.push('<a href="restrictions.html" class="nav-link">⛔ الحظر</a>');
+            if (currentUserPermissions.manageUsers === true || currentUserRole === 'admin') 
+                links.push('<a href="users.html" class="nav-link">👥 المستخدمين</a>');
+            if (currentUserPermissions.viewBackup === true || currentUserRole === 'admin') 
+                links.push('<a href="logs.html" class="nav-link">📜 السجلات</a>');
+            return links.join('');
+        }
+
+        async function loadNav() {
+            try {
+                const me = await apiCall('/me');
+                currentUserRole = me.user.role;
+                currentUserPermissions = me.user.permissions || {};
+                console.log('✅ صلاحيات المستخدم (صفحة التوزيع):', currentUserPermissions);
+                
+                const hasViewDist = (currentUserRole === 'admin') || (currentUserPermissions.viewDistribution === true);
+                if (!hasViewDist) {
+                    document.getElementById('authorizedContent').classList.add('hidden');
+                    document.getElementById('unauthorizedMsg').classList.remove('hidden');
+                    showLoading(false);
+                    return;
+                }
+                document.getElementById('authorizedContent').classList.remove('hidden');
+                document.getElementById('unauthorizedMsg').classList.add('hidden');
+                
+                // إظهار/إخفاء أزرار الإدارة بناءً على صلاحية manageDistribution
+                const canManage = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+                const autoBtn = document.getElementById('autoDistributeBtn');
+                const resetBtn = document.getElementById('resetDistBtn');
+                const saveBtn = document.getElementById('saveExcludedBtn');
+                if (autoBtn) autoBtn.style.display = canManage ? 'inline-flex' : 'none';
+                if (resetBtn) resetBtn.style.display = canManage ? 'inline-flex' : 'none';
+                if (saveBtn) saveBtn.style.display = canManage ? 'inline-flex' : 'none';
+                
+                document.getElementById('navLinks').innerHTML = buildNavLinks();
+                showLoading(true);
+                await loadSettings();
+                await loadRestrictions();
+                await loadData();
+                showLoading(false);
+            } catch(e) {
+                console.error(e);
+                window.location.href = '/login.html';
+            }
         }
 
         function showToast(msg,type){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className=`toast toast-${type}`; t.innerText=msg; c.appendChild(t); setTimeout(()=>t.remove(),3000); }
         function showLoading(show){ document.getElementById('loading').classList.toggle('active',show); }
         function logout(){ if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html'); }
-        
-        function loadNav() {
-            fetch('/api/me',{credentials:'include'}).then(r=>r.json()).then(data=>{
-                if(data.user) {
-                    document.getElementById('navLinks').innerHTML = `
-                        <a href="index.html" class="nav-link">📊 الرئيسية</a>
-                        <a href="orders.html" class="nav-link">📝 الطلبات</a>
-                        <a href="distribution.html" class="nav-link active">🚚 التوزيع</a>
-                        <a href="trucks.html" class="nav-link">🚛 السيارات</a>
-                        <a href="products.html" class="nav-link">📦 أنواع البحص</a>
-                        <a href="factories.html" class="nav-link">🏭 المصانع</a>
-                        <a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>
-                        <a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان الشهرية</a>
-                        <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
-                        <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
-                        <a href="users.html" class="nav-link">👥 المستخدمين</a>
-                        <a href="logs.html" class="nav-link">📜 السجلات</a>
-                    `;
-                } else window.location.href='/login.html';
-            }).catch(()=>window.location.href='/login.html');
-        }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            loadNav();
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('orderDate').value = today;
             currentDate = today;
-            showLoading(true);
-            await loadSettings();
-            await loadData();
-            showLoading(false);
+            await loadNav();  // loadNav تقوم بكل شيء: تحقق الصلاحيات، تحميل البيانات
         });
     </script>
-    <script src="navbar.js"></script>
+    <!-- تم إزالة سطر navbar.js لأن الروابط أصبحت ديناميكية -->
 </body>
 </html>
