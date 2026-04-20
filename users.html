@@ -87,6 +87,9 @@
             align-items: center;
             gap: 8px;
         }
+        .password-wrapper input {
+            flex: 1;
+        }
         .toggle-password {
             background: #2d3e50;
             border: none;
@@ -95,7 +98,22 @@
             font-size: 0.9rem;
             padding: 8px 12px;
             border-radius: 6px;
+            transition: 0.2s;
             white-space: nowrap;
+        }
+        .toggle-password:hover {
+            background: #667eea;
+        }
+        .permissions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         table {
             width: 100%;
@@ -123,6 +141,7 @@
         }
         .toast-success { background: #11998e; }
         .toast-error { background: #eb3349; }
+        .toast-warning { background: #f093fb; }
         .loading {
             position: fixed;
             top:0; left:0;
@@ -167,6 +186,13 @@
             font-size: 1.2em;
         }
         .hidden { display: none; }
+        .file-upload {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            border: 1px dashed #667eea;
+        }
     </style>
 </head>
 <body>
@@ -174,7 +200,7 @@
 <div class="toast-container" id="toastContainer"></div>
 <div class="container">
     <div class="header">
-        <h1>👥 إدارة المستخدمين</h1>
+        <h1>👥 إدارة المستخدمين والصلاحيات</h1>
         <div id="logout-btn-container" style="position: absolute; top: 20px; left: 20px;">
             <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
         </div>
@@ -194,7 +220,7 @@
                     <label>كلمة المرور</label>
                     <div class="password-wrapper">
                         <input type="password" id="newPassword">
-                        <button type="button" class="toggle-password" onclick="togglePassword('newPassword', this)">👁️ إظهار</button>
+                        <button type="button" class="toggle-password" id="toggleNewPassword" onclick="togglePasswordVisibility('newPassword', this)">👁️ إظهار</button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -202,16 +228,21 @@
                     <select id="newRole">
                         <option value="user">مستخدم عادي</option>
                         <option value="admin">مدير</option>
-                        <option value="client">عميل مصنع</option>
                     </select>
-                </div>
-                <div class="form-group" id="factoryGroup" style="display:none;">
-                    <label>المصنع</label>
-                    <select id="newFactory"></select>
                 </div>
                 <div class="form-group">
                     <button class="btn btn-success" onclick="addUser()">➕ إضافة</button>
                 </div>
+            </div>
+            <div class="permissions-grid" id="permissionsGrid"></div>
+        </div>
+
+        <div class="card">
+            <h3>📂 استيراد مستخدمين من Excel / CSV</h3>
+            <p style="color: #a8b2d1; margin-bottom: 10px;">ملف Excel أو CSV يحتوي على الأعمدة: <strong>Users, Password, Privileges</strong></p>
+            <div class="file-upload">
+                <input type="file" id="uploadExcel" accept=".xlsx, .csv, .xls" style="color: #fff; margin-bottom: 10px;">
+                <button class="btn btn-info" onclick="importUsersFromExcel()">📤 رفع وإضافة المستخدمين</button>
             </div>
         </div>
 
@@ -219,7 +250,7 @@
             <h3>📋 قائمة المستخدمين</h3>
             <table id="usersTable">
                 <thead>
-                    <tr><th>#</th><th>اسم المستخدم</th><th>الدور</th><th>المصنع</th><th>تاريخ الإنشاء</th><th>الإجراءات</th></tr>
+                <tr><th>#</th><th>اسم المستخدم</th><th>الدور</th><th>تاريخ الإنشاء</th><th>الإجراءات</th></tr>
                 </thead>
                 <tbody id="usersBody"></tbody>
             </table>
@@ -227,66 +258,54 @@
     </div>
 </div>
 
-<!-- مودال تعديل المستخدم -->
-<div class="modal" id="editUserModal">
+<!-- مودال إعادة تعيين كلمة المرور -->
+<div class="modal" id="resetPasswordModal">
     <div class="modal-content">
-        <h3>✏️ تعديل المستخدم</h3>
-        <input type="hidden" id="editUserId">
-        <div class="form-group"><label>الدور</label><select id="editRole"><option value="user">مستخدم</option><option value="admin">مدير</option><option value="client">عميل مصنع</option></select></div>
-        <div class="form-group" id="editFactoryGroup" style="display:none;"><label>المصنع</label><select id="editFactory"></select></div>
-        <div class="form-group"><label>كلمة مرور جديدة (اختياري)</label><div class="password-wrapper"><input type="password" id="editPassword"><button type="button" class="toggle-password" onclick="togglePassword('editPassword', this)">👁️ إظهار</button></div></div>
-        <div style="margin-top:20px;"><button class="btn btn-danger" onclick="closeModal()">إلغاء</button><button class="btn btn-success" onclick="saveUserEdit()">حفظ</button></div>
+        <h3>🔑 إعادة تعيين كلمة المرور</h3>
+        <input type="hidden" id="resetUserId">
+        <div class="form-group">
+            <label>المستخدم: <span id="resetUsername"></span></label>
+        </div>
+        <div class="form-group">
+            <label>كلمة المرور الجديدة</label>
+            <div class="password-wrapper">
+                <input type="password" id="resetPassword">
+                <button type="button" class="toggle-password" onclick="togglePasswordVisibility('resetPassword', this)">👁️ إظهار</button>
+            </div>
+        </div>
+        <div style="margin-top:20px;">
+            <button class="btn btn-danger" onclick="closeResetModal()">إلغاء</button>
+            <button class="btn btn-success" onclick="saveResetPassword()">حفظ كلمة المرور</button>
+        </div>
     </div>
 </div>
 
 <script>
     const API_BASE = '/api';
-    let users = [], currentUserRole = '', factoriesList = [];
+    let users = [], currentUserRole = '', currentUserPermissions = {};
 
-    function togglePassword(inputId, btn) {
-        const input = document.getElementById(inputId);
-        if (input.type === 'password') {
-            input.type = 'text';
-            btn.textContent = '🙈 إخفاء';
-        } else {
-            input.type = 'password';
-            btn.textContent = '👁️ إظهار';
+    function togglePasswordVisibility(inputId, btnElement) {
+        if (currentUserRole !== 'admin') {
+            showToast("❌ غير مسموح لك بعرض كلمة المرور. هذه الخاصية للمدير فقط.", "error");
+            return;
         }
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        btnElement.textContent = isPassword ? '🙈 إخفاء' : '👁️ إظهار';
     }
 
     async function apiCall(endpoint, method='GET', data=null) {
         const opts = { method, headers:{'Content-Type':'application/json'}, credentials:'include' };
-        if (data && (method==='POST'||method==='PUT')) opts.body = JSON.stringify(data);
+        if(data && (method==='POST'||method==='PUT')) opts.body = JSON.stringify(data);
         const res = await fetch(`${API_BASE}${endpoint}`, opts);
-        if (res.status === 401) {
-            window.location.href = '/login.html';
-            throw new Error('غير مصرح');
-        }
-        if (!res.ok) {
+        if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
+        if(!res.ok) {
             const err = await res.text();
             throw new Error(err || `HTTP ${res.status}`);
         }
         return res.json();
-    }
-
-    async function loadFactories() {
-        try {
-            const settings = await apiCall('/settings');
-            // التأكد من أن factories عبارة عن مصفوفة من الكائنات ذات الخاصية name
-            let rawFactories = settings.factories || [];
-            factoriesList = rawFactories.map(f => {
-                if (typeof f === 'string') return { name: f };
-                return { name: f.name || f.factory_name || '' };
-            }).filter(f => f.name);
-            const factorySelects = ['newFactory', 'editFactory'];
-            factorySelects.forEach(id => {
-                const select = document.getElementById(id);
-                if (select) {
-                    select.innerHTML = '<option value="">-- اختر مصنع --</option>' + 
-                        factoriesList.map(f => `<option value="${escapeHtml(f.name)}">${escapeHtml(f.name)}</option>`).join('');
-                }
-            });
-        } catch(e) { console.error('فشل تحميل المصانع', e); }
     }
 
     async function loadUsers() {
@@ -294,7 +313,10 @@
         try {
             const me = await apiCall('/me');
             currentUserRole = me.user.role;
-            if (currentUserRole !== 'admin') {
+            currentUserPermissions = me.user.permissions || {};
+            
+            const hasManageUsers = (currentUserRole === 'admin') || (currentUserPermissions && currentUserPermissions.manageUsers === true);
+            if (!hasManageUsers) {
                 document.getElementById('unauthorizedMsg').innerHTML = '⛔ غير مصرح لك بالوصول إلى إدارة المستخدمين. هذه الصفحة متاحة فقط للمديرين.';
                 document.getElementById('unauthorizedMsg').classList.remove('hidden');
                 document.getElementById('authorizedContent').classList.add('hidden');
@@ -306,128 +328,194 @@
             
             users = await apiCall('/users');
             renderUsersTable();
-            await loadFactories();
-            
-            const roleSelect = document.getElementById('newRole');
-            const factoryGroup = document.getElementById('factoryGroup');
-            function toggleFactoryField() {
-                factoryGroup.style.display = roleSelect.value === 'client' ? 'flex' : 'none';
-            }
-            roleSelect.addEventListener('change', toggleFactoryField);
-            toggleFactoryField();
+            renderPermissionsCheckboxes();
         } catch(e) { 
-            showToast('خطأ: ' + e.message, 'error');
+            showToast('خطأ في تحميل البيانات: ' + e.message, 'error');
+            console.error(e);
         }
         showLoading(false);
+    }
+
+    function renderPermissionsCheckboxes() {
+        const permissions = ['viewOrders','addOrders','editOrders','deleteOrders','viewDistribution','manageDistribution','viewTrucks','manageTrucks','viewReports','exportReports','viewSettings','manageSettings','viewBackup','manageBackup','manageUsers','manageRestrictions'];
+        const container = document.getElementById('permissionsGrid');
+        container.innerHTML = permissions.map(p => `<label class="permission-item"><input type="checkbox" value="${p}" id="perm_${p}" checked> ${p}</label>`).join('');
+    }
+
+    function parsePrivileges(privText) {
+        const allPerms = ['viewOrders','addOrders','editOrders','deleteOrders','viewDistribution','manageDistribution','viewTrucks','manageTrucks','viewReports','exportReports','viewSettings','manageSettings','viewBackup','manageBackup','manageUsers','manageRestrictions'];
+        const permissions = {};
+        allPerms.forEach(p => { permissions[p] = true; });
+        if (privText && (privText.toLowerCase().includes('all except user') || privText.toLowerCase().includes('كل الصلاحيات ما عدا'))) {
+            permissions.manageUsers = false;
+        }
+        return permissions;
+    }
+
+    async function importUsersFromExcel() {
+        const fileInput = document.getElementById('uploadExcel');
+        if (!fileInput.files.length) {
+            showToast('الرجاء اختيار ملف Excel أو CSV', 'error');
+            return;
+        }
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(sheet);
+                if (!rows.length) {
+                    showToast('الملف فارغ أو لا يحتوي على بيانات', 'error');
+                    return;
+                }
+                let successCount = 0, failCount = 0;
+                showLoading(true);
+                for (const row of rows) {
+                    const username = row.Users || row.users || row.USER || row['اسم المستخدم'];
+                    const password = row.Password || row.password || row.PASS || row['كلمة المرور'];
+                    const privText = row.Privileges || row.privileges || row.PRIVILEGES || row['الصلاحيات'] || '';
+                    if (!username || !password) {
+                        failCount++;
+                        continue;
+                    }
+                    const role = 'user';
+                    const permissions = parsePrivileges(privText);
+                    try {
+                        await apiCall('/users', 'POST', { username, password, role, permissions });
+                        successCount++;
+                    } catch(err) {
+                        failCount++;
+                    }
+                }
+                showLoading(false);
+                showToast(`✅ تم إضافة ${successCount} مستخدم، ❌ فشل ${failCount}`, successCount > 0 ? 'success' : 'error');
+                if (successCount > 0) await loadUsers();
+                fileInput.value = '';
+            } catch(err) {
+                showLoading(false);
+                showToast('خطأ في قراءة الملف: ' + err.message, 'error');
+            }
+        };
+        reader.readAsArrayBuffer(file);
     }
 
     async function addUser() {
         if (currentUserRole !== 'admin') {
-            showToast('غير مصرح', 'error');
+            showToast('غير مصرح لك بإضافة مستخدمين', 'error');
             return;
         }
         const username = document.getElementById('newUsername').value.trim();
         const password = document.getElementById('newPassword').value;
-        let role = document.getElementById('newRole').value;
-        let factory = '';
-        if (role === 'client') {
-            factory = document.getElementById('newFactory').value;
-            if (!factory) {
-                showToast('الرجاء اختيار مصنع للعميل', 'error');
-                return;
-            }
-        }
-        if (!username || !password) {
-            showToast('املأ جميع الحقول', 'error');
-            return;
-        }
+        const role = document.getElementById('newRole').value;
+        if(!username || !password) { showToast('املأ جميع الحقول', 'error'); return; }
+        const permissions = {};
+        document.querySelectorAll('#permissionsGrid input[type="checkbox"]').forEach(cb => { permissions[cb.value] = cb.checked; });
         showLoading(true);
         try {
-            const payload = { username, password, role };
-            if (factory) payload.factory = factory;
-            await apiCall('/users', 'POST', payload);
+            await apiCall('/users', 'POST', { username, password, role, permissions });
             showToast('✅ تم إضافة المستخدم', 'success');
             await loadUsers();
             document.getElementById('newUsername').value = '';
             document.getElementById('newPassword').value = '';
+            const toggleBtn = document.getElementById('toggleNewPassword');
             const passInput = document.getElementById('newPassword');
-            if (passInput) passInput.type = 'password';
-        } catch(e) {
-            showToast('خطأ: ' + e.message, 'error');
-        }
+            if (passInput.type !== 'password') {
+                passInput.type = 'password';
+                if (toggleBtn) toggleBtn.textContent = '👁️ إظهار';
+            }
+        } catch(e) { showToast('خطأ: '+e.message, 'error'); }
         showLoading(false);
     }
 
     async function deleteUser(id, username) {
-        if (currentUserRole !== 'admin') {
-            showToast('غير مصرح', 'error');
-            return;
-        }
-        if (username === 'admin') {
-            showToast('لا يمكن حذف المدير الرئيسي', 'error');
-            return;
-        }
-        if (!confirm(`حذف المستخدم ${username}؟`)) return;
+        if (currentUserRole !== 'admin') { showToast('غير مصرح', 'error'); return; }
+        if(username === 'Admin') { showToast('لا يمكن حذف المدير الرئيسي', 'error'); return; }
+        if(!confirm(`حذف المستخدم ${username}؟`)) return;
         showLoading(true);
         try {
             await apiCall(`/users/${id}`, 'DELETE');
             showToast('تم الحذف', 'success');
             await loadUsers();
-        } catch(e) {
-            showToast('خطأ: ' + e.message, 'error');
+        } catch(e) { showToast('خطأ: ' + e.message, 'error'); }
+        showLoading(false);
+    }
+
+    // فتح مودال إعادة تعيين كلمة المرور
+    function openResetPasswordModal(userId, username) {
+        if (currentUserRole !== 'admin') {
+            showToast('غير مصرح لك بإعادة تعيين كلمة المرور', 'error');
+            return;
         }
+        document.getElementById('resetUserId').value = userId;
+        document.getElementById('resetUsername').innerText = username;
+        document.getElementById('resetPassword').value = '';
+        const resetInput = document.getElementById('resetPassword');
+        const toggleBtn = resetInput.parentElement.querySelector('.toggle-password');
+        if (resetInput.type !== 'password') {
+            resetInput.type = 'password';
+            if (toggleBtn) toggleBtn.textContent = '👁️ إظهار';
+        }
+        document.getElementById('resetPasswordModal').classList.add('active');
+    }
+
+    async function saveResetPassword() {
+        const id = document.getElementById('resetUserId').value;
+        const newPassword = document.getElementById('resetPassword').value;
+        if (!newPassword) {
+            showToast('الرجاء إدخال كلمة المرور الجديدة', 'error');
+            return;
+        }
+        const user = users.find(u => u.id == id);
+        if (!user) { showToast('المستخدم غير موجود', 'error'); return; }
+        showLoading(true);
+        try {
+            await apiCall(`/users/${id}`, 'PUT', { username: user.username, role: user.role, permissions: user.permissions, password: newPassword });
+            showToast('✅ تم تغيير كلمة المرور بنجاح', 'success');
+            closeResetModal();
+        } catch(e) { showToast('خطأ: ' + e.message, 'error'); }
         showLoading(false);
     }
 
     function openEditModal(user) {
+        if (currentUserRole !== 'admin') { showToast('غير مصرح', 'error'); return; }
         document.getElementById('editUserId').value = user.id;
         document.getElementById('editRole').value = user.role;
         document.getElementById('editPassword').value = '';
-        const factoryGroup = document.getElementById('editFactoryGroup');
-        const factorySelect = document.getElementById('editFactory');
-        if (user.role === 'client') {
-            factoryGroup.style.display = 'flex';
-            factorySelect.value = user.factory || '';
-        } else {
-            factoryGroup.style.display = 'none';
-        }
+        const container = document.getElementById('editPermissionsGrid');
+        const perms = user.permissions || {};
+        const allPerms = ['viewOrders','addOrders','editOrders','deleteOrders','viewDistribution','manageDistribution','viewTrucks','manageTrucks','viewReports','exportReports','viewSettings','manageSettings','viewBackup','manageBackup','manageUsers','manageRestrictions'];
+        container.innerHTML = allPerms.map(p => `<label class="permission-item"><input type="checkbox" value="${p}" ${perms[p] ? 'checked' : ''}> ${p}</label>`).join('');
         document.getElementById('editUserModal').classList.add('active');
     }
 
     async function saveUserEdit() {
+        if (currentUserRole !== 'admin') { showToast('غير مصرح', 'error'); return; }
         const id = document.getElementById('editUserId').value;
         const role = document.getElementById('editRole').value;
         const password = document.getElementById('editPassword').value;
-        let factory = '';
-        if (role === 'client') {
-            factory = document.getElementById('editFactory').value;
-            if (!factory) {
-                showToast('الرجاء اختيار مصنع للعميل', 'error');
-                return;
-            }
-        }
-        const data = { role };
-        if (factory) data.factory = factory;
-        if (password) data.password = password;
+        const permissions = {};
+        document.querySelectorAll('#editPermissionsGrid input[type="checkbox"]').forEach(cb => { permissions[cb.value] = cb.checked; });
+        const user = users.find(u => u.id == id);
+        if (!user) { showToast('المستخدم غير موجود', 'error'); return; }
+        const data = { username: user.username, role, permissions };
+        if(password) data.password = password;
         showLoading(true);
         try {
             await apiCall(`/users/${id}`, 'PUT', data);
             showToast('✅ تم التعديل', 'success');
             closeModal();
             await loadUsers();
-        } catch(e) {
-            showToast('خطأ: ' + e.message, 'error');
-        }
+        } catch(e) { showToast('خطأ: ' + e.message, 'error'); }
         showLoading(false);
     }
 
     function renderUsersTable() {
         const tbody = document.getElementById('usersBody');
-        if (!users.length) {
-            tbody.innerHTML = '<tr><td colspan="6">لا يوجد مستخدمين</td></tr>';
-            return;
-        }
-        tbody.innerHTML = users.map((u, i) => {
+        if(!users.length) { tbody.innerHTML = '<tr><td colspan="5">لا يوجد مستخدمين</td></tr>'; return; }
+        tbody.innerHTML = users.map((u,i) => {
             let formattedDate = 'غير محدد';
             if (u.created_at) {
                 try {
@@ -439,70 +527,38 @@
             <tr>
                 <td>${i+1}</td>
                 <td>${escapeHtml(u.username)}</td>
-                <td>${u.role === 'admin' ? 'مدير' : (u.role === 'client' ? 'عميل مصنع' : 'مستخدم')}</td>
-                <td>${escapeHtml(u.factory || '')}</td>
+                <td>${u.role === 'admin' ? 'مدير' : 'مستخدم'}</td>
                 <td>${formattedDate}</td>
                 <td>
-                    <button class="btn btn-warning" onclick='openEditModal(${JSON.stringify(u).replace(/'/g, "&#39;")})'>✏️ تعديل</button>
-                    <button class="btn btn-danger" onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')">🗑️ حذف</button>
+                    <button class="btn btn-warning btn-sm" onclick="openEditModal(${JSON.stringify(u).replace(/"/g, '&quot;')})">✏️ تعديل</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')">🗑️ حذف</button>
+                    <button class="btn btn-secondary btn-sm" onclick="openResetPasswordModal(${u.id}, '${escapeHtml(u.username)}')">🔑 إعادة تعيين</button>
                  </td>
-            </tr>`;
-        }).join('');
+             </tr>
+        `}).join('');
     }
 
     function escapeHtml(str) { return str ? str.replace(/[&<>]/g, function(m){ return m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'; }) : ''; }
-    function showToast(msg, type) {
-        const c = document.getElementById('toastContainer');
-        const t = document.createElement('div');
-        t.className = `toast toast-${type}`;
-        t.innerText = msg;
-        c.appendChild(t);
-        setTimeout(() => t.remove(), 3000);
-    }
+    function showToast(msg,type) { const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className=`toast toast-${type}`; t.innerText=msg; c.appendChild(t); setTimeout(()=>t.remove(),3000); }
     function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
     function closeModal() { document.getElementById('editUserModal').classList.remove('active'); }
-    function logout() {
-        if (confirm('تسجيل الخروج؟')) {
-            fetch('/api/logout', { method: 'POST', credentials: 'include' }).then(() => window.location.href = '/login.html');
-        }
-    }
-    
-    function loadNav() {
-        fetch('/api/me', { credentials: 'include' })
-            .then(r => r.json())
-            .then(data => {
-                if (data.user) {
-                    const nav = document.getElementById('navLinks');
-                    if (nav) {
-                        nav.innerHTML = `
-                            <a href="index.html" class="nav-link">📊 الرئيسية</a>
-                            <a href="orders.html" class="nav-link">📝 الطلبات</a>
-                            <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
-                            <a href="trucks.html" class="nav-link">🚛 السيارات</a>
-                            <a href="products.html" class="nav-link">📦 أنواع البحص</a>
-                            <a href="factories.html" class="nav-link">🏭 المصانع</a>
-                            <a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>
-                            <a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان الشهرية</a>
-                            <a href="trucks-failed.html" class="nav-link">⚠️ السيارات غير المستوفية</a>
-                            <a href="trucks-failed-report.html" class="nav-link">📊 تقرير السيارات غير المستوفية</a>
-                            <a href="distribution-quality.html" class="nav-link">📈 جودة التوزيع</a>
-                            <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
-                            <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
-                            <a href="users.html" class="nav-link active">👥 المستخدمين</a>
-                            <a href="logs.html" class="nav-link">📜 السجلات</a>
-                        `;
-                    }
-                } else {
-                    window.location.href = '/login.html';
-                }
-            })
-            .catch(() => window.location.href = '/login.html');
-    }
+    function closeResetModal() { document.getElementById('resetPasswordModal').classList.remove('active'); }
+    function logout() { if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html'); }
+    function loadNav() { fetch('/api/me', {credentials:'include'}).then(r=>r.json()).then(data=>{ if(data.user) document.getElementById('navLinks').innerHTML = `<a href="index.html" class="nav-link">📊 الرئيسية</a><a href="orders.html" class="nav-link">📝 الطلبات</a><a href="distribution.html" class="nav-link">🚚 التوزيع</a><a href="trucks.html" class="nav-link">🚛 السيارات</a><a href="products.html" class="nav-link">📦 أنواع البحص</a><a href="factories.html" class="nav-link">🏭 المصانع</a><a href="reports.html" class="nav-link">📊 التقارير</a><a href="settings.html" class="nav-link">⚙️ الإعدادات</a><a href="restrictions.html" class="nav-link">⛔ الحظر</a><a href="users.html" class="nav-link active">👥 المستخدمين</a><a href="logs.html" class="nav-link">📜 السجلات</a>`; }).catch(()=>{ window.location='/login.html'; }); }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        loadNav();
-        loadUsers();
-    });
+    document.addEventListener('DOMContentLoaded', () => { loadNav(); loadUsers(); });
 </script>
+
+<!-- مودال التعديل الأساسي (بدون زر إظهار) -->
+<div class="modal" id="editUserModal">
+    <div class="modal-content">
+        <h3>✏️ تعديل صلاحيات المستخدم</h3>
+        <input type="hidden" id="editUserId">
+        <div class="form-group"><label>الدور</label><select id="editRole"><option value="user">مستخدم</option><option value="admin">مدير</option></select></div>
+        <div class="form-group"><label>كلمة مرور جديدة (اختياري)</label><input type="password" id="editPassword"></div>
+        <div id="editPermissionsGrid"></div>
+        <div style="margin-top:20px;"><button class="btn btn-danger" onclick="closeModal()">إلغاء</button><button class="btn btn-success" onclick="saveUserEdit()">حفظ</button></div>
+    </div>
+</div>
 </body>
 </html>
