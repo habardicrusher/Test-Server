@@ -1,4 +1,4 @@
-// navbar.js - شريط التنقل الموحد
+// navbar.js - شريط التنقل الموحد (محدث)
 (function() {
     // Keep-alive: كل 4 دقائق للحفاظ على الجلسة
     setInterval(async () => {
@@ -35,7 +35,7 @@
                 }
             }
 
-            // ========== الروابط الكاملة (تمت إضافة صفحة تقارير الميزان) ==========
+            // ========== الروابط الكاملة (تم إضافة expenses.html و الصفحات الأخرى) ==========
             const allLinks = [
                 { href: 'index.html', text: '📊 الرئيسية' },
                 { href: 'orders.html', text: '📝 الطلبات' },
@@ -44,7 +44,10 @@
                 { href: 'products.html', text: '📦 أنواع البحص' },
                 { href: 'factories.html', text: '🏭 المصانع' },
                 { href: 'reports.html', text: '📊 تقارير الكسارة' },
-                { href: 'scale_report.html', text: '⚖️ تقارير الميزان الشهرية' },  // ✅ الصفحة الجديدة
+                { href: 'scale_report.html', text: '⚖️ تقارير الميزان الشهرية' },
+                { href: 'expenses.html', text: '💰 مصاريف السيارات' },          // ✅ الصفحة الجديدة
+                { href: 'distribution-quality.html', text: '📈 جودة التوزيع' },  // ✅ إضافة مفقودة
+                { href: 'trucks-failed.html', text: '⚠️ السيارات غير المستوفية' }, // ✅ إضافة مفقودة
                 { href: 'settings.html', text: '⚙️ الإعدادات' },
                 { href: 'restrictions.html', text: '⛔ الحظر' },
                 { href: 'users.html', text: '👥 المستخدمين' },
@@ -53,10 +56,8 @@
 
             let linksToShow = [];
             if (isAdmin || isUser) {
-                // المدير والمستخدم العادي يريان كل الصفحات
                 linksToShow = allLinks;
             } else if (isClient) {
-                // العميل يرى فقط الطلبات
                 linksToShow = [{ href: 'orders.html', text: '📝 الطلبات' }];
             }
 
