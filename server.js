@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
@@ -9,9 +10,27 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ==================== Supabase Client ====================
-const supabaseUrl = 'https://ybbxinhgwnnnvougrzwv.supabase.co';
-const supabaseKey = 'EYR_EYJhbGciOiJIUzI1NiIsImR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InliYnhpbmhnd25ubnZvdWdyend2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0MjQxMzEsImV4cCI6MjA2MTAwMDEzMX0.nMlWcY-bzrT0KjEoO_sWz7x8B-kHcX5nJ2QfWK7jQ_k';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ خطأ: متغيرات Supabase غير موجودة في ملف .env');
+    process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// اختبار الاتصال عند بدء التشغيل
+(async () => {
+    try {
+        const { data, error } = await supabase.from('users').select('count', { count: 'exact', head: true });
+        if (error) throw error;
+        console.log('✅ الاتصال بـ Supabase ناجح');
+    } catch (err) {
+        console.error('❌ فشل الاتصال بـ Supabase:', err.message);
+        console.error('تأكد من صحة SUPABASE_URL و SUPABASE_ANON_KEY في ملف .env');
+    }
+})();
 
 // ==================== Middleware ====================
 app.use(cors({ origin: true, credentials: true }));
@@ -58,8 +77,8 @@ async function getUserByUsername(username) {
         .from('users')
         .select('*')
         .eq('username', username)
-        .single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+        .maybeSingle();
+    if (error) throw new Error(error.message);
     return data;
 }
 
@@ -67,7 +86,7 @@ async function getUsers() {
     const { data, error } = await supabase
         .from('users')
         .select('id, username, role, factory, permissions, created_at')
-        .order('id');
+        .order('id', { ascending: true });
     if (error) throw new Error(error.message);
     return data || [];
 }
@@ -102,16 +121,16 @@ async function deleteUser(id) {
     if (error) throw new Error(error.message);
 }
 
-// ----- Settings -----
+// ----- Settings (app_settings) -----
 async function getSettings() {
     const { data, error } = await supabase
         .from('app_settings')
         .select('factories, materials, trucks')
         .eq('id', 1)
-        .single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+        .maybeSingle();
+    if (error) throw new Error(error.message);
     if (!data) {
-        // بيانات افتراضية إذا لم توجد
+        // بيانات افتراضية
         const defaultSettings = {
             factories: [
                 { name: 'مصنع الفهد', location: 'الرياض' },
@@ -134,14 +153,15 @@ async function saveSettings(factories, materials, trucks) {
     if (error) throw new Error(error.message);
 }
 
-// ----- Daily Data -----
+// ----- Daily Data (daily_data) -----
 async function getDayData(date) {
     const { data, error } = await supabase
         .from('daily_data')
         .select('orders, distribution')
         .eq('date', date)
-        .single();
-    if (error && error.code !== 'PGRST116') return { orders: [], distribution: [] };
+        .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return { orders: [], distribution: [] };
     return { orders: data.orders || [], distribution: data.distribution || [] };
 }
 
@@ -245,8 +265,8 @@ async function getReportById(id) {
         .from('reports')
         .select('*')
         .eq('id', id)
-        .single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+        .maybeSingle();
+    if (error) throw new Error(error.message);
     return data;
 }
 
@@ -282,8 +302,8 @@ async function getScaleReportById(reportId) {
         .from('scale_reports')
         .select('*')
         .eq('report_id', reportId)
-        .single();
-    if (error && error.code !== 'PGRST116') return null;
+        .maybeSingle();
+    if (error) throw new Error(error.message);
     return data;
 }
 
@@ -313,6 +333,7 @@ app.post('/api/login', async (req, res) => {
         await addLog(username, 'تسجيل دخول', `تسجيل دخول للمستخدم ${username}`, req.session.user.factory || 'المكتب الرئيسي');
         res.json({ success: true, user: req.session.user });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -504,7 +525,7 @@ app.delete('/api/logs/clear', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-// ==================== Reports (Analysis) Routes ====================
+// ==================== Reports Routes ====================
 app.post('/api/upload-report', requireAuth, async (req, res) => {
     try {
         if (req.session.user.role !== 'admin') return res.status(403).json({ error: 'غير مصرح' });
@@ -641,7 +662,7 @@ app.delete('/api/scale-reports/:id', requireAuth, async (req, res) => {
     }
 });
 
-// ==================== Static Files & Fallback ====================
+// ==================== Static Files ====================
 app.get('/login.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
 });
