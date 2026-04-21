@@ -14,7 +14,7 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-    console.error('❌ خطأ: متغيرات Supabase غير موجودة في ملف .env');
+    console.error('❌ خطأ: متغيرات Supabase غير موجودة. تأكد من إعداد SUPABASE_URL و SUPABASE_ANON_KEY في البيئة.');
     process.exit(1);
 }
 
@@ -23,12 +23,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // اختبار الاتصال عند بدء التشغيل
 (async () => {
     try {
-        const { data, error } = await supabase.from('users').select('count', { count: 'exact', head: true });
+        const { data, error } = await supabase.from('users').select('id').limit(1);
         if (error) throw error;
         console.log('✅ الاتصال بـ Supabase ناجح');
     } catch (err) {
         console.error('❌ فشل الاتصال بـ Supabase:', err.message);
-        console.error('تأكد من صحة SUPABASE_URL و SUPABASE_ANON_KEY في ملف .env');
+        console.error('تأكد من صحة SUPABASE_URL و SUPABASE_ANON_KEY');
     }
 })();
 
@@ -78,7 +78,10 @@ async function getUserByUsername(username) {
         .select('*')
         .eq('username', username)
         .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) {
+        console.error('خطأ في getUserByUsername:', error.message);
+        throw new Error(error.message);
+    }
     return data;
 }
 
@@ -130,7 +133,6 @@ async function getSettings() {
         .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) {
-        // بيانات افتراضية
         const defaultSettings = {
             factories: [
                 { name: 'مصنع الفهد', location: 'الرياض' },
@@ -234,7 +236,7 @@ async function getLogsCount() {
     return count;
 }
 
-// ----- Reports (analysis) -----
+// ----- Reports -----
 async function saveReport(reportData) {
     const { data, error } = await supabase
         .from('reports')
@@ -320,7 +322,11 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     try {
         const user = await getUserByUsername(username);
-        if (!user || !bcrypt.compareSync(password, user.password)) {
+        if (!user) {
+            return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+        }
+        const isPasswordValid = bcrypt.compareSync(password, user.password);
+        if (!isPasswordValid) {
             return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
         }
         req.session.user = {
@@ -333,8 +339,8 @@ app.post('/api/login', async (req, res) => {
         await addLog(username, 'تسجيل دخول', `تسجيل دخول للمستخدم ${username}`, req.session.user.factory || 'المكتب الرئيسي');
         res.json({ success: true, user: req.session.user });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
+        console.error('خطأ في تسجيل الدخول:', err);
+        res.status(500).json({ error: 'حدث خطأ داخلي في الخادم. يرجى المحاولة لاحقاً.' });
     }
 });
 
@@ -358,6 +364,7 @@ app.get('/api/settings', requireAuth, async (req, res) => {
         }
         res.json(settings);
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
