@@ -377,41 +377,44 @@
         }
 
         // دالة بناء روابط التنقل بناءً على الصلاحيات
-        function buildNavLinks() {
-            const links = [];
-            if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
-                links.push('<a href="index.html" class="nav-link active">📊 الرئيسية</a>');
-            if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
-                links.push('<a href="orders.html" class="nav-link">📝 الطلبات</a>');
-            if (currentUserPermissions.viewDistribution === true || currentUserRole === 'admin') 
-                links.push('<a href="distribution.html" class="nav-link">🚚 التوزيع</a>');
-            if (currentUserPermissions.viewTrucks === true || currentUserRole === 'admin') 
-                links.push('<a href="trucks.html" class="nav-link">🚛 السيارات</a>');
-            // المنتجات والمصانع: نعتمد على صلاحية viewSettings أو صلاحيات مخصصة (يمكن إضافتها لاحقاً)
-            if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') {
-                links.push('<a href="products.html" class="nav-link">📦 أنواع البحص</a>');
-                links.push('<a href="factories.html" class="nav-link">🏭 المصانع</a>');
-            }
-            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') 
-                links.push('<a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>');
-            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') 
-                links.push('<a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان الشهرية</a>');
-            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') 
-                links.push('<a href="trucks-failed.html" class="nav-link">⚠️ السيارات الغير مستوفية</a>');
-            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') 
-                links.push('<a href="distribution-quality.html" class="nav-link">📈 جودة التوزيع</a>');
-            if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') 
-                links.push('<a href="settings.html" class="nav-link">⚙️ الإعدادات</a>');
-            if (currentUserPermissions.manageRestrictions === true || currentUserRole === 'admin') 
-                links.push('<a href="restrictions.html" class="nav-link">⛔ الحظر</a>');
-            if (currentUserPermissions.manageUsers === true || currentUserRole === 'admin') 
-                links.push('<a href="users.html" class="nav-link">👥 المستخدمين</a>');
-            if (currentUserPermissions.viewBackup === true || currentUserRole === 'admin') 
-                links.push('<a href="logs.html" class="nav-link">📜 السجلات</a>');
-            
-            return links.join('');
-        }
-
+function buildNavLinks() {
+    const links = [];
+    if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
+        links.push('<a href="index.html" class="nav-link active">📊 الرئيسية</a>');
+    if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
+        links.push('<a href="orders.html" class="nav-link">📝 الطلبات</a>');
+    if (currentUserPermissions.viewDistribution === true || currentUserRole === 'admin') 
+        links.push('<a href="distribution.html" class="nav-link">🚚 التوزيع</a>');
+    if (currentUserPermissions.viewTrucks === true || currentUserRole === 'admin') 
+        links.push('<a href="trucks.html" class="nav-link">🚛 السيارات</a>');
+    
+    // المنتجات والمصانع (تعتمد على صلاحية viewSettings)
+    if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') {
+        links.push('<a href="products.html" class="nav-link">📦 أنواع البحص</a>');
+        links.push('<a href="factories.html" class="nav-link">🏭 المصانع</a>');
+    }
+    
+    // التقارير (viewReports)
+    if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') {
+        links.push('<a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>');
+        links.push('<a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان الشهرية</a>');
+        links.push('<a href="trucks-failed.html" class="nav-link">⚠️ السيارات الغير مستوفية</a>');
+        links.push('<a href="distribution-quality.html" class="nav-link">📈 جودة التوزيع</a>');
+        links.push('<a href="expenses.html" class="nav-link">💰 مصاريف السيارات</a>');   // ✅ إضافة الصفحة الجديدة
+    }
+    
+    // الإعدادات والحظر والمستخدمين والسجلات
+    if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') 
+        links.push('<a href="settings.html" class="nav-link">⚙️ الإعدادات</a>');
+    if (currentUserPermissions.manageRestrictions === true || currentUserRole === 'admin') 
+        links.push('<a href="restrictions.html" class="nav-link">⛔ الحظر</a>');
+    if (currentUserPermissions.manageUsers === true || currentUserRole === 'admin') 
+        links.push('<a href="users.html" class="nav-link">👥 المستخدمين</a>');
+    if (currentUserPermissions.viewBackup === true || currentUserRole === 'admin') 
+        links.push('<a href="logs.html" class="nav-link">📜 السجلات</a>');
+    
+    return links.join('');
+}
         function loadNav() {
             fetch('/api/me', { credentials: 'include' })
                 .then(r => r.json())
