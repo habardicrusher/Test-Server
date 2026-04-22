@@ -35,7 +35,7 @@
                 }
             }
 
-            // ========== الروابط الكاملة (تم إضافة expenses.html و الصفحات الأخرى) ==========
+            // ========== الروابط الكاملة (تم إضافة expenses.html و cash_orders.html) ==========
             const allLinks = [
                 { href: 'index.html', text: '📊 الرئيسية' },
                 { href: 'orders.html', text: '📝 الطلبات' },
@@ -45,9 +45,10 @@
                 { href: 'factories.html', text: '🏭 المصانع' },
                 { href: 'reports.html', text: '📊 تقارير الكسارة' },
                 { href: 'scale_report.html', text: '⚖️ تقارير الميزان الشهرية' },
-                { href: 'expenses.html', text: '💰 مصاريف السيارات' },          // ✅ الصفحة الجديدة
-                { href: 'distribution-quality.html', text: '📈 جودة التوزيع' },  // ✅ إضافة مفقودة
-                { href: 'trucks-failed.html', text: '⚠️ السيارات غير المستوفية' }, // ✅ إضافة مفقودة
+                { href: 'expenses.html', text: '💰 مصاريف السيارات' },
+                { href: 'cash_orders.html', text: '💰 طلبات نقدية' },          // ✅ الصفحة الجديدة (طلبات نقدية)
+                { href: 'distribution-quality.html', text: '📈 جودة التوزيع' },
+                { href: 'trucks-failed.html', text: '⚠️ السيارات غير المستوفية' },
                 { href: 'settings.html', text: '⚙️ الإعدادات' },
                 { href: 'restrictions.html', text: '⛔ الحظر' },
                 { href: 'users.html', text: '👥 المستخدمين' },
