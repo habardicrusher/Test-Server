@@ -1,4 +1,4 @@
-// server.js - نظام إدارة طلبات كسارة الحبردي - تخزين مؤقت في الذاكرة
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
@@ -6,6 +6,7 @@ const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
+const XLSX = require('xlsx');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,9 +23,10 @@ app.use(session({
     name: 'gravel.sid'
 }));
 
-// ==================== إعداد رفع الملفات ====================
+// ==================== إعداد مجلد الرفع ====================
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
     filename: (req, file, cb) => {
@@ -34,7 +36,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
-// ==================== تخزين مؤقت في الذاكرة ====================
+// ==================== تخزين مؤقت في الذاكرة (للتشغيل بدون قاعدة بيانات) ====================
 let inMemory = {
     users: [],
     settings: {
@@ -46,12 +48,12 @@ let inMemory = {
         materials: ['3/4', '3/8', '3/16', 'بحص خشن', 'بحص ناعم'],
         trucks: []
     },
-    dailyData: {},      // key: date string, value: { orders: [], distribution: [] }
+    dailyData: {},
     restrictions: [],
     logs: [],
-    reports: [],        // تقارير التحليل (من رفع Excel)
-    scaleReports: [],   // تقارير الميزان
-    uploadedFiles: []   // تخزين معلومات الملفات المرفوعة (لـ expenses)
+    reports: [],
+    scaleReports: [],
+    uploadedFiles: []  // { id, original_name, stored_name, file_path, uploaded_by, uploaded_at, report_id }
 };
 
 // إضافة مستخدم Admin افتراضي
@@ -72,15 +74,17 @@ if (!inMemory.users.find(u => u.username === 'Admin')) {
     inMemory.users.push(defaultAdmin);
 }
 
-// ==================== دوال مساعدة ====================
+// ==================== Helper Functions ====================
 function requireAuth(req, res, next) {
     if (req.session && req.session.user) return next();
     res.status(401).json({ error: 'غير مصرح' });
 }
+
 function requireAdmin(req, res, next) {
     if (req.session?.user?.role === 'admin') return next();
     res.status(403).json({ error: 'صلاحيات المدير مطلوبة' });
 }
+
 async function addLog(username, action, details, location) {
     inMemory.logs.unshift({
         id: Date.now(),
@@ -93,9 +97,9 @@ async function addLog(username, action, details, location) {
     if (inMemory.logs.length > 1000) inMemory.logs.pop();
 }
 
-// ==================== API Routes ====================
+// ==================== دوال API ====================
 
-// --- Auth ---
+// Auth
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     const user = inMemory.users.find(u => u.username === username);
@@ -124,7 +128,7 @@ app.get('/api/me', requireAuth, (req, res) => {
     res.json({ user: req.session.user });
 });
 
-// --- Settings ---
+// Settings
 app.get('/api/settings', requireAuth, async (req, res) => {
     let factories = inMemory.settings.factories;
     if (req.session.user.role === 'client' && req.session.user.factory) {
@@ -146,38 +150,20 @@ app.put('/api/settings', requireAuth, requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-// --- Daily Data (orders & distribution) ---
+// Daily Data
 app.get('/api/day/:date', requireAuth, async (req, res) => {
     const data = inMemory.dailyData[req.params.date] || { orders: [], distribution: [] };
-    // إذا كان المستخدم client، نقوم بتصفية الطلبات حسب مصنعه
-    if (req.session.user.role === 'client' && req.session.user.factory) {
-        const factory = req.session.user.factory;
-        data.orders = data.orders.filter(o => o.factory === factory);
-        data.distribution = data.distribution.filter(d => d.factory === factory);
-    }
     res.json(data);
 });
 
 app.put('/api/day/:date', requireAuth, async (req, res) => {
     const { orders, distribution } = req.body;
-    // حماية: إذا كان المستخدم client، لا نسمح بتغيير توزيع الآخرين
-    if (req.session.user.role === 'client') {
-        const factory = req.session.user.factory;
-        const existing = inMemory.dailyData[req.params.date] || { orders: [], distribution: [] };
-        // دمج الطلبات: نحتفظ بطلبات العميل فقط
-        const filteredOrders = (orders || []).filter(o => o.factory === factory);
-        inMemory.dailyData[req.params.date] = {
-            orders: filteredOrders,
-            distribution: existing.distribution // لا نغير التوزيع
-        };
-    } else {
-        inMemory.dailyData[req.params.date] = { orders: orders || [], distribution: distribution || [] };
-    }
+    inMemory.dailyData[req.params.date] = { orders: orders || [], distribution: distribution || [] };
     await addLog(req.session.user.username, 'تحديث الطلبات', `تاريخ: ${req.params.date} - عدد الطلبات: ${orders?.length || 0}`, null);
     res.json({ success: true });
 });
 
-// --- Users Management ---
+// Users
 app.get('/api/users', requireAuth, requireAdmin, async (req, res) => {
     const users = inMemory.users.map(u => ({
         id: u.id,
@@ -232,7 +218,7 @@ app.delete('/api/users/:id', requireAuth, requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-// --- Restrictions ---
+// Restrictions
 app.get('/api/restrictions', requireAuth, async (req, res) => {
     res.json(inMemory.restrictions);
 });
@@ -273,7 +259,7 @@ app.delete('/api/restrictions/:id', requireAuth, async (req, res) => {
     res.json({ success: true });
 });
 
-// --- Logs ---
+// Logs
 app.get('/api/logs', requireAuth, async (req, res) => {
     if (req.session.user.role !== 'admin') return res.status(403).json({ error: 'غير مصرح' });
     const page = parseInt(req.query.page) || 1;
@@ -294,7 +280,7 @@ app.delete('/api/logs/clear', requireAuth, requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-// --- Reports (analysis) - حفظ التقارير المستخلصة من Excel ---
+// Reports (تحليل البيانات)
 app.post('/api/upload-report', requireAuth, async (req, res) => {
     if (req.session.user.role !== 'admin') return res.status(403).json({ error: 'غير مصرح' });
     const { filename, report_date, data } = req.body;
@@ -337,7 +323,73 @@ app.delete('/api/reports/:id', requireAuth, async (req, res) => {
     res.json({ success: true });
 });
 
-// --- Scale Reports ---
+// ==================== رفع الملفات وحفظها (مصاريف السيارات) ====================
+app.post('/api/upload-excel-report', requireAuth, upload.single('excelFile'), async (req, res) => {
+    try {
+        if (req.session.user.role !== 'admin') return res.status(403).json({ error: 'غير مصرح' });
+        if (!req.file) return res.status(400).json({ error: 'لم يتم رفع أي ملف' });
+
+        const { originalname, filename, path: filePath } = req.file;
+        const reportName = req.body.reportName || originalname;
+        const reportDate = req.body.reportDate || new Date().toISOString().split('T')[0];
+        let vehicleData = [];
+        if (req.body.vehicleData) {
+            try { vehicleData = JSON.parse(req.body.vehicleData); } catch(e) {}
+        }
+
+        // حفظ التقرير في inMemory.reports
+        const newReport = {
+            id: Date.now(),
+            report_name: reportName,
+            report_date: reportDate,
+            data: vehicleData,
+            created_by: req.session.user.username,
+            created_at: new Date().toISOString()
+        };
+        inMemory.reports.unshift(newReport);
+
+        // حفظ معلومات الملف
+        const uploadedFile = {
+            id: Date.now(),
+            original_name: originalname,
+            stored_name: filename,
+            file_path: filePath,
+            uploaded_by: req.session.user.username,
+            uploaded_at: new Date().toISOString(),
+            report_id: newReport.id
+        };
+        inMemory.uploadedFiles.unshift(uploadedFile);
+
+        await addLog(req.session.user.username, 'رفع ملف Excel', `تم رفع ${originalname}`, null);
+        res.json({ success: true, id: newReport.id, fileId: uploadedFile.id });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'فشل في رفع الملف: ' + err.message });
+    }
+});
+
+app.get('/api/uploaded-files', requireAuth, async (req, res) => {
+    const files = inMemory.uploadedFiles.map(f => {
+        const report = inMemory.reports.find(r => r.id === f.report_id);
+        return {
+            id: f.id,
+            original_name: f.original_name,
+            uploaded_at: f.uploaded_at,
+            uploaded_by: f.uploaded_by,
+            report_name: report ? report.report_name : null
+        };
+    });
+    res.json(files);
+});
+
+app.get('/api/download-file/:id', requireAuth, async (req, res) => {
+    const id = parseInt(req.params.id);
+    const file = inMemory.uploadedFiles.find(f => f.id === id);
+    if (!file) return res.status(404).json({ error: 'الملف غير موجود' });
+    res.download(file.file_path, file.original_name);
+});
+
+// ==================== Scale Reports ====================
 app.post('/api/scale-reports', requireAuth, async (req, res) => {
     const { reportName, reportDate, data } = req.body;
     if (!data) return res.status(400).json({ error: 'لا توجد بيانات' });
@@ -409,99 +461,6 @@ app.delete('/api/scale-reports/:id', requireAuth, async (req, res) => {
     res.json({ success: true });
 });
 
-// --- رفع وحفظ ملفات Excel الأصلية (خاص بـ expenses.html) ---
-app.post('/api/upload-excel-report', requireAuth, upload.single('excelFile'), async (req, res) => {
-    try {
-        if (req.session.user.role !== 'admin') return res.status(403).json({ error: 'غير مصرح' });
-        if (!req.file) return res.status(400).json({ error: 'لم يتم رفع أي ملف' });
-        const { originalname, filename, path: filePath } = req.file;
-        const reportName = req.body.reportName || originalname;
-        const reportDate = req.body.reportDate || new Date().toISOString().split('T')[0];
-        let vehicleData = [];
-        // إذا أرسلنا بيانات مستخلصة مع الطلب
-        if (req.body.vehicleData) {
-            try {
-                vehicleData = JSON.parse(req.body.vehicleData);
-            } catch(e) {}
-        }
-        // حفظ التقرير في جدول reports
-        const newReport = {
-            id: Date.now(),
-            report_name: reportName,
-            report_date: reportDate,
-            data: vehicleData,
-            created_by: req.session.user.username,
-            created_at: new Date().toISOString()
-        };
-        inMemory.reports.unshift(newReport);
-        // حفظ معلومات الملف
-        const fileRecord = {
-            id: Date.now(),
-            original_name: originalname,
-            stored_name: filename,
-            file_path: filePath,
-            uploaded_by: req.session.user.username,
-            uploaded_at: new Date().toISOString(),
-            report_id: newReport.id,
-            report_name: reportName
-        };
-        inMemory.uploadedFiles.unshift(fileRecord);
-        await addLog(req.session.user.username, 'رفع ملف Excel', `تم رفع ${originalname}`, null);
-        res.json({ success: true, id: newReport.id, fileId: fileRecord.id });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'فشل في رفع الملف: ' + err.message });
-    }
-});
-
-app.get('/api/uploaded-files', requireAuth, async (req, res) => {
-    res.json(inMemory.uploadedFiles);
-});
-
-app.get('/api/download-file/:id', requireAuth, async (req, res) => {
-    const id = parseInt(req.params.id);
-    const fileRecord = inMemory.uploadedFiles.find(f => f.id === id);
-    if (!fileRecord) return res.status(404).json({ error: 'الملف غير موجود' });
-    res.download(fileRecord.file_path, fileRecord.original_name);
-});
-
-// --- Backup & Restore (مبسط) ---
-app.get('/api/backup', requireAuth, requireAdmin, async (req, res) => {
-    const backup = {
-        settings: inMemory.settings,
-        users: inMemory.users.map(u => ({ ...u, password: '[HIDDEN]' })),
-        restrictions: inMemory.restrictions,
-        reports: inMemory.reports,
-        scaleReports: inMemory.scaleReports,
-        uploadedFiles: inMemory.uploadedFiles,
-        exportDate: new Date().toISOString()
-    };
-    await addLog(req.session.user.username, 'تصدير نسخة احتياطية', null, null);
-    res.json(backup);
-});
-
-app.post('/api/restore', requireAuth, requireAdmin, async (req, res) => {
-    const data = req.body;
-    if (data.settings) inMemory.settings = data.settings;
-    if (data.restrictions) inMemory.restrictions = data.restrictions;
-    if (data.reports) inMemory.reports = data.reports;
-    if (data.scaleReports) inMemory.scaleReports = data.scaleReports;
-    if (data.uploadedFiles) inMemory.uploadedFiles = data.uploadedFiles;
-    await addLog(req.session.user.username, 'استعادة نسخة احتياطية', null, null);
-    res.json({ success: true });
-});
-
-app.delete('/api/clear-all', requireAuth, requireAdmin, async (req, res) => {
-    inMemory.dailyData = {};
-    inMemory.restrictions = [];
-    inMemory.logs = [];
-    inMemory.reports = [];
-    inMemory.scaleReports = [];
-    inMemory.uploadedFiles = [];
-    await addLog(req.session.user.username, 'مسح جميع البيانات', null, null);
-    res.json({ success: true });
-});
-
 // ==================== حماية الصفحات الثابتة ====================
 app.get('/login.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
@@ -543,4 +502,5 @@ app.use(express.static(__dirname, {
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`✅ بيانات تسجيل الدخول الافتراضية: Admin / admin123`);
+    console.log(`📁 مجلد رفع الملفات: ${uploadDir}`);
 });
