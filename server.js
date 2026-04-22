@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
@@ -76,7 +77,6 @@ async function addLog(username, action, details, location) {
         location,
         created_at: new Date().toISOString()
     });
-    // الاحتفاظ بآخر 1000 سجل فقط
     if (inMemory.logs.length > 1000) inMemory.logs.pop();
 }
 
@@ -378,7 +378,7 @@ app.delete('/api/scale-reports/:id', requireAuth, async (req, res) => {
     res.json({ success: true });
 });
 
-// ==================== Static Files ====================
+// ==================== حماية الصفحات الثابتة ====================
 app.get('/login.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
 });
@@ -392,10 +392,11 @@ app.get('/', (req, res) => {
     }
 });
 
+// قائمة الصفحات المحمية (يجب إضافة كل صفحة جديدة هنا)
 const allProtectedPages = [
     'index.html', 'orders.html', 'distribution.html', 'trucks.html', 'products.html',
     'factories.html', 'reports.html', 'settings.html', 'restrictions.html', 'users.html',
-    'logs.html', 'upload-report.html', 'scale_report.html', 'Expenses.html'
+    'logs.html', 'upload-report.html', 'scale_report.html', 'expenses.html'
 ];
 
 allProtectedPages.forEach(page => {
@@ -406,6 +407,7 @@ allProtectedPages.forEach(page => {
     });
 });
 
+// تقديم الملفات الثابتة (static files) مع منع الوصول المباشر للصفحات المحمية
 app.use(express.static(__dirname, {
     setHeaders: (res, filePath) => {
         const base = path.basename(filePath);
@@ -415,7 +417,7 @@ app.use(express.static(__dirname, {
     }
 }));
 
-// ==================== Start Server ====================
+// ==================== تشغيل السيرفر ====================
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`✅ بيانات تسجيل الدخول الافتراضية: Admin / admin123`);
