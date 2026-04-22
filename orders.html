@@ -1,38 +1,37 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>الطلبات - نظام إدارة طلبات كسارة الحبردي</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
-        /* جميع الأنماط كما هي دون تغيير */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .header { text-align: center; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin-bottom: 30px; position: relative; }
         .nav-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
-        .nav-link { padding: 12px 24px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; transition: all 0.3s; font-weight: 600; }
+        .nav-link { padding: 12px 24px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; font-weight: 600; transition: 0.3s; }
         .nav-link:hover, .nav-link.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transform: translateY(-2px); }
-        .date-section { background: rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; }
-        .date-section input[type="date"] { padding: 12px 20px; border-radius: 10px; border: none; background: #fff; color: #333; cursor: pointer; }
-        .order-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .date-section { background: rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; align-items: center; }
+        .date-section input[type="date"] { padding: 12px 20px; border-radius: 10px; border: none; background: #fff; color: #333; cursor: pointer; font-weight: bold; }
+        .order-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px; background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; }
         .form-group { display: flex; flex-direction: column; gap: 8px; }
         .form-group label { font-weight: 600; color: #a8b2d1; }
         .form-group select, .form-group input { padding: 12px 15px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; font-size: 1em; }
         .form-group select option { background: #1a1a2e; }
-        .btn { padding: 12px 25px; border: none; border-radius: 12px; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn { padding: 12px 25px; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.3s; display: inline-flex; align-items: center; gap: 8px; }
         .btn-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #fff; }
         .btn-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #fff; }
         .btn-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: #fff; }
         .btn-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #fff; }
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
-        .btn-sm { padding: 8px 15px; font-size: 0.9em; }
+        .btn-sm { padding: 6px 12px; font-size: 0.85em; }
         .quick-add-section { margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 15px; }
-        .quick-add-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
-        .quick-btn { padding: 10px; border: none; border-radius: 8px; background: rgba(102,126,234,0.3); color: #fff; cursor: pointer; transition: all 0.3s; }
-        .quick-btn:hover { background: rgba(102,126,234,0.6); transform: scale(1.05); }
+        .quick-add-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
+        .quick-btn { padding: 10px; border: none; border-radius: 8px; background: rgba(102,126,234,0.3); color: #fff; cursor: pointer; transition: 0.3s; }
+        .quick-btn:hover { background: rgba(102,126,234,0.6); transform: scale(1.02); }
+        .orders-list { margin-top: 30px; }
         .order-item { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 10px; border-right: 4px solid #667eea; flex-wrap: wrap; gap: 10px; }
         .order-info { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
         .order-actions { display: flex; gap: 8px; }
@@ -45,576 +44,529 @@
         .toast-container { position: fixed; top: 20px; left: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; }
         .toast { padding: 15px 25px; border-radius: 10px; color: #fff; font-weight: 600; animation: slideIn 0.3s ease; }
         @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .toast-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-        .toast-error { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
-        .toast-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .toast-success { background: #11998e; }
+        .toast-error { background: #eb3349; }
+        .toast-info { background: #4facfe; }
+        .toast-warning { background: #f093fb; }
         .loading { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center; flex-direction:column; }
         .loading.active { display: flex; }
         .spinner { width:50px; height:50px; border:4px solid rgba(255,255,255,0.3); border-top-color:#667eea; border-radius:50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .fixed-factory { background: rgba(102,126,234,0.3); padding: 12px 15px; border-radius: 10px; font-weight: bold; }
-        .client-notice { background: rgba(102,126,234,0.2); border: 1px solid rgba(102,126,234,0.4); padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 1.1em; }
-        .client-notice .factory-name { color: #38ef7d; font-weight: bold; font-size: 1.2em; }
+        .fixed-factory { background: rgba(102,126,234,0.3); padding: 12px 15px; border-radius: 10px; font-weight: bold; text-align: center; }
+        .client-notice { background: rgba(102,126,234,0.2); border: 1px solid rgba(102,126,234,0.4); padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
         .unauthorized { text-align: center; padding: 50px; background: rgba(235,51,73,0.2); border-radius: 20px; margin: 50px auto; max-width: 600px; }
         .hidden { display: none; }
-        @media (max-width:768px){ .header h1 { font-size:1.5em; } }
+        @media (max-width:768px){ .order-info { flex-direction: column; align-items: flex-start; } }
     </style>
 </head>
 <body>
-    <div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
-    <div class="toast-container" id="toastContainer"></div>
-    <div class="container">
-        <div id="authorizedContent">
-            <div class="header"><h1>📝 إدارة الطلبات - كسارة الحبردي</h1>
-                <div id="logout-btn-container" style="position: absolute; top: 20px; left: 20px;">
-                    <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
-                </div>
+<div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
+<div class="toast-container" id="toastContainer"></div>
+<div class="container">
+    <div id="authorizedContent">
+        <div class="header">
+            <h1>📝 إدارة الطلبات - كسارة الحبردي</h1>
+            <div style="position: absolute; top: 20px; left: 20px;">
+                <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
             </div>
-            <div class="nav-links" id="navLinks"></div>
+        </div>
+        <div class="nav-links" id="navLinks"></div>
 
-            <div id="clientNotice" class="client-notice" style="display:none;">
-                🏭 أنت تعرض طلبات مصنع: <span class="factory-name" id="clientFactoryName"></span> فقط
-            </div>
-
-            <div class="date-section">
-                <div><label>📅 تاريخ العمل: </label><input type="date" id="orderDate" onchange="loadDayData()"></div>
-                <div id="adminButtons">
-                    <button class="btn btn-info" id="exportExcelBtn" onclick="exportOrdersToExcel()">📥 تصدير Excel</button>
-                    <button class="btn btn-primary" id="manualDistributeBtn" onclick="manualDistribute()">🔄 توزيع يدوي</button>
-                </div>
-            </div>
-
-            <div id="addOrderSection">
-                <h2>➕ إضافة طلب جديد</h2>
-                <div class="order-form">
-                    <div class="form-group" id="factoryFieldContainer">
-                        <label>🏭 المصنع</label>
-                        <div id="factorySelectContainer"></div>
-                    </div>
-                    <div class="form-group"><label>📦 نوع البحص</label><select id="materialType"></select></div>
-                    <div class="form-group"><label>🔢 العدد</label><input type="number" id="orderCount" min="1" value="1"></div>
-                    <div class="form-group"><label>⏰ التوقيت (اختياري)</label><input type="text" id="orderTime" placeholder="مثال: 8 PM"></div>
-                </div>
-                <button class="btn btn-success" id="addOrderBtn" onclick="addOrder()">✅ إضافة الطلب</button>
-            </div>
-
-            <div id="quickAddSection" class="quick-add-section">
-                <h4>⚡ إضافة سريعة <span id="quickAddNote">(اختر المصنع أولاً)</span></h4>
-                <div class="quick-add-grid" id="quickAddButtons"></div>
-            </div>
-
-            <h3 style="margin-top: 30px;">📋 <span id="ordersTitle">طلبات اليوم</span> (<span id="ordersCount">0</span> طلب)</h3>
-            <div id="todayOrders"></div>
+        <div id="clientNotice" class="client-notice hidden">
+            🏭 أنت تعرض طلبات مصنع: <span id="clientFactoryName"></span> فقط
         </div>
 
-        <div id="unauthorizedMsg" class="unauthorized hidden">
-            ⛔ غير مصرح لك بالوصول إلى صفحة الطلبات. <br>
-            يلزم صلاحية <strong>عرض الطلبات (viewOrders)</strong>.
+        <div class="date-section">
+            <div><label>📅 تاريخ العمل: </label><input type="date" id="orderDate" onchange="loadOrders()"></div>
+            <div>
+                <button class="btn btn-info" id="exportExcelBtn" onclick="exportOrdersToExcel()">📥 تصدير Excel</button>
+                <button class="btn btn-primary" id="manualDistributeBtn" onclick="manualDistribute()">🔄 توزيع يدوي</button>
+            </div>
+        </div>
+
+        <div id="addOrderSection">
+            <h2>➕ إضافة طلب جديد</h2>
+            <div class="order-form">
+                <div class="form-group" id="factoryFieldContainer">
+                    <label>🏭 المصنع</label>
+                    <div id="factorySelectContainer"></div>
+                </div>
+                <div class="form-group"><label>📦 نوع البحص</label><select id="materialType"></select></div>
+                <div class="form-group"><label>⏰ التوقيت (اختياري)</label><input type="text" id="orderTime" placeholder="مثال: 8 PM"></div>
+                <div class="form-group"><label>🔢 العدد</label><input type="number" id="orderCount" min="1" value="1"></div>
+                <div class="form-group"><button class="btn btn-success" onclick="addOrder()">✅ إضافة الطلب</button></div>
+            </div>
+        </div>
+
+        <div id="quickAddSection" class="quick-add-section">
+            <h4>⚡ إضافة سريعة <span id="quickAddNote">(اختر المصنع أولاً)</span></h4>
+            <div class="quick-add-grid" id="quickAddButtons"></div>
+        </div>
+
+        <div class="orders-list">
+            <h3>📋 <span id="ordersTitle">طلبات اليوم</span> (<span id="ordersCount">0</span> طلب)</h3>
+            <div id="todayOrders"></div>
         </div>
     </div>
 
-    <div class="modal" id="editOrderModal"><div class="modal-content"><div class="modal-header"><h3>✏️ تعديل الطلب</h3><button class="close-modal" onclick="closeModal('editOrderModal')">&times;</button></div><div class="modal-body"><input type="hidden" id="editOrderId"><div class="form-group" id="editFactoryFieldContainer"><label>🏭 المصنع</label><div id="editFactoryContainer"></div></div><div class="form-group"><label>📦 نوع البحص</label><select id="editOrderMaterial"></select></div><div class="form-group"><label>⏰ التوقيت</label><input type="text" id="editOrderTime" placeholder="اختياري"></div></div><div class="modal-footer"><button class="btn btn-danger" onclick="closeModal('editOrderModal')">إلغاء</button><button class="btn btn-success" onclick="saveOrderEdit()">حفظ</button></div></div></div>
+    <div id="unauthorizedMsg" class="unauthorized hidden">
+        ⛔ غير مصرح لك بالوصول إلى صفحة الطلبات. <br>
+        يلزم صلاحية <strong>عرض الطلبات (viewOrders)</strong>.
+    </div>
+</div>
 
-    <script>
-        const API_BASE = '/api';
-        let factories = [], materials = [], orders = [], allOrders = [], currentDate = '';
-        let currentDistribution = [];
-        let currentUser = null;
-        let currentUserFactory = null;
-        let currentUserRole = null;
-        let currentUserPermissions = {};
+<!-- مودال تعديل الطلب -->
+<div class="modal" id="editOrderModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>✏️ تعديل الطلب</h3>
+            <button class="close-modal" onclick="closeModal('editOrderModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editOrderId">
+            <div class="form-group" id="editFactoryFieldContainer">
+                <label>🏭 المصنع</label>
+                <div id="editFactoryContainer"></div>
+            </div>
+            <div class="form-group"><label>📦 نوع البحص</label><select id="editOrderMaterial"></select></div>
+            <div class="form-group"><label>⏰ التوقيت</label><input type="text" id="editOrderTime" placeholder="اختياري"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-danger" onclick="closeModal('editOrderModal')">إلغاء</button>
+            <button class="btn btn-success" onclick="saveOrderEdit()">حفظ</button>
+        </div>
+    </div>
+</div>
 
-        async function apiCall(endpoint, method = 'GET', data = null) {
-            const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
-            if (data) options.body = JSON.stringify(data);
-            const res = await fetch(`${API_BASE}${endpoint}`, options);
-            if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
-            if (!res.ok) throw new Error(await res.text());
-            return res.json();
-        }
+<script>
+    const API_BASE = '/api';
+    let factories = [], materials = [], orders = [];
+    let currentDate = '';
+    let currentUser = null;
+    let currentUserRole = null;
+    let currentUserFactory = null;
+    let currentUserPermissions = {};
 
-        setInterval(async () => { try { await fetch('/api/me', { credentials: 'include' }); } catch(e) {} }, 4 * 60 * 1000);
+    // ==================== دوال API ====================
+    async function apiCall(endpoint, method = 'GET', data = null) {
+        const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+        if (data) options.body = JSON.stringify(data);
+        const res = await fetch(`${API_BASE}${endpoint}`, options);
+        if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+    }
 
-        async function loadCurrentUser() {
-            try {
-                const me = await apiCall('/me');
-                currentUser = me.user;
-                currentUserRole = me.user.role;
-                currentUserFactory = me.user.factory;
-                currentUserPermissions = me.user.permissions || {};
-                
-                const hasViewOrders = (currentUserRole === 'admin') || (currentUserPermissions.viewOrders === true);
-                if (!hasViewOrders) {
-                    document.getElementById('authorizedContent').classList.add('hidden');
-                    document.getElementById('unauthorizedMsg').classList.remove('hidden');
-                    return;
-                } else {
-                    document.getElementById('authorizedContent').classList.remove('hidden');
-                    document.getElementById('unauthorizedMsg').classList.add('hidden');
-                }
-                
-                const canAddOrders = (currentUserRole === 'admin') || (currentUserPermissions.addOrders === true);
-                const addOrderSection = document.getElementById('addOrderSection');
-                const quickAddSection = document.getElementById('quickAddSection');
-                if (addOrderSection) addOrderSection.style.display = canAddOrders ? 'block' : 'none';
-                if (quickAddSection) quickAddSection.style.display = canAddOrders ? 'block' : 'none';
-                
-                const canManageDist = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
-                const canExport = (currentUserRole === 'admin') || (currentUserPermissions.exportReports === true);
-                const manualBtn = document.getElementById('manualDistributeBtn');
-                const exportBtn = document.getElementById('exportExcelBtn');
-                if (manualBtn) manualBtn.style.display = canManageDist ? 'inline-flex' : 'none';
-                if (exportBtn) exportBtn.style.display = canExport ? 'inline-flex' : 'none';
-                
-                if (currentUserRole === 'client') {
-                    document.getElementById('clientNotice').style.display = 'block';
-                    document.getElementById('clientFactoryName').textContent = currentUserFactory || 'غير محدد';
-                    document.getElementById('ordersTitle').textContent = `طلباتي - ${currentUserFactory}`;
-                    if (manualBtn) manualBtn.style.display = 'none';
-                    if (exportBtn) exportBtn.style.display = 'none';
-                } else {
-                    document.getElementById('adminButtons').style.display = 'flex';
-                }
-            } catch(e) {
-                showToast('خطأ في تحميل صلاحيات المستخدم', 'error');
-            }
-        }
-
-        // دالة بناء شريط التنقل ديناميكياً حسب الصلاحيات (مثل index.html)
-        function buildNavLinks() {
-            const links = [];
-            if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
-                links.push('<a href="index.html" class="nav-link">📊 الرئيسية</a>');
-            if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
-                links.push('<a href="orders.html" class="nav-link active">📝 الطلبات</a>');
-            if (currentUserPermissions.viewDistribution === true || currentUserRole === 'admin') 
-                links.push('<a href="distribution.html" class="nav-link">🚚 التوزيع</a>');
-            if (currentUserPermissions.viewTrucks === true || currentUserRole === 'admin') 
-                links.push('<a href="trucks.html" class="nav-link">🚛 السيارات</a>');
-            if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') {
-                links.push('<a href="products.html" class="nav-link">📦 أنواع البحص</a>');
-                links.push('<a href="factories.html" class="nav-link">🏭 المصانع</a>');
-            }
-            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') {
-                links.push('<a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>');
-                links.push('<a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان الشهرية</a>');
-                links.push('<a href="trucks-failed.html" class="nav-link">⚠️ السيارات غير المستوفية</a>');
-                links.push('<a href="distribution-quality.html" class="nav-link">📈 جودة التوزيع</a>');
-            }
-            if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') 
-                links.push('<a href="settings.html" class="nav-link">⚙️ الإعدادات</a>');
-            if (currentUserPermissions.manageRestrictions === true || currentUserRole === 'admin') 
-                links.push('<a href="restrictions.html" class="nav-link">⛔ الحظر</a>');
-            if (currentUserPermissions.manageUsers === true || currentUserRole === 'admin') 
-                links.push('<a href="users.html" class="nav-link">👥 المستخدمين</a>');
-            if (currentUserPermissions.viewBackup === true || currentUserRole === 'admin') 
-                links.push('<a href="logs.html" class="nav-link">📜 السجلات</a>');
-            return links.join('');
-        }
-
-        async function loadSettings() {
-            try {
-                const data = await apiCall('/settings');
-                factories = (data.factories || []).map(f => typeof f === 'object' ? (f.name || f.factory_name || f.text || '') : f);
-                materials = (data.materials || []).map(m => typeof m === 'object' ? (m.name || m.material_name || m.text || '') : m);
-                updateUI();
-                renderQuickAddButtons();
-            } catch(e) { showToast('خطأ في تحميل الإعدادات', 'error'); }
-        }
-
-        function updateUI() {
-            const factoryContainer = document.getElementById('factorySelectContainer');
-            const editFactoryContainer = document.getElementById('editFactoryContainer');
+    // ==================== تحميل البيانات الأساسية ====================
+    async function loadCurrentUser() {
+        try {
+            const me = await apiCall('/me');
+            currentUser = me.user;
+            currentUserRole = me.user.role;
+            currentUserFactory = me.user.factory;
+            currentUserPermissions = me.user.permissions || {};
             
-            if (currentUserRole === 'client' && currentUserFactory) {
-                factoryContainer.innerHTML = `<div class="fixed-factory">🏭 ${currentUserFactory}</div>`;
-                editFactoryContainer.innerHTML = `<div class="fixed-factory">🏭 ${currentUserFactory}</div>`;
-            } else {
-                const validFactories = factories.filter(f => f && f.trim());
-                const factoryOptions = '<option value="">-- اختر --</option>' + validFactories.map(f => `<option value="${f}">${f}</option>`).join('');
-                factoryContainer.innerHTML = `<select id="factorySelect" style="width:100%; padding:12px 15px; border-radius:10px; border:2px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff;">${factoryOptions}</select>`;
-                editFactoryContainer.innerHTML = `<select id="editOrderFactory" style="width:100%; padding:12px 15px; border-radius:10px; border:2px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff;">${factoryOptions}</select>`;
+            const hasViewOrders = (currentUserRole === 'admin') || (currentUserPermissions.viewOrders === true);
+            if (!hasViewOrders) {
+                document.getElementById('authorizedContent').classList.add('hidden');
+                document.getElementById('unauthorizedMsg').classList.remove('hidden');
+                return false;
             }
+            document.getElementById('authorizedContent').classList.remove('hidden');
+            document.getElementById('unauthorizedMsg').classList.add('hidden');
             
-            const validMaterials = materials.filter(m => m && m.trim());
-            const materialOptions = '<option value="">-- اختر --</option>' + validMaterials.map(m => `<option value="${m}">بحص ${m}</option>`).join('');
-            const materialSelect = document.getElementById('materialType');
-            const editMaterialSelect = document.getElementById('editOrderMaterial');
-            if (materialSelect) materialSelect.innerHTML = materialOptions;
-            if (editMaterialSelect) editMaterialSelect.innerHTML = materialOptions;
-        }
-        
-        function getSelectedFactory() {
-            if (currentUserRole === 'client' && currentUserFactory) return currentUserFactory;
-            const select = document.getElementById('factorySelect');
-            return select ? select.value : '';
-        }
-        
-        function getSelectedEditFactory() {
-            if (currentUserRole === 'client' && currentUserFactory) return currentUserFactory;
-            const select = document.getElementById('editOrderFactory');
-            return select ? select.value : '';
-        }
-
-        function renderQuickAddButtons() {
-            const container = document.getElementById('quickAddButtons');
-            const valid = materials.filter(m => m && m.trim());
-            if (!valid.length) { container.innerHTML = '<p>لا توجد أنواع بحص</p>'; return; }
-            container.innerHTML = valid.map(m => `<button class="quick-btn" onclick="quickAdd('${m}',1)">${m} ×1</button><button class="quick-btn" onclick="quickAdd('${m}',5)">${m} ×5</button><button class="quick-btn" onclick="quickAdd('${m}',10)">${m} ×10</button>`).join('');
-        }
-
-        async function loadDayData() {
-            currentDate = document.getElementById('orderDate').value;
-            if (!currentDate) return;
-            showLoading(true);
-            try {
-                const data = await apiCall(`/day/${currentDate}`);
-                allOrders = data.orders || [];
-                currentDistribution = data.distribution || [];
-                orders = [...allOrders];
-                renderOrders();
-            } catch(e) { 
-                orders = []; 
-                allOrders = [];
-                renderOrders(); 
-                showToast('خطأ في تحميل الطلبات', 'error'); 
-            }
-            showLoading(false);
-        }
-
-        async function saveData() {
-            try {
-                const cleaned = orders.map(o => ({
-                    id: o.id,
-                    factory: o.factory,
-                    material: o.material,
-                    time: (o.time && o.time !== 'undefined' && o.time !== 'null') ? o.time : '',
-                    timestamp: o.timestamp
-                }));
-                const distToSend = (currentUserRole === 'client' || currentUserPermissions.manageDistribution !== true) ? [] : currentDistribution;
-                await apiCall(`/day/${currentDate}`, 'PUT', { orders: cleaned, distribution: distToSend });
-                return true;
-            } catch(e) { 
-                showToast('خطأ في حفظ البيانات: ' + e.message, 'error'); 
-                return false; 
-            }
-        }
-
-        async function manualDistribute() {
+            const canAddOrders = (currentUserRole === 'admin') || (currentUserPermissions.addOrders === true);
+            document.getElementById('addOrderSection').style.display = canAddOrders ? 'block' : 'none';
+            document.getElementById('quickAddSection').style.display = canAddOrders ? 'block' : 'none';
+            
             const canManageDist = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
-            if (!canManageDist) {
-                showToast('❌ ليس لديك صلاحية للتوزيع', 'error');
-                return;
-            }
+            const canExport = (currentUserRole === 'admin') || (currentUserPermissions.exportReports === true);
+            document.getElementById('manualDistributeBtn').style.display = canManageDist ? 'inline-flex' : 'none';
+            document.getElementById('exportExcelBtn').style.display = canExport ? 'inline-flex' : 'none';
+            
             if (currentUserRole === 'client') {
-                showToast('❌ ليس لديك صلاحية للتوزيع', 'error');
+                document.getElementById('clientNotice').classList.remove('hidden');
+                document.getElementById('clientFactoryName').textContent = currentUserFactory || 'غير محدد';
+                document.getElementById('ordersTitle').textContent = `طلباتي - ${currentUserFactory}`;
+                document.getElementById('manualDistributeBtn').style.display = 'none';
+                document.getElementById('exportExcelBtn').style.display = 'none';
+            } else {
+                document.getElementById('clientNotice').classList.add('hidden');
+            }
+            return true;
+        } catch(e) {
+            showToast('خطأ في تحميل صلاحيات المستخدم', 'error');
+            return false;
+        }
+    }
+
+    async function loadSettings() {
+        try {
+            const data = await apiCall('/settings');
+            factories = (data.factories || []).map(f => typeof f === 'object' ? (f.name || f.factory_name || f.text || '') : f);
+            materials = (data.materials || []).map(m => typeof m === 'object' ? (m.name || m.material_name || m.text || '') : m);
+            updateUI();
+            renderQuickAddButtons();
+        } catch(e) { showToast('خطأ في تحميل الإعدادات', 'error'); }
+    }
+
+    function updateUI() {
+        const factoryContainer = document.getElementById('factorySelectContainer');
+        const editFactoryContainer = document.getElementById('editFactoryContainer');
+        
+        if (currentUserRole === 'client' && currentUserFactory) {
+            factoryContainer.innerHTML = `<div class="fixed-factory">🏭 ${currentUserFactory}</div>`;
+            editFactoryContainer.innerHTML = `<div class="fixed-factory">🏭 ${currentUserFactory}</div>`;
+        } else {
+            const validFactories = factories.filter(f => f && f.trim());
+            const factoryOptions = '<option value="">-- اختر --</option>' + validFactories.map(f => `<option value="${f}">${f}</option>`).join('');
+            factoryContainer.innerHTML = `<select id="factorySelect" style="width:100%; padding:12px 15px; border-radius:10px; border:2px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff;">${factoryOptions}</select>`;
+            editFactoryContainer.innerHTML = `<select id="editOrderFactory" style="width:100%; padding:12px 15px; border-radius:10px; border:2px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff;">${factoryOptions}</select>`;
+        }
+        
+        const validMaterials = materials.filter(m => m && m.trim());
+        const materialOptions = '<option value="">-- اختر --</option>' + validMaterials.map(m => `<option value="${m}">بحص ${m}</option>`).join('');
+        document.getElementById('materialType').innerHTML = materialOptions;
+        document.getElementById('editOrderMaterial').innerHTML = materialOptions;
+    }
+
+    function getSelectedFactory() {
+        if (currentUserRole === 'client' && currentUserFactory) return currentUserFactory;
+        const select = document.getElementById('factorySelect');
+        return select ? select.value : '';
+    }
+
+    function getSelectedEditFactory() {
+        if (currentUserRole === 'client' && currentUserFactory) return currentUserFactory;
+        const select = document.getElementById('editOrderFactory');
+        return select ? select.value : '';
+    }
+
+    function renderQuickAddButtons() {
+        const container = document.getElementById('quickAddButtons');
+        const valid = materials.filter(m => m && m.trim());
+        if (!valid.length) { container.innerHTML = '<p>لا توجد أنواع بحص</p>'; return; }
+        container.innerHTML = valid.map(m => `
+            <button class="quick-btn" onclick="quickAdd('${m}',1)">${m} ×1</button>
+            <button class="quick-btn" onclick="quickAdd('${m}',5)">${m} ×5</button>
+            <button class="quick-btn" onclick="quickAdd('${m}',10)">${m} ×10</button>
+        `).join('');
+    }
+
+    // ==================== الطلبات ====================
+    async function loadOrders() {
+        currentDate = document.getElementById('orderDate').value;
+        if (!currentDate) return;
+        showLoading(true);
+        try {
+            const data = await apiCall(`/day/${currentDate}`);
+            orders = data.orders || [];
+            renderOrders();
+        } catch(e) { 
+            orders = []; 
+            renderOrders(); 
+            showToast('خطأ في تحميل الطلبات', 'error'); 
+        }
+        showLoading(false);
+    }
+
+    async function saveOrders() {
+        try {
+            const cleaned = orders.map(o => ({
+                id: o.id,
+                factory: o.factory,
+                material: o.material,
+                time: (o.time && o.time !== 'undefined' && o.time !== 'null') ? o.time : '',
+                timestamp: o.timestamp
+            }));
+            await apiCall(`/day/${currentDate}`, 'PUT', { orders: cleaned, distribution: [] });
+            return true;
+        } catch(e) { 
+            showToast('خطأ في حفظ البيانات: ' + e.message, 'error'); 
+            return false; 
+        }
+    }
+
+    async function addOrder() {
+        const canAdd = (currentUserRole === 'admin') || (currentUserPermissions.addOrders === true);
+        if (!canAdd) { showToast('❌ غير مصرح لك بإضافة طلبات', 'error'); return; }
+        
+        const factory = getSelectedFactory();
+        const material = document.getElementById('materialType').value;
+        const count = parseInt(document.getElementById('orderCount').value);
+        let time = document.getElementById('orderTime').value.trim();
+        if (time === 'undefined' || time === 'null') time = '';
+        
+        if (!factory || !material || !count) {
+            showToast('املأ جميع الحقول المطلوبة', 'error');
+            return;
+        }
+        if (currentUserRole === 'client' && factory !== currentUserFactory) {
+            showToast('❌ لا يمكنك إضافة طلبات لمصنع آخر', 'error');
+            return;
+        }
+        
+        showLoading(true);
+        for (let i = 0; i < count; i++) {
+            orders.push({
+                id: Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '_' + i,
+                factory,
+                material,
+                time,
+                timestamp: new Date().toLocaleTimeString('ar-SA')
+            });
+        }
+        if (await saveOrders()) {
+            renderOrders();
+            document.getElementById('orderCount').value = '1';
+            document.getElementById('orderTime').value = '';
+            showToast(`✅ تم إضافة ${count} طلب`, 'success');
+            localStorage.setItem('newOrderTimestamp', Date.now());
+        }
+        showLoading(false);
+    }
+
+    async function quickAdd(material, count) {
+        const canAdd = (currentUserRole === 'admin') || (currentUserPermissions.addOrders === true);
+        if (!canAdd) { showToast('❌ غير مصرح لك بإضافة طلبات', 'error'); return; }
+        
+        const factory = getSelectedFactory();
+        let time = document.getElementById('orderTime').value.trim();
+        if (time === 'undefined' || time === 'null') time = '';
+        if (!factory) { showToast('اختر المصنع أولاً', 'error'); return; }
+        if (currentUserRole === 'client' && factory !== currentUserFactory) {
+            showToast('❌ لا يمكنك إضافة طلبات لمصنع آخر', 'error');
+            return;
+        }
+        
+        showLoading(true);
+        for (let i = 0; i < count; i++) {
+            orders.push({
+                id: Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '_' + i,
+                factory,
+                material,
+                time,
+                timestamp: new Date().toLocaleTimeString('ar-SA')
+            });
+        }
+        if (await saveOrders()) {
+            renderOrders();
+            showToast(`✅ تم إضافة ${count} طلب ${material}`, 'success');
+            localStorage.setItem('newOrderTimestamp', Date.now());
+        }
+        showLoading(false);
+    }
+
+    async function deleteOrder(id) {
+        const canDelete = (currentUserRole === 'admin') || (currentUserPermissions.deleteOrders === true);
+        if (!canDelete) { showToast('❌ غير مصرح لك بحذف الطلبات', 'error'); return; }
+        if (currentUserRole === 'client') {
+            const orderToDelete = orders.find(o => o.id === id);
+            if (orderToDelete && orderToDelete.factory !== currentUserFactory) {
+                showToast('❌ لا يمكنك حذف طلبات مصنع آخر', 'error');
                 return;
             }
-            showLoading(true);
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                const settings = await apiCall('/settings');
-                const trucks = settings.trucks || [];
-                if (trucks.length === 0) { showToast('لا توجد سيارات للتوزيع', 'error'); showLoading(false); return; }
-                const dayData = await apiCall(`/day/${today}`);
-                let allDayOrders = dayData.orders || [];
-                if (allDayOrders.length === 0) { showToast('لا توجد طلبات لتوزيعها', 'error'); showLoading(false); return; }
-                
-                let lastFactoryForTruck = {};
-                trucks.forEach(t => { lastFactoryForTruck[t.number] = null; });
-                let availableTrucks = [...trucks];
-                let newDistribution = [];
-                for (let i = 0; i < allDayOrders.length; i++) {
-                    const order = allDayOrders[i];
-                    const requiredFactory = order.factory;
-                    let selectedTruck = null, candidateIndex = -1;
-                    for (let j = 0; j < availableTrucks.length; j++) {
-                        if (lastFactoryForTruck[availableTrucks[j].number] !== requiredFactory) {
-                            selectedTruck = availableTrucks[j];
-                            candidateIndex = j;
+        }
+        if (confirm('حذف الطلب؟')) {
+            orders = orders.filter(o => o.id !== id);
+            if (await saveOrders()) renderOrders();
+        }
+    }
+
+    function openEditOrderModal(id) {
+        const canEdit = (currentUserRole === 'admin') || (currentUserPermissions.editOrders === true);
+        if (!canEdit) { showToast('❌ غير مصرح لك بتعديل الطلبات', 'error'); return; }
+        
+        let o = orders.find(o => o.id === id);
+        if (!o) return;
+        if (currentUserRole === 'client' && o.factory !== currentUserFactory) {
+            showToast('❌ لا يمكنك تعديل طلبات مصنع آخر', 'error');
+            return;
+        }
+        document.getElementById('editOrderId').value = id;
+        if (currentUserRole !== 'client') {
+            const editSelect = document.getElementById('editOrderFactory');
+            if (editSelect) editSelect.value = o.factory;
+        }
+        document.getElementById('editOrderMaterial').value = o.material;
+        document.getElementById('editOrderTime').value = (o.time && o.time !== 'undefined') ? o.time : '';
+        openModal('editOrderModal');
+    }
+
+    async function saveOrderEdit() {
+        let id = document.getElementById('editOrderId').value;
+        let idx = orders.findIndex(o => o.id === id);
+        if (idx !== -1) {
+            const newFactory = getSelectedEditFactory();
+            if (currentUserRole === 'client' && newFactory !== currentUserFactory) {
+                showToast('❌ لا يمكنك تغيير المصنع', 'error');
+                return;
+            }
+            orders[idx].factory = newFactory;
+            orders[idx].material = document.getElementById('editOrderMaterial').value;
+            let newTime = document.getElementById('editOrderTime').value.trim();
+            if (newTime === 'undefined' || newTime === 'null') newTime = '';
+            orders[idx].time = newTime;
+            if (await saveOrders()) {
+                renderOrders();
+                closeModal('editOrderModal');
+                showToast('✅ تم التعديل', 'success');
+            }
+        }
+    }
+
+    function renderOrders() {
+        const container = document.getElementById('todayOrders');
+        const displayOrders = orders;
+        document.getElementById('ordersCount').textContent = displayOrders.length;
+        if (!displayOrders.length) {
+            if (currentUserRole === 'client') {
+                container.innerHTML = `<p style="text-align:center;padding:30px;">📭 لا توجد طلبات لمصنع "${currentUserFactory}" في هذا اليوم</p>`;
+            } else {
+                container.innerHTML = '<p style="text-align:center;padding:30px;">لا توجد طلبات</p>';
+            }
+            return;
+        }
+        let orderNumber = 0;
+        const canEdit = (currentUserRole === 'admin') || (currentUserPermissions.editOrders === true);
+        const canDelete = (currentUserRole === 'admin') || (currentUserPermissions.deleteOrders === true);
+        
+        container.innerHTML = displayOrders.map((o, i) => {
+            orderNumber++;
+            let timeDisplay = '';
+            if (o.time && o.time !== 'undefined' && o.time !== 'null' && o.time.trim() !== '') {
+                timeDisplay = `<span>⏰ ${o.time}</span>`;
+            }
+            const factoryDisplay = (currentUserRole === 'client') ? '' : `<span>🏭 ${o.factory}</span>`;
+            let actionButtons = '';
+            if (canEdit) actionButtons += `<button class="btn btn-sm btn-warning" onclick="openEditOrderModal('${o.id}')">✏️</button>`;
+            if (canDelete) actionButtons += `<button class="btn btn-sm btn-danger" onclick="deleteOrder('${o.id}')">🗑️</button>`;
+            
+            return `
+                <div class="order-item">
+                    <div class="order-info">
+                        <span><strong>#${orderNumber}</strong></span>
+                        ${factoryDisplay}
+                        <span>📦 ${o.material}</span>
+                        ${timeDisplay}
+                        <span>🕐 ${o.timestamp || '—'}</span>
+                    </div>
+                    <div class="order-actions">${actionButtons}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ==================== توزيع يدوي (اختصار) ====================
+    async function manualDistribute() {
+        const canManageDist = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+        if (!canManageDist) { showToast('❌ ليس لديك صلاحية للتوزيع', 'error'); return; }
+        window.location.href = 'distribution.html';
+    }
+
+    // ==================== تصدير Excel ====================
+    function exportOrdersToExcel() {
+        const canExport = (currentUserRole === 'admin') || (currentUserPermissions.exportReports === true);
+        if (!canExport) { showToast('❌ غير مصرح لك بتصدير التقارير', 'error'); return; }
+        if (!orders.length) { showToast('لا توجد طلبات للتصدير', 'error'); return; }
+        const data = orders.map((o, i) => ({
+            '#': i + 1,
+            'المصنع': o.factory,
+            'نوع البحص': o.material,
+            'التوقيت': (o.time && o.time !== 'undefined') ? o.time : '',
+            'وقت الإضافة': o.timestamp || '—'
+        }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        const sheetName = currentUserRole === 'client' ? `طلبات ${currentUserFactory}` : 'الطلبات';
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        const fileName = currentUserRole === 'client' 
+            ? `طلبات_${currentUserFactory}_${currentDate}.xlsx`
+            : `طلبات_${currentDate}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        showToast('✅ تم التصدير', 'success');
+    }
+
+    // ==================== دوال مساعدة ====================
+    function showToast(msg, type) { 
+        const c = document.getElementById('toastContainer'); 
+        const t = document.createElement('div'); 
+        t.className = `toast toast-${type}`; 
+        t.innerText = msg; 
+        c.appendChild(t); 
+        setTimeout(() => t.remove(), 3000); 
+    }
+    function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function logout() { if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html'); }
+
+    // ==================== تحميل شريط التنقل ====================
+    function loadNav() {
+        fetch('/api/me', { credentials: 'include' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.user) {
+                    const role = data.user.role;
+                    const perms = data.user.permissions || {};
+                    const isAdmin = (role === 'admin');
+                    const isUser = (role === 'user');
+                    let links = [];
+                    if (isAdmin || isUser) {
+                        links = [
+                            '<a href="index.html" class="nav-link">📊 الرئيسية</a>',
+                            '<a href="orders.html" class="nav-link active">📝 الطلبات</a>',
+                            '<a href="distribution.html" class="nav-link">🚚 التوزيع</a>',
+                            '<a href="trucks.html" class="nav-link">🚛 السيارات</a>',
+                            '<a href="products.html" class="nav-link">📦 أنواع البحص</a>',
+                            '<a href="factories.html" class="nav-link">🏭 المصانع</a>',
+                            '<a href="reports.html" class="nav-link">📊 التقارير</a>',
+                            '<a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان</a>',
+                            '<a href="expenses.html" class="nav-link">💰 مصاريف السيارات</a>',
+                            '<a href="settings.html" class="nav-link">⚙️ الإعدادات</a>',
+                            '<a href="restrictions.html" class="nav-link">⛔ الحظر</a>',
+                            '<a href="users.html" class="nav-link">👥 المستخدمين</a>',
+                            '<a href="logs.html" class="nav-link">📜 السجلات</a>'
+                        ];
+                    } else if (role === 'client') {
+                        links = ['<a href="orders.html" class="nav-link active">📝 الطلبات</a>'];
+                    }
+                    document.getElementById('navLinks').innerHTML = links.join('');
+                } else {
+                    window.location.href = '/login.html';
+                }
+            })
+            .catch(() => window.location.href = '/login.html');
+    }
+
+    // ==================== تهيئة الصفحة ====================
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadCurrentUser();
+        loadNav();
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('orderDate').value = today;
+        currentDate = today;
+        await loadSettings();
+        await loadOrders();
+        
+        // فلترة تلقائية من رابط (اختياري)
+        const urlParams = new URLSearchParams(window.location.search);
+        const filterFactory = urlParams.get('filter');
+        if (filterFactory && currentUserRole !== 'client') {
+            setTimeout(() => {
+                const factorySelect = document.getElementById('factorySelect');
+                if (factorySelect) {
+                    for(let i = 0; i < factorySelect.options.length; i++) {
+                        if(factorySelect.options[i].value === filterFactory) {
+                            factorySelect.selectedIndex = i;
                             break;
                         }
                     }
-                    if (!selectedTruck && availableTrucks.length) { selectedTruck = availableTrucks[0]; candidateIndex = 0; }
-                    if (!selectedTruck) break;
-                    availableTrucks.splice(candidateIndex, 1);
-                    lastFactoryForTruck[selectedTruck.number] = requiredFactory;
-                    const currentRoad = Math.floor(i / trucks.length) + 1;
-                    newDistribution.push({
-                        orderId: order.id,
-                        orderIndex: i + 1,
-                        truck: selectedTruck,
-                        factory: order.factory,
-                        material: order.material,
-                        time: order.time || '',
-                        road: currentRoad
-                    });
-                    if (availableTrucks.length === 0) availableTrucks = [...trucks];
+                    showToast(`تم التحديد تلقائياً: ${filterFactory}`, 'info');
                 }
-                if (newDistribution.length) {
-                    await apiCall(`/day/${today}`, 'PUT', { orders: allDayOrders, distribution: newDistribution });
-                    const trucksUsed = new Set(newDistribution.map(d => d.truck?.number)).size;
-                    showToast(`✅ تم توزيع ${allDayOrders.length} طلب على ${trucksUsed} سيارة`, 'success');
-                    await loadDayData();
-                } else { showToast('فشل في توزيع الطلبات', 'error'); }
-            } catch(e) { showToast('خطأ في التوزيع: ' + e.message, 'error'); }
-            showLoading(false);
+            }, 500);
         }
-
-        async function addOrder() {
-            const canAdd = (currentUserRole === 'admin') || (currentUserPermissions.addOrders === true);
-            if (!canAdd) {
-                showToast('❌ غير مصرح لك بإضافة طلبات', 'error');
-                return;
-            }
-            const factory = getSelectedFactory();
-            const material = document.getElementById('materialType').value;
-            const count = parseInt(document.getElementById('orderCount').value);
-            let time = document.getElementById('orderTime').value.trim();
-            if (time === 'undefined' || time === 'null') time = '';
-            
-            if (!factory || !material || !count) {
-                showToast('املأ جميع الحقول المطلوبة', 'error');
-                return;
-            }
-            if (currentUserRole === 'client' && factory !== currentUserFactory) {
-                showToast('❌ لا يمكنك إضافة طلبات لمصنع آخر', 'error');
-                return;
-            }
-            
-            showLoading(true);
-            for (let i = 0; i < count; i++) {
-                orders.push({
-                    id: Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '_' + i,
-                    factory,
-                    material,
-                    time: time,
-                    timestamp: new Date().toLocaleTimeString('ar-SA')
-                });
-            }
-            if (await saveData()) {
-                renderOrders();
-                document.getElementById('orderCount').value = '1';
-                document.getElementById('orderTime').value = '';
-                showToast(`✅ تم إضافة ${count} طلب`, 'success');
-                localStorage.setItem('newOrderTimestamp', Date.now());
-            }
-            showLoading(false);
-        }
-
-        async function quickAdd(material, count) {
-            const canAdd = (currentUserRole === 'admin') || (currentUserPermissions.addOrders === true);
-            if (!canAdd) {
-                showToast('❌ غير مصرح لك بإضافة طلبات', 'error');
-                return;
-            }
-            const factory = getSelectedFactory();
-            let time = document.getElementById('orderTime').value.trim();
-            if (time === 'undefined' || time === 'null') time = '';
-            if (!factory) { showToast('اختر المصنع أولاً', 'error'); return; }
-            if (currentUserRole === 'client' && factory !== currentUserFactory) {
-                showToast('❌ لا يمكنك إضافة طلبات لمصنع آخر', 'error');
-                return;
-            }
-            showLoading(true);
-            for (let i = 0; i < count; i++) {
-                orders.push({
-                    id: Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '_' + i,
-                    factory,
-                    material,
-                    time: time,
-                    timestamp: new Date().toLocaleTimeString('ar-SA')
-                });
-            }
-            if (await saveData()) {
-                renderOrders();
-                showToast(`✅ تم إضافة ${count} طلب ${material}`, 'success');
-                localStorage.setItem('newOrderTimestamp', Date.now());
-            }
-            showLoading(false);
-        }
-
-        async function deleteOrder(id) {
-            const canDelete = (currentUserRole === 'admin') || (currentUserPermissions.deleteOrders === true);
-            if (!canDelete) {
-                showToast('❌ غير مصرح لك بحذف الطلبات', 'error');
-                return;
-            }
-            if (currentUserRole === 'client') {
-                const orderToDelete = orders.find(o => o.id === id);
-                if (orderToDelete && orderToDelete.factory !== currentUserFactory) {
-                    showToast('❌ لا يمكنك حذف طلبات مصنع آخر', 'error');
-                    return;
-                }
-            }
-            if (confirm('حذف الطلب؟')) {
-                orders = orders.filter(o => o.id !== id);
-                if (await saveData()) renderOrders();
-            }
-        }
-
-        function openEditOrderModal(id) {
-            const canEdit = (currentUserRole === 'admin') || (currentUserPermissions.editOrders === true);
-            if (!canEdit) {
-                showToast('❌ غير مصرح لك بتعديل الطلبات', 'error');
-                return;
-            }
-            let o = orders.find(o => o.id === id);
-            if (!o) return;
-            if (currentUserRole === 'client' && o.factory !== currentUserFactory) {
-                showToast('❌ لا يمكنك تعديل طلبات مصنع آخر', 'error');
-                return;
-            }
-            document.getElementById('editOrderId').value = id;
-            if (currentUserRole !== 'client') {
-                const editSelect = document.getElementById('editOrderFactory');
-                if (editSelect) editSelect.value = o.factory;
-            }
-            const editMaterial = document.getElementById('editOrderMaterial');
-            if (editMaterial) editMaterial.value = o.material;
-            document.getElementById('editOrderTime').value = (o.time && o.time !== 'undefined') ? o.time : '';
-            openModal('editOrderModal');
-        }
-
-        async function saveOrderEdit() {
-            let id = document.getElementById('editOrderId').value;
-            let idx = orders.findIndex(o => o.id === id);
-            if (idx !== -1) {
-                const newFactory = getSelectedEditFactory();
-                if (currentUserRole === 'client' && newFactory !== currentUserFactory) {
-                    showToast('❌ لا يمكنك تغيير المصنع', 'error');
-                    return;
-                }
-                orders[idx].factory = newFactory;
-                orders[idx].material = document.getElementById('editOrderMaterial').value;
-                let newTime = document.getElementById('editOrderTime').value.trim();
-                if (newTime === 'undefined' || newTime === 'null') newTime = '';
-                orders[idx].time = newTime;
-                if (await saveData()) {
-                    renderOrders();
-                    closeModal('editOrderModal');
-                    showToast('✅ تم التعديل', 'success');
-                }
-            }
-        }
-
-        function renderOrders() {
-            const container = document.getElementById('todayOrders');
-            const displayOrders = orders;
-            document.getElementById('ordersCount').textContent = displayOrders.length;
-            if (!displayOrders.length) {
-                if (currentUserRole === 'client') {
-                    container.innerHTML = `<p style="text-align:center;padding:30px;">📭 لا توجد طلبات لمصنع "${currentUserFactory}" في هذا اليوم</p>`;
-                } else {
-                    container.innerHTML = '<p style="text-align:center;padding:30px;">لا توجد طلبات</p>';
-                }
-                return;
-            }
-            let orderNumber = 0;
-            const canEdit = (currentUserRole === 'admin') || (currentUserPermissions.editOrders === true);
-            const canDelete = (currentUserRole === 'admin') || (currentUserPermissions.deleteOrders === true);
-            
-            container.innerHTML = displayOrders.map((o, i) => {
-                orderNumber++;
-                let timeDisplay = '';
-                if (o.time && o.time !== 'undefined' && o.time !== 'null' && o.time.trim() !== '') {
-                    timeDisplay = `<span>⏰ ${o.time}</span>`;
-                }
-                const factoryDisplay = (currentUserRole === 'client') ? '' : `<span>🏭 ${o.factory}</span>`;
-                let actionButtons = '';
-                if (canEdit) actionButtons += `<button class="btn btn-sm btn-warning" onclick="openEditOrderModal('${o.id}')">✏️</button>`;
-                if (canDelete) actionButtons += `<button class="btn btn-sm btn-danger" onclick="deleteOrder('${o.id}')">🗑️</button>`;
-                
-                return `
-                    <div class="order-item">
-                        <div class="order-info">
-                            <span><strong>#${orderNumber}</strong></span>
-                            ${factoryDisplay}
-                            <span>📦 ${o.material}</span>
-                            ${timeDisplay}
-                            <span>🕐 ${o.timestamp || '—'}</span>
-                        </div>
-                        <div class="order-actions">
-                            ${actionButtons}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function exportOrdersToExcel() {
-            const canExport = (currentUserRole === 'admin') || (currentUserPermissions.exportReports === true);
-            if (!canExport) {
-                showToast('❌ غير مصرح لك بتصدير التقارير', 'error');
-                return;
-            }
-            const exportOrders = orders;
-            if (!exportOrders.length) { showToast('لا توجد طلبات للتصدير', 'error'); return; }
-            const data = exportOrders.map((o, i) => ({
-                '#': i + 1,
-                'المصنع': o.factory,
-                'نوع البحص': o.material,
-                'التوقيت': (o.time && o.time !== 'undefined') ? o.time : '',
-                'وقت الإضافة': o.timestamp || '—'
-            }));
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            const sheetName = currentUserRole === 'client' ? `طلبات ${currentUserFactory}` : 'الطلبات';
-            XLSX.utils.book_append_sheet(wb, ws, sheetName);
-            const fileName = currentUserRole === 'client' 
-                ? `طلبات_${currentUserFactory}_${currentDate}.xlsx`
-                : `طلبات_${currentDate}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-            showToast('✅ تم التصدير', 'success');
-        }
-
-        function showToast(msg, type) { 
-            const c = document.getElementById('toastContainer'); 
-            const t = document.createElement('div'); 
-            t.className = `toast toast-${type}`; 
-            t.innerText = msg; 
-            c.appendChild(t); 
-            setTimeout(() => t.remove(), 3000); 
-        }
-        
-        function showLoading(s) { document.getElementById('loading').classList.toggle('active', s); }
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-        function logout() { if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html'); }
-        
-        // تم استبدال loadNav القديمة بدالة بناء الروابط الديناميكية
-        function loadNav() {
-            // نستخدم buildNavLinks التي تعتمد على currentUserPermissions و currentUserRole
-            document.getElementById('navLinks').innerHTML = buildNavLinks();
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => { 
-            await loadCurrentUser();     // يجب أن يتم تحميل المستخدم والصلاحيات أولاً
-            loadNav();                   // ثم بناء شريط التنقل بناءً على الصلاحيات
-            const today = new Date().toISOString().split('T')[0]; 
-            document.getElementById('orderDate').value = today; 
-            currentDate = today; 
-            await loadSettings(); 
-            await loadDayData(); 
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            const filterFactory = urlParams.get('filter');
-            if (filterFactory && currentUserRole !== 'client') {
-                setTimeout(() => {
-                    const factorySelect = document.getElementById('factorySelect');
-                    if (factorySelect) {
-                        for(let i = 0; i < factorySelect.options.length; i++) {
-                            if(factorySelect.options[i].value === filterFactory) {
-                                factorySelect.selectedIndex = i;
-                                break;
-                            }
-                        }
-                        showToast(`تم التحديد تلقائياً: ${filterFactory}`, 'info');
-                    }
-                }, 500);
-            }
-        });
-    </script>
-    <!-- تم إزالة سطر navbar.js لأن الروابط أصبحت ديناميكية -->
+    });
+</script>
 </body>
 </html>
