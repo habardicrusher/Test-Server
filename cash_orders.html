@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طلبات نقدية - نظام إدارة الكسارة</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 20px; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 20px; margin-bottom: 30px; position: relative; }
+        .header h1 { margin: 0; font-size: 1.8rem; }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
+        .nav-link { padding: 10px 20px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; font-weight: 600; transition: 0.3s; }
+        .nav-link:hover, .nav-link.active { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; margin-bottom: 25px; backdrop-filter: blur(5px); }
+        .form-row { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; }
+        .form-group { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 0.85rem; color: #a8b2d1; }
+        .form-group input, .form-group select { padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #fff; }
+        .btn { padding: 10px 20px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; margin: 5px; }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+        .btn-success { background: #11998e; color: #fff; }
+        .btn-danger { background: #eb3349; color: #fff; }
+        .btn-warning { background: #f093fb; color: #1a1a2e; }
+        .btn-info { background: #0f5c7a; color: #fff; }
+        .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        th { background: rgba(102,126,234,0.4); font-weight: bold; }
+        tr:hover { background: rgba(255,255,255,0.05); }
+        .locked { color: #f093fb; font-size: 0.8rem; }
+        .stats-grid { display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; }
+        .stat-card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; flex: 1; min-width: 150px; text-align: center; border-right: 3px solid #667eea; }
+        .stat-card .number { font-size: 1.8rem; font-weight: bold; color: #a8b2d1; }
+        .filter-bar { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 20px; }
+        .toast { position: fixed; bottom: 20px; left: 20px; background: #1e2a3a; color: white; padding: 12px 24px; border-radius: 40px; z-index: 1000; border-right: 4px solid #667eea; }
+        .loading { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display: none; align-items:center; justify-content:center; flex-direction:column; z-index:2000; }
+        .loading.active { display: flex; }
+        .spinner { width:40px; height:40px; border:4px solid rgba(255,255,255,0.3); border-top-color:#667eea; border-radius:50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        footer { text-align: center; margin-top: 40px; color: #aaa; font-size: 0.8rem; }
+        @media (max-width:768px) { .form-row { flex-direction: column; } .stats-grid { flex-direction: column; } }
+    </style>
+</head>
+<body>
+<div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
+<div class="container">
+    <div class="header">
+        <h1>💰 طلبات نقدية - كسارة الحبردي</h1>
+        <div style="position: absolute; top: 20px; left: 20px;">
+            <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
+        </div>
+    </div>
+    <div class="nav-links" id="navLinks"></div>
+
+    <!-- نموذج إضافة طلب نقدي -->
+    <div class="card">
+        <h3>➕ طلب نقدي جديد</h3>
+        <div class="form-row">
+            <div class="form-group"><label>👤 اسم العميل</label><input type="text" id="clientName" placeholder="أدخل اسم العميل"></div>
+            <div class="form-group"><label>📞 رقم الهاتف</label><input type="tel" id="clientPhone" placeholder="رقم الهاتف"></div>
+            <div class="form-group"><label>⚖️ الوزن (طن)</label><input type="number" id="weight" step="0.01" placeholder="مثال: 25.5"></div>
+            <div class="form-group"><label>💰 السعر للطن (ر.س)</label><input type="number" id="price" step="0.01" placeholder="مثال: 180"></div>
+            <div class="form-group"><label>📦 نوع البحص</label><select id="materialType"><option value="3/4">3/4</option><option value="3/8">3/8</option><option value="3/16">3/16</option></select></div>
+            <div class="form-group"><label>⏰ الوقت</label><input type="datetime-local" id="orderTime"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>💰 الإجمالي (ر.س)</label><input type="text" id="totalAmount" readonly style="background:#2a2a4e; font-weight:bold;"></div>
+            <div class="form-group"><button class="btn btn-success" id="saveOrderBtn" onclick="saveOrder()">💾 حفظ الطلب (مقفل)</button></div>
+        </div>
+    </div>
+
+    <!-- الإحصائيات السريعة -->
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <!-- الفلاتر والتقارير -->
+    <div class="card">
+        <h3>📊 التقارير والإحصائيات</h3>
+        <div class="filter-bar">
+            <div class="form-group"><label>📅 من تاريخ</label><input type="date" id="filterStartDate"></div>
+            <div class="form-group"><label>📅 إلى تاريخ</label><input type="date" id="filterEndDate"></div>
+            <div class="form-group"><label>👤 عميل</label><input type="text" id="filterClient" placeholder="اسم العميل"></div>
+            <div><button class="btn btn-primary" onclick="applyFilters()">🔍 تصفية</button></div>
+            <div><button class="btn btn-info" onclick="resetFilters()">🗑️ إعادة ضبط</button></div>
+            <div><button class="btn btn-warning" onclick="exportToExcel()">📥 تصدير Excel</button></div>
+        </div>
+        <div style="overflow-x: auto;">
+            <table id="ordersTable">
+                <thead>
+                    <tr><th>#</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>الوزن (طن)</th><th>السعر/طن</th><th>الإجمالي</th><th>نوع البحص</th><th>حالة التعديل</th><th>إجراءات</th></tr>
+                </thead>
+                <tbody id="ordersBody"></tbody>
+            </table>
+        </div>
+    </div>
+    <footer>✅ الطلبات النقدية مقفلة ولا يمكن تعديلها بعد الحفظ. يمكن حذفها فقط.</footer>
+</div>
+
+<script>
+    // ==================== إعدادات التخزين ====================
+    let cashOrders = [];
+    const STORAGE_KEY = 'cash_orders';
+
+    // تحميل البيانات من localStorage
+    function loadOrdersFromStorage() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try {
+                cashOrders = JSON.parse(stored);
+            } catch(e) { cashOrders = []; }
+        } else {
+            cashOrders = [];
+        }
+        // ترتيب تنازلي حسب التاريخ (الأحدث أولاً)
+        cashOrders.sort((a,b) => new Date(b.dateTime) - new Date(a.dateTime));
+        renderStatsAndTable();
+    }
+
+    // حفظ البيانات إلى localStorage
+    function saveOrdersToStorage() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cashOrders));
+        renderStatsAndTable();
+    }
+
+    // حساب الإجمالي تلقائياً
+    function updateTotal() {
+        const weight = parseFloat(document.getElementById('weight').value) || 0;
+        const price = parseFloat(document.getElementById('price').value) || 0;
+        const total = weight * price;
+        document.getElementById('totalAmount').value = total.toFixed(2);
+    }
+
+    document.getElementById('weight').addEventListener('input', updateTotal);
+    document.getElementById('price').addEventListener('input', updateTotal);
+
+    // حفظ طلب جديد (مقفل)
+    function saveOrder() {
+        const clientName = document.getElementById('clientName').value.trim();
+        const clientPhone = document.getElementById('clientPhone').value.trim();
+        const weight = parseFloat(document.getElementById('weight').value);
+        const price = parseFloat(document.getElementById('price').value);
+        const material = document.getElementById('materialType').value;
+        let orderTime = document.getElementById('orderTime').value;
+        if (!orderTime) orderTime = new Date().toISOString().slice(0,16);
+        if (!clientName) { showToast('يرجى إدخال اسم العميل', 'error'); return; }
+        if (isNaN(weight) || weight <= 0) { showToast('الوزن يجب أن يكون أكبر من صفر', 'error'); return; }
+        if (isNaN(price) || price <= 0) { showToast('السعر يجب أن يكون أكبر من صفر', 'error'); return; }
+
+        const total = weight * price;
+        const newOrder = {
+            id: Date.now(),
+            clientName,
+            clientPhone,
+            weight,
+            price,
+            material,
+            dateTime: orderTime,
+            total: total,
+            locked: true,   // مقفل نهائياً
+            createdAt: new Date().toISOString()
+        };
+        cashOrders.unshift(newOrder);
+        saveOrdersToStorage();
+        // تفريغ الحقول
+        document.getElementById('clientName').value = '';
+        document.getElementById('clientPhone').value = '';
+        document.getElementById('weight').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('orderTime').value = '';
+        document.getElementById('totalAmount').value = '';
+        showToast('✅ تم حفظ الطلب النقدي بنجاح (مقفل للتعديل)', 'success');
+    }
+
+    // حذف طلب (لا يمكن التعديل، فقط حذف)
+    function deleteOrder(id) {
+        if (confirm('هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع.')) {
+            cashOrders = cashOrders.filter(o => o.id != id);
+            saveOrdersToStorage();
+            showToast('تم حذف الطلب', 'info');
+        }
+    }
+
+    // ==================== الفلاتر والإحصائيات ====================
+    let currentFilters = { startDate: '', endDate: '', client: '' };
+
+    function applyFilters() {
+        currentFilters.startDate = document.getElementById('filterStartDate').value;
+        currentFilters.endDate = document.getElementById('filterEndDate').value;
+        currentFilters.client = document.getElementById('filterClient').value.trim();
+        renderStatsAndTable();
+    }
+
+    function resetFilters() {
+        document.getElementById('filterStartDate').value = '';
+        document.getElementById('filterEndDate').value = '';
+        document.getElementById('filterClient').value = '';
+        currentFilters = { startDate: '', endDate: '', client: '' };
+        renderStatsAndTable();
+    }
+
+    function filterOrders(orders) {
+        return orders.filter(order => {
+            const orderDate = order.dateTime.split('T')[0];
+            if (currentFilters.startDate && orderDate < currentFilters.startDate) return false;
+            if (currentFilters.endDate && orderDate > currentFilters.endDate) return false;
+            if (currentFilters.client && !order.clientName.includes(currentFilters.client)) return false;
+            return true;
+        });
+    }
+
+    // عرض الإحصائيات والجدول
+    function renderStatsAndTable() {
+        const filtered = filterOrders(cashOrders);
+        // إحصائيات
+        const totalOrders = filtered.length;
+        const totalWeight = filtered.reduce((sum, o) => sum + o.weight, 0);
+        const totalRevenue = filtered.reduce((sum, o) => sum + o.total, 0);
+        const avgPrice = totalWeight ? totalRevenue / totalWeight : 0;
+        document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-card"><div class="number">${totalOrders}</div><p>📋 عدد الطلبات</p></div>
+            <div class="stat-card"><div class="number">${totalWeight.toFixed(2)} طن</div><p>⚖️ إجمالي الوزن</p></div>
+            <div class="stat-card"><div class="number">${totalRevenue.toLocaleString()} ر.س</div><p>💰 إجمالي الإيرادات</p></div>
+            <div class="stat-card"><div class="number">${avgPrice.toFixed(2)} ر.س/طن</div><p>📈 متوسط السعر</p></div>
+        `;
+        // عرض الجدول
+        const tbody = document.getElementById('ordersBody');
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">لا توجد طلبات</td></tr>';
+            return;
+        }
+        tbody.innerHTML = filtered.map((order, idx) => {
+            const dateStr = order.dateTime.replace('T', ' ');
+            return `
+                <tr>
+                    <td>${idx+1}</td>
+                    <td>${dateStr}</td>
+                    <td>${escapeHtml(order.clientName)}</td>
+                    <td>${escapeHtml(order.clientPhone)}</td>
+                    <td>${order.weight.toFixed(2)}</td>
+                    <td>${order.price.toFixed(2)}</td>
+                    <td>${order.total.toLocaleString()}</td>
+                    <td>${order.material}</td>
+                    <td><span class="locked">🔒 مقفل</span></td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">🗑️ حذف</button></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // ==================== تصدير Excel منسق ====================
+    async function exportToExcel() {
+        const filtered = filterOrders(cashOrders);
+        if (!filtered.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+        showLoading(true);
+        try {
+            // استخدام ExcelJS للحصول على تنسيق أفضل
+            const ExcelJS = window.ExcelJS;
+            if (!ExcelJS) {
+                // fallback بسيط
+                const ws = XLSX.utils.json_to_sheet(filtered.map(o => ({
+                    'التاريخ': o.dateTime,
+                    'العميل': o.clientName,
+                    'الهاتف': o.clientPhone,
+                    'الوزن (طن)': o.weight,
+                    'السعر/طن': o.price,
+                    'الإجمالي': o.total,
+                    'نوع البحص': o.material
+                })));
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'الطلبات النقدية');
+                XLSX.writeFile(wb, `طلبات_نقدية_${new Date().toISOString().slice(0,10)}.xlsx`);
+                showToast('تم التصدير', 'success');
+                showLoading(false);
+                return;
+            }
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'نظام الكسارة';
+            const sheet = workbook.addWorksheet('الطلبات النقدية');
+            sheet.views = [{ rightToLeft: true }];
+            // إضافة عنوان
+            sheet.mergeCells('A1:I1');
+            sheet.getCell('A1').value = '📊 تقرير الطلبات النقدية';
+            sheet.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+            sheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF667EEA' } };
+            sheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+            sheet.getRow(1).height = 40;
+            // رأس الجدول
+            const headers = ['#', 'التاريخ', 'العميل', 'الهاتف', 'الوزن (طن)', 'السعر/طن', 'الإجمالي (ر.س)', 'نوع البحص', 'حالة التعديل'];
+            const headerRow = sheet.addRow(headers);
+            headerRow.eachCell(cell => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4facfe' } };
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.alignment = { horizontal: 'center' };
+                cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+            });
+            // البيانات
+            filtered.forEach((order, idx) => {
+                const row = sheet.addRow([
+                    idx+1,
+                    order.dateTime.replace('T', ' '),
+                    order.clientName,
+                    order.clientPhone,
+                    order.weight,
+                    order.price,
+                    order.total,
+                    order.material,
+                    'مقفل'
+                ]);
+                row.eachCell((cell, colNum) => {
+                    cell.alignment = { horizontal: 'center' };
+                    cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+                    if (colNum === 7) cell.numFmt = '#,##0.00';
+                    if (colNum === 5 || colNum === 6) cell.numFmt = '#,##0.00';
+                });
+                if (idx % 2 === 0) {
+                    row.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } });
+                }
+            });
+            // إضافة سطر إجمالي
+            const totalWeight = filtered.reduce((s,o)=>s+o.weight,0);
+            const totalRevenue = filtered.reduce((s,o)=>s+o.total,0);
+            const footerRow = sheet.addRow(['', '', '', '', 'الإجمالي', '', totalRevenue, '', '']);
+            footerRow.getCell(5).value = 'الإجمالي';
+            footerRow.getCell(5).font = { bold: true };
+            footerRow.getCell(7).value = totalRevenue;
+            footerRow.getCell(7).numFmt = '#,##0.00';
+            footerRow.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+            // ضبط عرض الأعمدة
+            sheet.columns = [
+                { width: 8 }, { width: 20 }, { width: 20 }, { width: 15 }, { width: 12 },
+                { width: 12 }, { width: 18 }, { width: 12 }, { width: 12 }
+            ];
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveAs(new Blob([buffer]), `تقرير_الطلبات_النقدية_${new Date().toISOString().slice(0,10)}.xlsx`);
+            showToast('✅ تم تصدير التقرير بنجاح', 'success');
+        } catch(e) {
+            showToast('خطأ في التصدير: '+e.message, 'error');
+        }
+        showLoading(false);
+    }
+
+    // Helper functions
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
+    function showToast(msg, type) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerText = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+    function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
+    function logout() { if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html'); }
+
+    // شريط التنقل (بسيط مع إضافة الصفحة الحالية)
+    function loadNav() {
+        fetch('/api/me', { credentials: 'include' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.user) {
+                    const nav = document.getElementById('navLinks');
+                    if (nav) {
+                        nav.innerHTML = `
+                            <a href="index.html" class="nav-link">📊 الرئيسية</a>
+                            <a href="orders.html" class="nav-link">📝 الطلبات</a>
+                            <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
+                            <a href="trucks.html" class="nav-link">🚛 السيارات</a>
+                            <a href="products.html" class="nav-link">📦 أنواع البحص</a>
+                            <a href="factories.html" class="nav-link">🏭 المصانع</a>
+                            <a href="reports.html" class="nav-link">📊 التقارير</a>
+                            <a href="scale_report.html" class="nav-link">⚖️ الميزان</a>
+                            <a href="expenses.html" class="nav-link">💰 مصاريف السيارات</a>
+                            <a href="cash_orders.html" class="nav-link active">💰 طلبات نقدية</a>
+                            <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
+                            <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
+                            <a href="users.html" class="nav-link">👥 المستخدمين</a>
+                            <a href="logs.html" class="nav-link">📜 السجلات</a>
+                        `;
+                    }
+                } else {
+                    window.location.href = '/login.html';
+                }
+            })
+            .catch(() => window.location.href = '/login.html');
+    }
+
+    // تهيئة الصفحة
+    document.addEventListener('DOMContentLoaded', () => {
+        loadNav();
+        loadOrdersFromStorage();
+        // تعيين الوقت الحالي افتراضياً في حقل الوقت
+        if (!document.getElementById('orderTime').value) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('orderTime').value = now.toISOString().slice(0,16);
+        }
+        updateTotal();
+    });
+</script>
+<!-- إضافة مكتبة saveAs لملفات Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</body>
+</html>
