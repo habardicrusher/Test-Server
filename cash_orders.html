@@ -6,6 +6,7 @@
     <title>طلبات نقدية - نظام إدارة الكسارة</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 20px; min-height: 100vh; }
@@ -85,7 +86,7 @@
             <div class="form-group"><label>👤 عميل</label><input type="text" id="filterClient" placeholder="اسم العميل"></div>
             <div><button class="btn btn-primary" onclick="applyFilters()">🔍 تصفية</button></div>
             <div><button class="btn btn-info" onclick="resetFilters()">🗑️ إعادة ضبط</button></div>
-            <div><button class="btn btn-warning" onclick="exportToExcel()">📥 تصدير Excel</button></div>
+            <div><button class="btn btn-warning" onclick="exportToExcel()">📥 تصدير Excel (ملون)</button></div>
         </div>
         <div style="overflow-x: auto;">
             <table id="ordersTable">
@@ -104,39 +105,29 @@
     let cashOrders = [];
     const STORAGE_KEY = 'cash_orders';
 
-    // تحميل البيانات من localStorage
     function loadOrdersFromStorage() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
-            try {
-                cashOrders = JSON.parse(stored);
-            } catch(e) { cashOrders = []; }
-        } else {
-            cashOrders = [];
-        }
-        // ترتيب تنازلي حسب التاريخ (الأحدث أولاً)
+            try { cashOrders = JSON.parse(stored); } catch(e) { cashOrders = []; }
+        } else { cashOrders = []; }
         cashOrders.sort((a,b) => new Date(b.dateTime) - new Date(a.dateTime));
         renderStatsAndTable();
     }
 
-    // حفظ البيانات إلى localStorage
     function saveOrdersToStorage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(cashOrders));
         renderStatsAndTable();
     }
 
-    // حساب الإجمالي تلقائياً
     function updateTotal() {
         const weight = parseFloat(document.getElementById('weight').value) || 0;
         const price = parseFloat(document.getElementById('price').value) || 0;
-        const total = weight * price;
-        document.getElementById('totalAmount').value = total.toFixed(2);
+        document.getElementById('totalAmount').value = (weight * price).toFixed(2);
     }
 
     document.getElementById('weight').addEventListener('input', updateTotal);
     document.getElementById('price').addEventListener('input', updateTotal);
 
-    // حفظ طلب جديد (مقفل)
     function saveOrder() {
         const clientName = document.getElementById('clientName').value.trim();
         const clientPhone = document.getElementById('clientPhone').value.trim();
@@ -148,23 +139,13 @@
         if (!clientName) { showToast('يرجى إدخال اسم العميل', 'error'); return; }
         if (isNaN(weight) || weight <= 0) { showToast('الوزن يجب أن يكون أكبر من صفر', 'error'); return; }
         if (isNaN(price) || price <= 0) { showToast('السعر يجب أن يكون أكبر من صفر', 'error'); return; }
-
         const total = weight * price;
-        const newOrder = {
+        cashOrders.unshift({
             id: Date.now(),
-            clientName,
-            clientPhone,
-            weight,
-            price,
-            material,
-            dateTime: orderTime,
-            total: total,
-            locked: true,   // مقفل نهائياً
-            createdAt: new Date().toISOString()
-        };
-        cashOrders.unshift(newOrder);
+            clientName, clientPhone, weight, price, material, dateTime: orderTime,
+            total, locked: true, createdAt: new Date().toISOString()
+        });
         saveOrdersToStorage();
-        // تفريغ الحقول
         document.getElementById('clientName').value = '';
         document.getElementById('clientPhone').value = '';
         document.getElementById('weight').value = '';
@@ -174,7 +155,6 @@
         showToast('✅ تم حفظ الطلب النقدي بنجاح (مقفل للتعديل)', 'success');
     }
 
-    // حذف طلب (لا يمكن التعديل، فقط حذف)
     function deleteOrder(id) {
         if (confirm('هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع.')) {
             cashOrders = cashOrders.filter(o => o.id != id);
@@ -183,16 +163,13 @@
         }
     }
 
-    // ==================== الفلاتر والإحصائيات ====================
     let currentFilters = { startDate: '', endDate: '', client: '' };
-
     function applyFilters() {
         currentFilters.startDate = document.getElementById('filterStartDate').value;
         currentFilters.endDate = document.getElementById('filterEndDate').value;
         currentFilters.client = document.getElementById('filterClient').value.trim();
         renderStatsAndTable();
     }
-
     function resetFilters() {
         document.getElementById('filterStartDate').value = '';
         document.getElementById('filterEndDate').value = '';
@@ -200,7 +177,6 @@
         currentFilters = { startDate: '', endDate: '', client: '' };
         renderStatsAndTable();
     }
-
     function filterOrders(orders) {
         return orders.filter(order => {
             const orderDate = order.dateTime.split('T')[0];
@@ -211,13 +187,11 @@
         });
     }
 
-    // عرض الإحصائيات والجدول
     function renderStatsAndTable() {
         const filtered = filterOrders(cashOrders);
-        // إحصائيات
         const totalOrders = filtered.length;
-        const totalWeight = filtered.reduce((sum, o) => sum + o.weight, 0);
-        const totalRevenue = filtered.reduce((sum, o) => sum + o.total, 0);
+        const totalWeight = filtered.reduce((s,o) => s + o.weight, 0);
+        const totalRevenue = filtered.reduce((s,o) => s + o.total, 0);
         const avgPrice = totalWeight ? totalRevenue / totalWeight : 0;
         document.getElementById('statsGrid').innerHTML = `
             <div class="stat-card"><div class="number">${totalOrders}</div><p>📋 عدد الطلبات</p></div>
@@ -225,78 +199,62 @@
             <div class="stat-card"><div class="number">${totalRevenue.toLocaleString()} ر.س</div><p>💰 إجمالي الإيرادات</p></div>
             <div class="stat-card"><div class="number">${avgPrice.toFixed(2)} ر.س/طن</div><p>📈 متوسط السعر</p></div>
         `;
-        // عرض الجدول
         const tbody = document.getElementById('ordersBody');
-        if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">لا توجد طلبات</td></tr>';
-            return;
-        }
-        tbody.innerHTML = filtered.map((order, idx) => {
-            const dateStr = order.dateTime.replace('T', ' ');
-            return `
-                <tr>
-                    <td>${idx+1}</td>
-                    <td>${dateStr}</td>
-                    <td>${escapeHtml(order.clientName)}</td>
-                    <td>${escapeHtml(order.clientPhone)}</td>
-                    <td>${order.weight.toFixed(2)}</td>
-                    <td>${order.price.toFixed(2)}</td>
-                    <td>${order.total.toLocaleString()}</td>
-                    <td>${order.material}</td>
-                    <td><span class="locked">🔒 مقفل</span></td>
-                    <td><button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">🗑️ حذف</button></td>
-                </tr>
-            `;
-        }).join('');
+        if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">لا توجد طلبات</td></tr>'; return; }
+        tbody.innerHTML = filtered.map((order, idx) => `
+            <tr>
+                <td>${idx+1}</td>
+                <td>${order.dateTime.replace('T',' ')}</td>
+                <td>${escapeHtml(order.clientName)}</td>
+                <td>${escapeHtml(order.clientPhone)}</td>
+                <td>${order.weight.toFixed(2)}</td>
+                <td>${order.price.toFixed(2)}</td>
+                <td>${order.total.toLocaleString()}</td>
+                <td>${order.material}</td>
+                <td><span class="locked">🔒 مقفل</span></td>
+                <td><button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">🗑️ حذف</button></td>
+            </tr>
+        `).join('');
     }
 
-    // ==================== تصدير Excel منسق ====================
+    // ==================== تصدير Excel منسق وملون باستخدام ExcelJS ====================
     async function exportToExcel() {
         const filtered = filterOrders(cashOrders);
         if (!filtered.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
         showLoading(true);
         try {
-            // استخدام ExcelJS للحصول على تنسيق أفضل
-            const ExcelJS = window.ExcelJS;
-            if (!ExcelJS) {
-                // fallback بسيط
-                const ws = XLSX.utils.json_to_sheet(filtered.map(o => ({
-                    'التاريخ': o.dateTime,
-                    'العميل': o.clientName,
-                    'الهاتف': o.clientPhone,
-                    'الوزن (طن)': o.weight,
-                    'السعر/طن': o.price,
-                    'الإجمالي': o.total,
-                    'نوع البحص': o.material
-                })));
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'الطلبات النقدية');
-                XLSX.writeFile(wb, `طلبات_نقدية_${new Date().toISOString().slice(0,10)}.xlsx`);
-                showToast('تم التصدير', 'success');
-                showLoading(false);
-                return;
+            // التأكد من وجود ExcelJS (سيتم تحميله من CDN أعلاه)
+            if (typeof ExcelJS === 'undefined') {
+                // تحميل ديناميكي إذا لم يكن موجوداً
+                await loadExcelJS();
             }
             const workbook = new ExcelJS.Workbook();
             workbook.creator = 'نظام الكسارة';
-            const sheet = workbook.addWorksheet('الطلبات النقدية');
-            sheet.views = [{ rightToLeft: true }];
-            // إضافة عنوان
+            workbook.lastModifiedBy = 'نظام الطلبات النقدية';
+            workbook.created = new Date();
+            const sheet = workbook.addWorksheet('الطلبات النقدية', { views: [{ rightToLeft: true, showGridLines: true }] });
+            
+            // عنوان رئيسي ملون
             sheet.mergeCells('A1:I1');
-            sheet.getCell('A1').value = '📊 تقرير الطلبات النقدية';
-            sheet.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-            sheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF667EEA' } };
-            sheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+            const titleCell = sheet.getCell('A1');
+            titleCell.value = '📊 تقرير الطلبات النقدية - كسارة الحبردي';
+            titleCell.font = { size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+            titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A6FA5' } };
+            titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
             sheet.getRow(1).height = 40;
-            // رأس الجدول
-            const headers = ['#', 'التاريخ', 'العميل', 'الهاتف', 'الوزن (طن)', 'السعر/طن', 'الإجمالي (ر.س)', 'نوع البحص', 'حالة التعديل'];
+            
+            // رأس الجدول (ألوان جذابة)
+            const headers = ['#', 'التاريخ', 'العميل', 'الهاتف', 'الوزن (طن)', 'السعر/طن (ر.س)', 'الإجمالي (ر.س)', 'نوع البحص', 'حالة التعديل'];
             const headerRow = sheet.addRow(headers);
-            headerRow.eachCell(cell => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4facfe' } };
-                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-                cell.alignment = { horizontal: 'center' };
+            headerRow.eachCell((cell, colNumber) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E86C1' } };  // أزرق
+                cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
                 cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
             });
-            // البيانات
+            sheet.getRow(2).height = 25;
+            
+            // إضافة البيانات مع تنسيق الصفوف المتنوعة
             filtered.forEach((order, idx) => {
                 const row = sheet.addRow([
                     idx+1,
@@ -310,38 +268,74 @@
                     'مقفل'
                 ]);
                 row.eachCell((cell, colNum) => {
-                    cell.alignment = { horizontal: 'center' };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
                     cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
-                    if (colNum === 7) cell.numFmt = '#,##0.00';
-                    if (colNum === 5 || colNum === 6) cell.numFmt = '#,##0.00';
+                    // تنسيق الأرقام
+                    if (colNum === 5 || colNum === 6 || colNum === 7) {
+                        cell.numFmt = '#,##0.00';
+                    }
                 });
+                // تلوين الصفوف بشكل متناوب
+                const rowIndex = idx + 3;
                 if (idx % 2 === 0) {
-                    row.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } });
+                    row.eachCell(cell => {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } };
+                    });
+                } else {
+                    row.eachCell(cell => {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEAF2F8' } };
+                    });
                 }
             });
-            // إضافة سطر إجمالي
-            const totalWeight = filtered.reduce((s,o)=>s+o.weight,0);
-            const totalRevenue = filtered.reduce((s,o)=>s+o.total,0);
+            
+            // صف الإجمالي (ملخص)
+            const totalWeight = filtered.reduce((s,o) => s + o.weight, 0);
+            const totalRevenue = filtered.reduce((s,o) => s + o.total, 0);
             const footerRow = sheet.addRow(['', '', '', '', 'الإجمالي', '', totalRevenue, '', '']);
             footerRow.getCell(5).value = 'الإجمالي';
-            footerRow.getCell(5).font = { bold: true };
+            footerRow.getCell(5).font = { bold: true, color: { argb: 'FF000000' } };
             footerRow.getCell(7).value = totalRevenue;
             footerRow.getCell(7).numFmt = '#,##0.00';
-            footerRow.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+            footerRow.getCell(7).font = { bold: true };
+            footerRow.eachCell(cell => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD3E0EA' } };
+                cell.alignment = { horizontal: 'center' };
+                cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+            });
+            // دمج الخلايا لإظهار الإجمالي بشكل أفضل (اختياري)
+            sheet.mergeCells(`E${footerRow.number}:F${footerRow.number}`);
+            sheet.getCell(`E${footerRow.number}`).value = 'الإجمالي الكلي';
+            
             // ضبط عرض الأعمدة
             sheet.columns = [
-                { width: 8 }, { width: 20 }, { width: 20 }, { width: 15 }, { width: 12 },
-                { width: 12 }, { width: 18 }, { width: 12 }, { width: 12 }
+                { width: 8 }, { width: 22 }, { width: 22 }, { width: 15 }, { width: 12 },
+                { width: 14 }, { width: 18 }, { width: 12 }, { width: 12 }
             ];
+            
+            // كتابة الملف
             const buffer = await workbook.xlsx.writeBuffer();
             saveAs(new Blob([buffer]), `تقرير_الطلبات_النقدية_${new Date().toISOString().slice(0,10)}.xlsx`);
-            showToast('✅ تم تصدير التقرير بنجاح', 'success');
-        } catch(e) {
-            showToast('خطأ في التصدير: '+e.message, 'error');
+            showToast('✅ تم تصدير التقرير الملوّن بنجاح', 'success');
+        } catch (err) {
+            console.error(err);
+            showToast('خطأ في التصدير: ' + err.message, 'error');
+        } finally {
+            showLoading(false);
         }
-        showLoading(false);
     }
-
+    
+    // تحميل ExcelJS إذا لم يكن موجوداً (مثال للاحتياط)
+    function loadExcelJS() {
+        return new Promise((resolve, reject) => {
+            if (typeof ExcelJS !== 'undefined') return resolve();
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('فشل تحميل ExcelJS'));
+            document.head.appendChild(script);
+        });
+    }
+    
     // Helper functions
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
     function showToast(msg, type) {
@@ -353,8 +347,7 @@
     }
     function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
     function logout() { if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html'); }
-
-    // شريط التنقل (بسيط مع إضافة الصفحة الحالية)
+    
     function loadNav() {
         fetch('/api/me', { credentials: 'include' })
             .then(r => r.json())
@@ -385,12 +378,10 @@
             })
             .catch(() => window.location.href = '/login.html');
     }
-
-    // تهيئة الصفحة
+    
     document.addEventListener('DOMContentLoaded', () => {
         loadNav();
         loadOrdersFromStorage();
-        // تعيين الوقت الحالي افتراضياً في حقل الوقت
         if (!document.getElementById('orderTime').value) {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -399,7 +390,5 @@
         updateTotal();
     });
 </script>
-<!-- إضافة مكتبة saveAs لملفات Excel -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </body>
 </html>
