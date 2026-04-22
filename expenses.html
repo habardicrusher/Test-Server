@@ -10,7 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* جميع الأنماط كما هي دون تغيير */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 20px; min-height: 100vh; }
         .container { max-width: 1400px; margin: 0 auto; }
@@ -27,47 +26,43 @@
         .btn-warning { background: #f093fb; color: #1a1a2e; }
         .btn-success { background: #11998e; color: #fff; }
         .btn-danger { background: #eb3349; color: #fff; }
-        .btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
+        .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
         .kpi-grid { display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; }
         .kpi-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(2px); flex: 1; min-width: 170px; padding: 20px 15px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border-right: 5px solid #667eea; text-align: center; }
         .kpi-value { font-size: 1.8rem; font-weight: bold; color: #a8b2d1; margin-bottom: 8px; }
         .table-responsive { overflow-x: auto; background: rgba(255, 255, 255, 0.03); border-radius: 24px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-top: 20px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 1000px; }
         th, td { padding: 14px 12px; text-align: center; vertical-align: middle; border: 1px solid rgba(255,255,255,0.15); }
-        th { background: rgba(102, 126, 234, 0.5); color: white; font-weight: bold; font-size: 0.95rem; }
+        th { background: rgba(102, 126, 234, 0.5); color: white; font-weight: bold; }
         td { color: #f0f0f0; }
-        tr:nth-child(even) { background-color: rgba(255, 255, 255, 0.03); }
-        tr:hover { background-color: rgba(102, 126, 234, 0.2); }
-        th:first-child, td:first-child { background-color: rgba(0,0,0,0.2); font-weight: bold; position: sticky; right: 0; }
+        tr:nth-child(even) { background-color: rgba(255,255,255,0.03); }
+        tr:hover { background-color: rgba(102,126,234,0.2); }
         .net-percent-red { color: #f3a3a8 !important; font-weight: bold; }
         .net-percent-yellow { color: #f5c542 !important; font-weight: bold; }
         .net-percent-green { color: #7fdea4 !important; font-weight: bold; }
         .top-categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; margin-top: 30px; }
-        .top-category-card { background: rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 15px; backdrop-filter: blur(2px); }
-        .top-category-card h4 { text-align: center; margin-bottom: 12px; color: #f093fb; font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 8px; }
-        .top-category-card table { width: 100%; font-size: 0.8rem; min-width: auto; }
-        .top-category-card th, td { padding: 8px 4px; white-space: nowrap; }
+        .top-category-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 15px; }
+        .top-category-card h4 { text-align: center; margin-bottom: 12px; color: #f093fb; }
         .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 30px; }
-        .chart-card { background: rgba(255, 255, 255, 0.05); border-radius: 24px; padding: 15px; }
+        .chart-card { background: rgba(255,255,255,0.05); border-radius: 24px; padding: 15px; }
         .chart-card h3 { color: #ddd; margin-bottom: 12px; text-align: center; }
         canvas { max-height: 280px; background: rgba(0,0,0,0.2); border-radius: 16px; padding: 10px; }
         .reports-list { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; max-height: 500px; overflow-y: auto; }
-        .report-card { background: rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 15px; width: 280px; cursor: pointer; transition: 0.2s; border: 2px solid transparent; }
-        .report-card.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.25); }
-        .report-card .report-name { font-weight: bold; font-size: 1.1rem; display: block; color: #fff; }
-        .report-card .report-date { font-size: 0.8rem; color: #aaa; }
+        .report-card { background: rgba(255,255,255,0.08); border-radius: 20px; padding: 15px; width: 280px; cursor: pointer; transition: 0.2s; border: 2px solid transparent; }
+        .report-card.selected { border-color: #667eea; background: rgba(102,126,234,0.25); }
+        .report-name { font-weight: bold; font-size: 1.1rem; display: block; color: #fff; }
+        .report-date { font-size: 0.8rem; color: #aaa; }
         .report-actions { margin-top: 10px; display: flex; gap: 8px; }
         .report-actions button { padding: 4px 10px; font-size: 0.75rem; border-radius: 20px; background: rgba(255,255,255,0.15); color: white; border: none; cursor: pointer; }
         .view-report-btn { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 6px 12px; border-radius: 20px; margin-top: 8px; width: 100%; cursor: pointer; font-weight: bold; }
-        .toast { position: fixed; bottom: 20px; left: 20px; background: #1e2a3a; color: white; padding: 12px 24px; border-radius: 40px; z-index: 1000; box-shadow: 0 4px 12px black; font-weight: bold; border-right: 5px solid #667eea; }
+        .toast { position: fixed; bottom: 20px; left: 20px; background: #1e2a3a; color: white; padding: 12px 24px; border-radius: 40px; z-index: 1000; box-shadow: 0 4px 12px black; border-right: 5px solid #667eea; }
         .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; color: white; font-size: 1.5rem; flex-direction: column; }
         footer { text-align: center; margin-top: 40px; color: #aaa; font-size: 0.8rem; }
-        #statusMsg { background: rgba(0,0,0,0.4); padding: 12px; border-radius: 20px; margin: 10px 0; color: #ffd966; font-weight: bold; text-align: center; }
-        h3 i, h4 i { margin-left: 8px; }
         .uploaded-files-list { list-style: none; padding: 0; margin-top: 10px; }
         .uploaded-files-list li { margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .file-info { flex: 1; }
         .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+        .reminder-box { background: #f0ad4e; color: #1a1a2e; padding: 12px 20px; border-radius: 12px; margin: 10px 0; text-align: center; font-weight: bold; display: none; }
     </style>
 </head>
 <body>
@@ -75,7 +70,6 @@
     <div class="header">
         <h1><i class="fas fa-chart-line"></i> تقرير دخل السيارات - مجموعة شركات زرعة الخير</h1>
     </div>
-    <!-- شريط التنقل سيتحمّل ديناميكياً عبر navbar.js (أو يمكن إضافته ثابتاً) -->
     <div class="nav-links" id="navLinks"></div>
 
     <div class="upload-card">
@@ -87,14 +81,20 @@
         <button class="btn btn-danger" id="clearReportsBtn"><i class="fas fa-trash-alt"></i> مسح جميع التقارير</button>
         <button class="btn btn-secondary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> تصدير Excel (تفصيل شامل)</button>
     </div>
+
+    <!-- Reminder box for unsaved data -->
+    <div id="reminderBox" class="reminder-box">
+        <i class="fas fa-exclamation-triangle"></i> ⚠️ تم رفع الملف وعرض البيانات، لكن لم يتم حفظه بعد! اضغط على "حفظ التقرير الحالي" لحفظه على الخادم.
+    </div>
+
     <div id="statusMsg"></div>
     <div id="reportsPanel" class="reports-panel" style="display:none;">
         <h3><i class="fas fa-folder-open"></i> التقارير المحفوظة (اختر تقارير للدمج)</h3>
         <div id="savedReportsList" class="reports-list"></div>
     </div>
     
-    <!-- قسم الملفات الأصلية المحفوظة -->
-    <div class="upload-card">
+    <!-- Hidden container for uploaded files as requested -->
+    <div class="upload-card" style="display:none;">
         <h3><i class="fas fa-file-excel"></i> الملفات الأصلية المحفوظة على الخادم</h3>
         <div id="uploadedFilesContainer"></div>
     </div>
@@ -117,94 +117,35 @@
 </div>
 
 <script>
-    let currentVehicleData = [];
-    let savedReports = [];
-    let selectedReportIds = new Set();
-    let charts = { topExp: null, bottomExp: null, topRev: null, bottomRev: null };
-    let currentUploadedFile = null;   // لتخزين الملف المرفوع حاليًا (لحفظه مع التقرير)
-
-    // نفس خريطة بيانات السيارات (لم تتغير)
+    // ---------------------- بيانات ثابتة ----------------------
     const truckInfoMap = {
-        "1091 SDA": { brand: "Volvo", year: 2015 },
-        "2757 BTA": { brand: "FAW", year: 2025 },
-        "2758 BTA": { brand: "FAW", year: 2025 },
-        "2759 BTA": { brand: "FAW", year: 2025 },
-        "2760 BTA": { brand: "FAW", year: 2025 },
-        "2762 BTA": { brand: "FAW", year: 2025 },
-        "2818 BTA": { brand: "FAW", year: 2025 },
-        "2927 BTA": { brand: "FAW", year: 2025 },
-        "2928 BTA": { brand: "FAW", year: 2025 },
-        "2929 BTA": { brand: "FAW", year: 2025 },
-        "3321 UXA": { brand: "CNHTC", year: 2025 },
-        "3322 UXA": { brand: "CNHTC", year: 2025 },
-        "3324 UXA": { brand: "CNHTC", year: 2025 },
-        "3325 UXA": { brand: "CNHTC", year: 2025 },
-        "3326 UXA": { brand: "CNHTC", year: 2025 },
-        "3461 KXA": { brand: "FAW", year: 2024 },
-        "3462 KXA": { brand: "FAW", year: 2024 },
-        "3963 TSA": { brand: "SANY", year: 2023 },
-        "4445 GSA": { brand: "SANY", year: 2023 },
-        "5324 SXA": { brand: "SANY", year: 2024 },
-        "5367 KRA": { brand: "Volvo", year: 2012 },
-        "5520 XXA": { brand: "FAW", year: 2024 },
-        "5521 XXA": { brand: "FAW", year: 2024 },
-        "5522 XXA": { brand: "FAW", year: 2024 },
-        "5523 XXA": { brand: "FAW", year: 2024 },
-        "5524 XXA": { brand: "FAW", year: 2024 },
-        "5525 XXA": { brand: "FAW", year: 2024 },
-        "5526 XXA": { brand: "FAW", year: 2024 },
-        "5527 XXA": { brand: "FAW", year: 2024 },
-        "5528 XXA": { brand: "FAW", year: 2024 },
-        "5658 RXA": { brand: "SANY", year: 2024 },
-        "5796 VRA": { brand: "CNHTC", year: 2022 },
-        "5797 VRA": { brand: "CNHTC", year: 2022 },
-        "5800 VRA": { brand: "CNHTC", year: 2022 },
-        "6398 ERA": { brand: "Volvo", year: 2013 },
-        "6428 TRA": { brand: "Volvo", year: 2012 },
-        "6429 TRA": { brand: "Volvo", year: 2012 },
-        "6430 TRA": { brand: "Volvo", year: 2011 },
-        "6432 TRA": { brand: "Volvo", year: 2011 },
-        "6612 DSA": { brand: "SANY", year: 2023 },
-        "6613 DSA": { brand: "SANY", year: 2023 },
-        "6614 DSA": { brand: "SANY", year: 2023 },
-        "6615 DSA": { brand: "SANY", year: 2023 },
-        "6616 DSA": { brand: "SANY", year: 2023 },
-        "6617 DSA": { brand: "SANY", year: 2023 },
-        "6618 DSA": { brand: "SANY", year: 2023 },
-        "6619 DSA": { brand: "SANY", year: 2023 },
-        "6620 DSA": { brand: "SANY", year: 2023 },
-        "6621 DSA": { brand: "SANY", year: 2023 },
-        "6622 DSA": { brand: "SANY", year: 2023 },
-        "6623 DSA": { brand: "SANY", year: 2023 },
-        "6624 DSA": { brand: "SANY", year: 2023 },
-        "6626 DSA": { brand: "SANY", year: 2023 },
-        "6629 DSA": { brand: "SANY", year: 2023 },
-        "6935 GSA": { brand: "SANY", year: 2023 },
-        "6939 GSA": { brand: "SANY", year: 2023 },
-        "7042 ZXA": { brand: "FAW", year: 2024 },
-        "7043 ZXA": { brand: "FAW", year: 2024 },
-        "7332 DXA": { brand: "SANY", year: 2024 },
-        "7682 DXA": { brand: "SANY", year: 2024 },
-        "7750 DXA": { brand: "SANY", year: 2024 },
-        "7837 DXA": { brand: "SANY", year: 2024 },
-        "7926 DXA": { brand: "SANY", year: 2024 },
-        "7927 DXA": { brand: "SANY", year: 2024 },
-        "7928 DXA": { brand: "SANY", year: 2024 },
-        "7929 DXA": { brand: "SANY", year: 2024 },
-        "7930 DXA": { brand: "SANY", year: 2024 },
-        "7974 DXA": { brand: "SANY", year: 2024 },
-        "7980 DXA": { brand: "SANY", year: 2024 },
-        "9103 HSA": { brand: "SANY", year: 2023 },
-        "9492 SXA": { brand: "SANY", year: 2024 },
-        "9493 SXA": { brand: "SANY", year: 2024 },
-        "9495 SXA": { brand: "SANY", year: 2024 },
-        "9496 SXA": { brand: "SANY", year: 2024 },
-        "5908 TRA": { brand: "Volvo", year: 2015 },
-        "683 3TRA": { brand: "Volvo", year: 2015 },
-        "7478 TRA": { brand: "Volvo", year: 2015 },
-        "7550 TRA": { brand: "Volvo", year: 2015 }
+        "1091 SDA": { brand: "Volvo", year: 2015 }, "2757 BTA": { brand: "FAW", year: 2025 }, "2758 BTA": { brand: "FAW", year: 2025 },
+        "2759 BTA": { brand: "FAW", year: 2025 }, "2760 BTA": { brand: "FAW", year: 2025 }, "2762 BTA": { brand: "FAW", year: 2025 },
+        "2818 BTA": { brand: "FAW", year: 2025 }, "2927 BTA": { brand: "FAW", year: 2025 }, "2928 BTA": { brand: "FAW", year: 2025 },
+        "2929 BTA": { brand: "FAW", year: 2025 }, "3321 UXA": { brand: "CNHTC", year: 2025 }, "3322 UXA": { brand: "CNHTC", year: 2025 },
+        "3324 UXA": { brand: "CNHTC", year: 2025 }, "3325 UXA": { brand: "CNHTC", year: 2025 }, "3326 UXA": { brand: "CNHTC", year: 2025 },
+        "3461 KXA": { brand: "FAW", year: 2024 }, "3462 KXA": { brand: "FAW", year: 2024 }, "3963 TSA": { brand: "SANY", year: 2023 },
+        "4445 GSA": { brand: "SANY", year: 2023 }, "5324 SXA": { brand: "SANY", year: 2024 }, "5367 KRA": { brand: "Volvo", year: 2012 },
+        "5520 XXA": { brand: "FAW", year: 2024 }, "5521 XXA": { brand: "FAW", year: 2024 }, "5522 XXA": { brand: "FAW", year: 2024 },
+        "5523 XXA": { brand: "FAW", year: 2024 }, "5524 XXA": { brand: "FAW", year: 2024 }, "5525 XXA": { brand: "FAW", year: 2024 },
+        "5526 XXA": { brand: "FAW", year: 2024 }, "5527 XXA": { brand: "FAW", year: 2024 }, "5528 XXA": { brand: "FAW", year: 2024 },
+        "5658 RXA": { brand: "SANY", year: 2024 }, "5796 VRA": { brand: "CNHTC", year: 2022 }, "5797 VRA": { brand: "CNHTC", year: 2022 },
+        "5800 VRA": { brand: "CNHTC", year: 2022 }, "6398 ERA": { brand: "Volvo", year: 2013 }, "6428 TRA": { brand: "Volvo", year: 2012 },
+        "6429 TRA": { brand: "Volvo", year: 2012 }, "6430 TRA": { brand: "Volvo", year: 2011 }, "6432 TRA": { brand: "Volvo", year: 2011 },
+        "6612 DSA": { brand: "SANY", year: 2023 }, "6613 DSA": { brand: "SANY", year: 2023 }, "6614 DSA": { brand: "SANY", year: 2023 },
+        "6615 DSA": { brand: "SANY", year: 2023 }, "6616 DSA": { brand: "SANY", year: 2023 }, "6617 DSA": { brand: "SANY", year: 2023 },
+        "6618 DSA": { brand: "SANY", year: 2023 }, "6619 DSA": { brand: "SANY", year: 2023 }, "6620 DSA": { brand: "SANY", year: 2023 },
+        "6621 DSA": { brand: "SANY", year: 2023 }, "6622 DSA": { brand: "SANY", year: 2023 }, "6623 DSA": { brand: "SANY", year: 2023 },
+        "6624 DSA": { brand: "SANY", year: 2023 }, "6626 DSA": { brand: "SANY", year: 2023 }, "6629 DSA": { brand: "SANY", year: 2023 },
+        "6935 GSA": { brand: "SANY", year: 2023 }, "6939 GSA": { brand: "SANY", year: 2023 }, "7042 ZXA": { brand: "FAW", year: 2024 },
+        "7043 ZXA": { brand: "FAW", year: 2024 }, "7332 DXA": { brand: "SANY", year: 2024 }, "7682 DXA": { brand: "SANY", year: 2024 },
+        "7750 DXA": { brand: "SANY", year: 2024 }, "7837 DXA": { brand: "SANY", year: 2024 }, "7926 DXA": { brand: "SANY", year: 2024 },
+        "7927 DXA": { brand: "SANY", year: 2024 }, "7928 DXA": { brand: "SANY", year: 2024 }, "7929 DXA": { brand: "SANY", year: 2024 },
+        "7930 DXA": { brand: "SANY", year: 2024 }, "7974 DXA": { brand: "SANY", year: 2024 }, "7980 DXA": { brand: "SANY", year: 2024 },
+        "9103 HSA": { brand: "SANY", year: 2023 }, "9492 SXA": { brand: "SANY", year: 2024 }, "9493 SXA": { brand: "SANY", year: 2024 },
+        "9495 SXA": { brand: "SANY", year: 2024 }, "9496 SXA": { brand: "SANY", year: 2024 }, "5908 TRA": { brand: "Volvo", year: 2015 },
+        "683 3TRA": { brand: "Volvo", year: 2015 }, "7478 TRA": { brand: "Volvo", year: 2015 }, "7550 TRA": { brand: "Volvo", year: 2015 }
     };
-
     const expenseCategories = [
         { key: "diesel", name: "الديزل", colName: "الديزل بالريال" },
         { key: "spareParts", name: "قطع غيار", colName: "قطع غيار" },
@@ -217,11 +158,19 @@
         { key: "admin", name: "عمومية وإدارية", colName: "عمومية وإدارية" }
     ];
 
+    // ---------------------- متغيرات عامة ----------------------
+    let currentVehicleData = [];
+    let savedReports = [];
+    let selectedReportIds = new Set();
+    let charts = { topExp: null, bottomExp: null, topRev: null, bottomRev: null };
+    let currentUploadedFile = null;
+    let hasUnsavedData = false;   // track if data loaded from file and not saved yet
+
+    // ---------------------- دوال مساعدة ----------------------
     function formatNumber(num) {
         if (num === undefined || num === null || isNaN(num)) return "0.00";
         return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-
     function showToast(msg, type = "info") {
         const toast = document.createElement("div");
         toast.className = "toast";
@@ -229,7 +178,6 @@
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
     }
-
     function showLoading(show) {
         let el = document.getElementById("loadingOverlay");
         if (show) {
@@ -242,8 +190,20 @@
             }
         } else if (el) el.remove();
     }
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+    }
 
-    // دوال parseNumeric, evaluateFormula, إلخ (كما هي سابقاً)
+    // Show/hide reminder box
+    function updateReminder() {
+        const reminder = document.getElementById('reminderBox');
+        if (reminder) {
+            reminder.style.display = (hasUnsavedData && currentVehicleData.length > 0) ? 'block' : 'none';
+        }
+    }
+
+    // ---------------------- دوال تحليل Excel (نفس السابق) ----------------------
     function evaluateFormula(str) {
         if (typeof str !== 'string') return NaN;
         str = str.trim();
@@ -271,7 +231,6 @@
         if (str.includes('=')) return evaluateFormula(str);
         return parseNumericBasic(str);
     }
-
     function getTruckInfo(plateCode) {
         const info = truckInfoMap[plateCode];
         if (info) return info;
@@ -291,11 +250,6 @@
         }
         return cleaned;
     }
-    function extractNumericId(plateCode) {
-        let match = plateCode.match(/\d+/);
-        return match ? parseInt(match[0], 10) : 999999;
-    }
-
     function findExpenseColumns(headers) {
         let colMap = {};
         for (let cat of expenseCategories) {
@@ -323,7 +277,6 @@
         }
         return colMap;
     }
-
     async function processExcelFile(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -333,7 +286,6 @@
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
                 if (!rows || rows.length < 3) reject("الملف فارغ");
-
                 let headerRowIdx = -1;
                 for (let i = 0; i < Math.min(rows.length, 30); i++) {
                     const row = rows[i];
@@ -347,7 +299,6 @@
                 }
                 if (headerRowIdx === -1) headerRowIdx = 0;
                 const headers = rows[headerRowIdx].map(c => (c || "").toString().trim());
-
                 const findCol = (keywords) => {
                     for (let i = 0; i < headers.length; i++) {
                         let cell = headers[i].toLowerCase();
@@ -359,7 +310,6 @@
                 let colExpense = findCol(['الجملة', 'جملة المصروفات', 'اجمالي المصروف', 'إجمالي المصروفات', 'المصروفات']);
                 let colRevenue = findCol(['الايراد', 'الإيراد', 'ايراد']);
                 let colNet = findCol(['الصافي', 'صافي']);
-
                 if (colCost === -1 || colExpense === -1 || colRevenue === -1 || colNet === -1) {
                     reject(`لم نجد الأعمدة الأساسية. تأكد من وجود: مركز التكلفة، الجملة، الايراد، الصافي`);
                     return;
@@ -371,13 +321,11 @@
                     if (!row || row.length === 0) continue;
                     const costRaw = row[colCost] ? String(row[colCost]).trim() : "";
                     if (!costRaw || costRaw.includes("الإجمالي") || costRaw.includes("SUM") || costRaw === "" || costRaw.includes("جملة")) continue;
-
                     let expense = parseNumeric(row[colExpense]);
                     let revenue = parseNumeric(row[colRevenue]);
                     let net = parseNumeric(row[colNet]);
                     if (isNaN(expense) || isNaN(revenue) || isNaN(net)) continue;
                     if (revenue === 0 && expense === 0) continue;
-
                     let details = {};
                     for (let cat of expenseCategories) {
                         let colIdx = expenseCols[cat.key];
@@ -413,7 +361,6 @@
         if (percent > 35) return 'net-percent-green';
         return '';
     }
-
     function renderDashboard(data) {
         if (!data.length) return;
         const sortedData = [...data].sort((a, b) => a.netPercent - b.netPercent);
@@ -473,7 +420,7 @@
         charts.bottomRev = new Chart(document.getElementById('bottomRevenueChart'), { type: 'bar', data: { labels: bottomRev.map(v=>v.plateCode), datasets: [{ label: 'أقل إيراد', data: bottomRev.map(v=>v.totalRevenue), backgroundColor: '#eb3349' }] }, options: { plugins: { legend: { labels: { color: textColor } } } } });
     }
 
-    // ==================== دوال ربط السيرفر ====================
+    // ---------------------- دوال ربط السيرفر ----------------------
     async function apiCall(endpoint, method='GET', data=null, isFormData=false) {
         const opts = { method, credentials:'include' };
         if (isFormData) {
@@ -508,10 +455,10 @@
         formData.append('excelFile', file);
         formData.append('reportName', reportName);
         formData.append('reportDate', new Date().toISOString().split('T')[0]);
-        // إضافة البيانات المستخلصة أيضاً (إذا أردت الاحتفاظ بها في جدول reports)
         formData.append('vehicleData', JSON.stringify(vehicleData));
         await apiCall('/upload-excel-report', 'POST', formData, true);
         await loadReportsFromServer();
+        await loadUploadedFiles();  // تحديث قائمة الملفات (حتى لو مخفية)
     }
 
     async function deleteReportFromServer(reportId) {
@@ -523,8 +470,6 @@
         const report = savedReports.find(r => r.id == reportId);
         if (!report) return;
         await deleteReportFromServer(reportId);
-        // إعادة الحفظ بنفس البيانات ولكن بدون ملف (لأننا لا نملك الملف الأصلي هنا)
-        // الحل الأفضل: استخدام endpoint مخصص لتعديل الاسم، ولكن لتجنب التعقيد سنستخدم الطريقة السابقة
         await apiCall('/upload-report', 'POST', {
             filename: newName,
             report_date: new Date().toISOString().split('T')[0],
@@ -614,7 +559,10 @@
             showToast(`✅ تم حفظ "${name}" مع الملف الأصلي`, "success");
             document.getElementById("reportsPanel").style.display = "block";
             await loadAndDisplayReportsList();
-            await loadUploadedFiles(); // تحديث قائمة الملفات
+            await loadUploadedFiles();
+            // بعد الحفظ، نعيد تعيين حالة البيانات غير المحفوظة
+            hasUnsavedData = false;
+            updateReminder();
         } catch (err) {
             showToast("خطأ في الحفظ: " + err.message, "error");
         } finally {
@@ -666,7 +614,6 @@
             currentVehicleData = mergedData;
             renderDashboard(currentVehicleData);
             showToast(`تم دمج ${reportsToMerge.length} تقارير`, "success");
-            // حفظ التقرير المدمج كتقرير عادي (بدون ملف أصلي)
             await apiCall('/upload-report', 'POST', {
                 filename: `دمج (${reportsToMerge.map(r=>r.reportName).join(' + ')})`,
                 report_date: new Date().toISOString().split('T')[0],
@@ -676,35 +623,48 @@
         } catch(e) { showToast("خطأ: "+e.message, "error"); } finally { showLoading(false); }
     }
 
-    // دالة لتحميل قائمة الملفات الأصلية المحفوظة
+    // ---------------------- تحميل وعرض الملفات الأصلية (مخفي لكن الوظيفة باقية) ----------------------
     async function loadUploadedFiles() {
         try {
-            const files = await apiCall('/uploaded-files');
+            const response = await fetch('/api/uploaded-files', { credentials: 'include' });
+            if (!response.ok) throw new Error('فشل تحميل الملفات');
+            const files = await response.json();
             const container = document.getElementById('uploadedFilesContainer');
-            if (!files.length) {
-                container.innerHTML = '<p>لا توجد ملفات محفوظة</p>';
+            if (!container) return;
+            if (!files || files.length === 0) {
+                container.innerHTML = '<p style="color:#aaa;">📂 لا توجد ملفات محفوظة على الخادم</p>';
                 return;
             }
-            container.innerHTML = `<ul class="uploaded-files-list">
-                ${files.map(f => `
-                    <li>
-                        <div class="file-info">
-                            📄 <strong>${escapeHtml(f.original_name)}</strong><br>
-                            <small>رفع: ${new Date(f.uploaded_at).toLocaleString()} - بواسطة: ${f.uploaded_by}</small><br>
-                            <small>التقرير المرتبط: ${f.report_name || 'غير مرتبط'}</small>
-                        </div>
-                        <button class="btn btn-sm btn-info" onclick="downloadFile(${f.id})">⬇️ تحميل</button>
-                    </li>
-                `).join('')}
-            </ul>`;
-        } catch(e) { console.error(e); container.innerHTML = '<p>خطأ في تحميل الملفات</p>'; }
+            container.innerHTML = `
+                <ul class="uploaded-files-list">
+                    ${files.map(f => `
+                        <li>
+                            <div class="file-info">
+                                📄 <strong>${escapeHtml(f.original_name)}</strong><br>
+                                <small>رفع: ${new Date(f.uploaded_at).toLocaleString()} - بواسطة: ${escapeHtml(f.uploaded_by)}</small><br>
+                                <small>التقرير المرتبط: ${escapeHtml(f.report_name || 'غير مرتبط')}</small>
+                            </div>
+                            <button class="btn btn-sm btn-info" onclick="downloadFile(${f.id})">⬇️ تحميل الملف الأصلي</button>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+        } catch (err) {
+            console.error('خطأ في تحميل الملفات:', err);
+            const container = document.getElementById('uploadedFilesContainer');
+            if (container) container.innerHTML = '<p style="color:#f00;">❌ خطأ في تحميل الملفات</p>';
+        }
     }
 
-    async function downloadFile(id) {
-        window.open(`/api/download-file/${id}`, '_blank');
+    async function downloadFile(fileId) {
+        try {
+            window.open(`/api/download-file/${fileId}`, '_blank');
+        } catch (err) {
+            showToast('فشل تحميل الملف', 'error');
+        }
     }
 
-    // تصدير Excel (نفس الكود السابق)
+    // ---------------------- تصدير Excel (نسخة محسنة) ----------------------
     async function exportFullExcel() {
         if (!currentVehicleData.length) { alert("لا توجد بيانات للتصدير"); return; }
         showLoading(true);
@@ -715,14 +675,12 @@
             workbook.creator = 'مجموعة شركات زرعة الخير';
             
             let monthlyData = savedReports.length ? savedReports.map(r => ({ name: r.reportName, totalExp: r.data.reduce((s,v)=>s+v.totalExpense,0), totalRev: r.data.reduce((s,v)=>s+v.totalRevenue,0), totalNet: r.data.reduce((s,v)=>s+v.netIncome,0) })) : [{ name: "التقرير الحالي", totalExp: currentVehicleData.reduce((s,v)=>s+v.totalExpense,0), totalRev: currentVehicleData.reduce((s,v)=>s+v.totalRevenue,0), totalNet: currentVehicleData.reduce((s,v)=>s+v.netIncome,0) }];
-            let allTrucks = [...currentVehicleData].sort((a,b) => extractNumericId(a.plateCode) - extractNumericId(b.plateCode));
-
+            let allTrucks = [...currentVehicleData].sort((a,b) => parseInt(a.plateCode.match(/\d+/)?.[0] || 0) - parseInt(b.plateCode.match(/\d+/)?.[0] || 0));
             let totalDetails = {};
             for (let cat of expenseCategories) totalDetails[cat.key] = 0;
             for (let t of allTrucks) {
                 for (let cat of expenseCategories) totalDetails[cat.key] += (t.expenseDetails?.[cat.key] || 0);
             }
-
             function styleLight(ws, title, columns, rows, numericIndices=[], percentIndices=[], setPageSetup=true, conditionalFormatCol=-1) {
                 ws.views = [{ rightToLeft: true }];
                 if (setPageSetup) ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
@@ -762,21 +720,15 @@
                 });
                 ws.columns = columns.map(col => ({ width: col.width || 18 }));
             }
-
-            // 1. ملخص شهري
             const wsMonthly = workbook.addWorksheet("ملخص شهري");
             styleLight(wsMonthly, "📅 ملخص شهري", [{ header:"الشهر", width:25 }, { header:"إجمالي المصروفات", width:25 }, { header:"إجمالي الإيرادات", width:25 }, { header:"صافي الدخل", width:25 }, { header:"نسبة الصافي %", width:20 }], monthlyData.map(m => [m.name, m.totalExp, m.totalRev, m.totalNet, m.totalRev ? (m.totalNet/m.totalRev)/100 : 0]), [1,2,3], [4]);
-
-            // 2. ملخص إجمالي المصاريف
+            const wsSummaryTotal = workbook.addWorksheet("ملخص إجمالي المصاريف");
             let summaryRows = [];
             for (let cat of expenseCategories) summaryRows.push([cat.name, totalDetails[cat.key]]);
             summaryRows.push(["إجمالي المصروفات الكلي", allTrucks.reduce((s,t)=>s+t.totalExpense,0)]);
             summaryRows.push(["إجمالي الإيرادات الكلي", allTrucks.reduce((s,t)=>s+t.totalRevenue,0)]);
             summaryRows.push(["صافي الدخل الكلي", allTrucks.reduce((s,t)=>s+t.netIncome,0)]);
-            const wsSummaryTotal = workbook.addWorksheet("ملخص إجمالي المصاريف");
             styleLight(wsSummaryTotal, "📊 ملخص إجمالي المصاريف", [{ header: "بند المصروف", width: 25 }, { header: "الإجمالي (ر.س)", width: 22 }], summaryRows, [1]);
-
-            // 3. تفصيل المصاريف لكل شاحنة
             let detailColumns = [{ header: "الماركة", width: 15 }, { header: "سنة الإنتاج", width: 12 }, { header: "رقم اللوحة", width: 20 }];
             for (let cat of expenseCategories) detailColumns.push({ header: cat.name, width: 18 });
             detailColumns.push({ header: "إجمالي الإيرادات", width: 22 }, { header: "إجمالي المصروفات", width: 22 }, { header: "صافي الدخل", width: 22 }, { header: "نسبة الصافي %", width: 18 });
@@ -790,8 +742,6 @@
             const numericDetailIndices = Array.from({length: expenseCategories.length + 3}, (_,i) => i+3);
             const percentDetailIndex = detailColumns.length - 1;
             styleLight(wsDetail, "📊 تفصيل المصاريف لكل شاحنة", detailColumns, detailRows, numericDetailIndices, [percentDetailIndex], true, percentDetailIndex);
-
-            // 4. أعلى 10 في بنود المصاريف
             const wsTop = workbook.addWorksheet("🏆 أعلى 10 في بنود المصاريف");
             wsTop.views = [{ rightToLeft: true }];
             wsTop.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
@@ -804,12 +754,11 @@
             wsTop.getRow(1).height = 40;
             currentRow = 2;
             for (let cat of expenseCategories) {
-                const titleCell = wsTop.getCell(`A${currentRow}`);
-                titleCell.value = cat.name;
-                titleCell.font = { size: 14, bold: true, color: { argb: 'FF000000' } };
-                titleCell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFE6F0D8' } };
-                titleCell.alignment = { horizontal: 'center' };
                 wsTop.mergeCells(`A${currentRow}:D${currentRow}`);
+                wsTop.getCell(`A${currentRow}`).value = cat.name;
+                wsTop.getCell(`A${currentRow}`).font = { size: 14, bold: true, color: { argb: 'FF000000' } };
+                wsTop.getCell(`A${currentRow}`).fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFE6F0D8' } };
+                wsTop.getCell(`A${currentRow}`).alignment = { horizontal: 'center' };
                 currentRow++;
                 const headerRow = wsTop.getRow(currentRow);
                 headerRow.getCell(1).value = "#";
@@ -852,8 +801,6 @@
             wsTop.getColumn(1).width = 8;
             wsTop.getColumn(2).width = 22;
             wsTop.getColumn(3).width = 20;
-
-            // 5. أهم 10 سيارات
             const wsImportant = workbook.addWorksheet("📊 أهم 10 سيارات");
             wsImportant.views = [{ rightToLeft: true }];
             wsImportant.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
@@ -865,7 +812,6 @@
             wsImportant.getCell('A1').alignment = { horizontal:'center', vertical:'middle' };
             wsImportant.getRow(1).height = 40;
             impRow = 2;
-
             const sections = [
                 { title: "💰 أعلى 10 مصروفات", data: [...allTrucks].sort((a,b)=>b.totalExpense - a.totalExpense).slice(0,10), cols: ["#", "رقم اللوحة", "المصروفات (ر.س)"] },
                 { title: "📉 أقل 10 مصروفات", data: [...allTrucks].sort((a,b)=>a.totalExpense - b.totalExpense).slice(0,10), cols: ["#", "رقم اللوحة", "المصروفات (ر.س)"] },
@@ -874,14 +820,12 @@
                 { title: "🏆 أكثر 10 صافي أرباح", data: [...allTrucks].sort((a,b)=>b.netIncome - a.netIncome).slice(0,10), cols: ["#", "رقم اللوحة", "صافي الربح (ر.س)"] },
                 { title: "⚠️ أقل 10 صافي أرباح", data: [...allTrucks].sort((a,b)=>a.netIncome - b.netIncome).slice(0,10), cols: ["#", "رقم اللوحة", "صافي الربح (ر.س)"] }
             ];
-
             for (let sec of sections) {
-                const titleCell = wsImportant.getCell(`A${impRow}`);
-                titleCell.value = sec.title;
-                titleCell.font = { size: 14, bold: true, color: { argb: 'FF000000' } };
-                titleCell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFE6F0D8' } };
-                titleCell.alignment = { horizontal: 'center' };
                 wsImportant.mergeCells(`A${impRow}:C${impRow}`);
+                wsImportant.getCell(`A${impRow}`).value = sec.title;
+                wsImportant.getCell(`A${impRow}`).font = { size: 14, bold: true, color: { argb: 'FF000000' } };
+                wsImportant.getCell(`A${impRow}`).fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFE6F0D8' } };
+                wsImportant.getCell(`A${impRow}`).alignment = { horizontal: 'center' };
                 impRow++;
                 const headerRow = wsImportant.getRow(impRow);
                 for (let i = 0; i < sec.cols.length; i++) {
@@ -921,8 +865,6 @@
             wsImportant.getColumn(1).width = 8;
             wsImportant.getColumn(2).width = 22;
             wsImportant.getColumn(3).width = 20;
-
-            // 6. إجمالي الشاحنات
             const wsSimple = workbook.addWorksheet("إجمالي الشاحنات (مبسط)");
             let simpleRows = allTrucks.map(t => [t.brand, t.year, t.plateCode, t.totalExpense, t.totalRevenue, t.netIncome, t.netPercent / 100]);
             styleLight(wsSimple, "🚛 إجمالي الشاحنات", [
@@ -930,17 +872,12 @@
                 { header:"إجمالي المصروفات", width:22 }, { header:"إجمالي الإيرادات", width:22 },
                 { header:"صافي الدخل", width:22 }, { header:"نسبة الصافي %", width:18 }
             ], simpleRows, [3,4,5], [6], true, 6);
-
-            const sheetOrder = [
-                "ملخص شهري", "ملخص إجمالي المصاريف", "تفصيل المصاريف لكل شاحنة",
-                "🏆 أعلى 10 في بنود المصاريف", "📊 أهم 10 سيارات", "إجمالي الشاحنات (مبسط)"
-            ];
+            const sheetOrder = ["ملخص شهري", "ملخص إجمالي المصاريف", "تفصيل المصاريف لكل شاحنة", "🏆 أعلى 10 في بنود المصاريف", "📊 أهم 10 سيارات", "إجمالي الشاحنات (مبسط)"];
             workbook.eachSheet((sheet, id) => {
                 const targetIndex = sheetOrder.indexOf(sheet.name);
                 if (targetIndex !== -1 && sheet.order !== targetIndex) sheet.order = targetIndex;
             });
             workbook.worksheets.sort((a, b) => (a.order || 999) - (b.order || 999));
-
             const buffer = await workbook.xlsx.writeBuffer();
             saveAs(new Blob([buffer]), `تقرير_سيارات_${new Date().toISOString().slice(0,10)}.xlsx`);
             showToast("✅ تم تصدير Excel", "success");
@@ -949,19 +886,20 @@
         } finally { showLoading(false); }
     }
 
-    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
-
-    // ربط الأحداث
+    // ---------------------- أحداث الصفحة ----------------------
     document.getElementById("uploadBtn").onclick = () => document.getElementById("excelInput").click();
     document.getElementById("excelInput").onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        currentUploadedFile = file;
         showLoading(true);
         try {
             const data = await processExcelFile(file);
             currentVehicleData = data;
             renderDashboard(data);
-            showToast(`✅ تم تحليل ${data.length} سيارة`, "success");
+            hasUnsavedData = true;
+            updateReminder();
+            showToast(`✅ تم تحليل ${data.length} سيارة، تذكر حفظ التقرير!`, "success");
         } catch (err) { showToast("خطأ: "+err.message, "error"); }
         finally { showLoading(false); }
     };
@@ -974,17 +912,15 @@
     document.getElementById("clearReportsBtn").onclick = clearAllReportsOnServer;
     document.getElementById("exportExcelBtn").onclick = () => exportFullExcel();
 
-    // تحميل البيانات الأولية
+    // ---------------------- تهيئة الصفحة ----------------------
     (async function init() {
         try {
             await apiCall('/me');
             await loadAndDisplayReportsList();
-            await loadUploadedFiles();
-            // تحميل شريط التنقل (navbar.js)
+            await loadUploadedFiles(); // still called but hidden container
             if (typeof renderNavbar === 'function') {
                 renderNavbar();
             } else {
-                // fallback بسيط
                 const navDiv = document.getElementById('navLinks');
                 if (navDiv) navDiv.innerHTML = `<a href="index.html" class="nav-link">📊 الرئيسية</a>
                                                 <a href="orders.html" class="nav-link">📝 الطلبات</a>
@@ -1004,6 +940,5 @@
         } catch(e) { window.location.href = '/login.html'; }
     })();
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </body>
 </html>
