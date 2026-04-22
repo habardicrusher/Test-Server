@@ -3,400 +3,467 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الطلبات النقدية - نظام كسارة الحبردي</title>
+    <title>الرئيسية - نظام إدارة طلبات كسارة الحبردي</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 20px; min-height: 100vh; }
-        .container { max-width: 1400px; margin: 0 auto; }
-        .header { text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 20px; margin-bottom: 30px; position: relative; }
-        .header h1 { margin: 0; font-size: 1.8rem; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin-bottom: 30px; position: relative; }
         .nav-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
-        .nav-link { padding: 10px 20px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; font-weight: 600; transition: 0.3s; }
-        .nav-link:hover, .nav-link.active { background: linear-gradient(135deg, #667eea, #764ba2); }
-        .card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; margin-bottom: 25px; backdrop-filter: blur(5px); }
-        .form-row { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; align-items: flex-end; }
-        .form-group { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 5px; }
-        .form-group label { font-size: 0.85rem; color: #a8b2d1; }
-        .form-group input, .form-group select { padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #fff; }
-        .btn { padding: 10px 20px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; margin: 5px; }
-        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
-        .btn-success { background: #11998e; color: #fff; }
+        .nav-link { padding: 12px 24px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; font-weight: 600; transition: all 0.3s; }
+        .nav-link:hover, .nav-link.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transform: translateY(-2px); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2)); border-radius: 15px; padding: 25px; text-align: center; backdrop-filter: blur(10px); }
+        .stat-card h3 { font-size: 2.5em; color: #38ef7d; margin-bottom: 10px; }
+        .stat-card p { color: #a8b2d1; font-size: 1em; }
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; margin-bottom: 30px; }
+        .chart-container { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; }
+        .chart-container h3 { margin-bottom: 15px; color: #667eea; text-align: center; }
+        .chart-wrapper { height: 300px; width: 100%; }
+        .recent-orders { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; margin-top: 20px; overflow-x: auto; }
+        .recent-orders h3 { margin-bottom: 15px; color: #667eea; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        th { background: rgba(102,126,234,0.3); font-weight: 600; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin: 5px; }
+        .btn-sm { padding: 5px 10px; font-size: 0.8em; }
+        .btn-info { background: #4facfe; color: #fff; }
         .btn-danger { background: #eb3349; color: #fff; }
-        .btn-warning { background: #f093fb; color: #1a1a2e; }
-        .btn-info { background: #0f5c7a; color: #fff; }
-        .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        th { background: rgba(102,126,234,0.4); font-weight: bold; }
-        tr:hover { background: rgba(255,255,255,0.05); }
-        .locked { color: #f093fb; font-size: 0.8rem; }
-        .stats-grid { display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; }
-        .stat-card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; flex: 1; min-width: 150px; text-align: center; border-right: 3px solid #667eea; }
-        .stat-card .number { font-size: 1.8rem; font-weight: bold; color: #a8b2d1; }
-        .filter-bar { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 20px; }
-        .toast { position: fixed; bottom: 20px; left: 20px; background: #1e2a3a; color: white; padding: 12px 24px; border-radius: 40px; z-index: 1000; border-right: 4px solid #667eea; }
-        .loading { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display: none; align-items:center; justify-content:center; flex-direction:column; z-index:2000; }
+        .btn-warning { background: #f093fb; color: #fff; }
+        .toast-container { position: fixed; top: 20px; left: 20px; z-index: 3000; }
+        .toast { padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; font-weight: 600; animation: slideIn 0.3s ease; }
+        .toast-success { background: #11998e; }
+        .toast-error { background: #eb3349; }
+        .toast-warning { background: #f093fb; }
+        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .loading { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center; flex-direction:column; }
         .loading.active { display: flex; }
-        .spinner { width:40px; height:40px; border:4px solid rgba(255,255,255,0.3); border-top-color:#667eea; border-radius:50%; animation: spin 1s linear infinite; }
+        .spinner { width:50px; height:50px; border:4px solid rgba(255,255,255,0.3); border-top-color:#667eea; border-radius:50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        footer { text-align: center; margin-top: 40px; color: #aaa; font-size: 0.8rem; }
-        @media (max-width:768px) { .form-row { flex-direction: column; } .stats-grid { flex-direction: column; } }
+        
+        .alert-badge {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: #eb3349;
+            color: white;
+            border-radius: 50%;
+            width: 55px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.4em;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(235,51,73,0.8);
+            transition: all 0.3s ease;
+            z-index: 100;
+            animation: pulse 1s infinite, shake 0.5s infinite;
+        }
+        .alert-badge:hover { transform: scale(1.15); box-shadow: 0 0 25px rgba(235,51,73,1); }
+        @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-3px); } 50% { transform: translateX(3px); } 75% { transform: translateX(-2px); } 100% { transform: translateX(0); } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(235,51,73,0.7); } 70% { box-shadow: 0 0 0 20px rgba(235,51,73,0); } 100% { box-shadow: 0 0 0 0 rgba(235,51,73,0); } }
+        .alert-badge.hidden { display: none; }
+        
+        .alert-bar {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            padding: 10px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            animation: slideDown 0.5s ease;
+        }
+        .alert-bar.hidden { display: none; }
+        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .alert-bar .message { display: flex; align-items: center; gap: 10px; font-size: 1em; }
+        .alert-bar .message span { font-size: 1.5em; }
+        .alert-bar button { background: rgba(255,255,255,0.2); border: none; padding: 6px 15px; border-radius: 20px; color: white; cursor: pointer; font-weight: bold; }
+        .alert-bar button:hover { background: rgba(255,255,255,0.4); }
+        
+        .unauthorized { text-align: center; padding: 50px; background: rgba(235,51,73,0.2); border-radius: 20px; margin: 50px auto; max-width: 600px; }
+        .hidden { display: none; }
+        
+        @media (max-width:768px){ .charts-grid { grid-template-columns:1fr; } .chart-wrapper { height:250px; } }
     </style>
 </head>
 <body>
-<div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
-<div class="container">
-    <div class="header">
-        <h1>💰 الطلبات النقدية - كسارة الحبردي</h1>
-        <div style="position: absolute; top: 20px; left: 20px;">
-            <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
+    <div class="loading" id="loading"><div class="spinner"></div><p>جاري التحميل...</p></div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="container">
+        <!-- المحتوى الذي سيظهر فقط إذا كان المستخدم مصرحاً له -->
+        <div id="authorizedContent">
+            <div class="header">
+                <h1>📊 لوحة التحكم الرئيسية - كسارة الحبردي</h1>
+                <p>نظام إدارة طلبات كسارة الحبردي</p>
+                <div style="position: absolute; top: 20px; left: 20px;">
+                    <button onclick="logout()" style="background: linear-gradient(135deg, #f5576c, #eb3349); border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer;">🚪 تسجيل الخروج</button>
+                    <!-- أزرار الإدارة تظهر فقط عند توفر الصلاحيات المناسبة -->
+                    <button id="manualUpdateBtn" onclick="manualCheckOrders()" style="background: #4facfe; border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer; margin-right: 10px;">🔄 تحديث يدوي</button>
+                    <button id="goDistBtn" onclick="goToDistribution()" style="background: #f093fb; border: none; padding: 8px 20px; border-radius: 25px; color: white; font-weight: bold; cursor: pointer; margin-right: 10px;">⚡ توزيع الطلبات</button>
+                </div>
+                <div id="alertBadge" class="alert-badge hidden" onclick="goToDistribution()" title="طلبات جديدة غير موزعة - اضغط للتوزيع">
+                    <span id="alertCount">0</span>📬
+                </div>
+            </div>
+            
+            <div id="alertBar" class="alert-bar hidden">
+                <div class="message">
+                    <span>📬</span>
+                    <span id="alertBarMessage">يوجد طلبات جديدة غير موزعة!</span>
+                </div>
+                <button onclick="goToDistribution()">الذهاب للتوزيع</button>
+            </div>
+            
+            <div class="nav-links" id="navLinks"></div>
+
+            <div class="stats-grid">
+                <div class="stat-card"><h3 id="totalOrders">0</h3><p>📋 إجمالي الطلبات اليوم</p></div>
+                <div class="stat-card"><h3 id="totalTrips">0</h3><p>🚚 الرحلات الموزعة</p></div>
+                <div class="stat-card"><h3 id="activeTrucks">0</h3><p>🚛 سيارات نشطة</p></div>
+                <div class="stat-card"><h3 id="completedPercentage">0%</h3><p>📈 نسبة الإنجاز</p></div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-container"><h3>📈 توزيع الطلبات حسب المصنع</h3><div class="chart-wrapper"><canvas id="factoriesChart"></canvas></div></div>
+                <div class="chart-container"><h3>📦 توزيع الطلبات حسب نوع البحص</h3><div class="chart-wrapper"><canvas id="materialsChart"></canvas></div></div>
+            </div>
+
+            <div class="recent-orders">
+                <h3>📋 آخر 10 طلبات اليوم</h3>
+                <table id="recentOrdersTable"><thead><tr><th>#</th><th>المصنع</th><th>نوع البحص</th><th>التوقيت</th><th>وقت الإضافة</th></tr></thead><tbody id="recentOrdersBody"></tbody>｜DSML｜
+            </div>
+        </div>
+
+        <!-- رسالة عدم التصريح -->
+        <div id="unauthorizedMsg" class="unauthorized hidden">
+            ⛔ غير مصرح لك بالوصول إلى لوحة التحكم. <br>
+            يلزم صلاحية <strong>عرض الطلبات (viewOrders)</strong> أو <strong>عرض التقارير (viewReports)</strong>.
         </div>
     </div>
-    <div class="nav-links" id="navLinks"></div>
 
-    <!-- نموذج إضافة طلب نقدي -->
-    <div class="card">
-        <h3>➕ طلب نقدي جديد</h3>
-        <div class="form-row">
-            <div class="form-group"><label>👤 اسم العميل</label><input type="text" id="clientName" placeholder="أدخل اسم العميل"></div>
-            <div class="form-group"><label>📞 رقم الهاتف</label><input type="tel" id="clientPhone" placeholder="رقم الهاتف"></div>
-            <div class="form-group"><label>⚖️ الوزن (طن)</label><input type="number" id="weight" step="0.01" placeholder="مثال: 25.5"></div>
-            <div class="form-group"><label>💰 السعر للطن (ر.س)</label><input type="number" id="price" step="0.01" placeholder="مثال: 180"></div>
-            <div class="form-group"><label>📦 نوع البحص</label><select id="materialType"><option value="3/4">3/4</option><option value="3/8">3/8</option><option value="3/16">3/16</option></select></div>
-            <div class="form-group"><label>⏰ الوقت</label><input type="datetime-local" id="orderTime"></div>
-        </div>
-        <div class="form-row">
-            <div class="form-group"><label>💰 الإجمالي (ر.س)</label><input type="text" id="totalAmount" readonly style="background:#2a2a4e; font-weight:bold;"></div>
-            <div class="form-group"><button class="btn btn-success" id="saveOrderBtn" onclick="saveOrder()">💾 حفظ الطلب (مقفل للتعديل)</button></div>
-        </div>
-    </div>
+    <script>
+        const API_BASE = '/api';
+        let factoriesChart, materialsChart;
+        let currentDate = new Date().toISOString().split('T')[0];
+        let pendingOrdersCount = 0;
+        let currentUserRole = null;
+        let currentUserPermissions = {};
+        let lastOrderCount = 0;
+        let pollingInterval = null;
 
-    <!-- الإحصائيات السريعة -->
-    <div class="stats-grid" id="statsGrid"></div>
-
-    <!-- الفلاتر والتقارير -->
-    <div class="card">
-        <h3>📊 التقارير والإحصائيات</h3>
-        <div class="filter-bar">
-            <div class="form-group"><label>📅 من تاريخ</label><input type="date" id="filterStartDate"></div>
-            <div class="form-group"><label>📅 إلى تاريخ</label><input type="date" id="filterEndDate"></div>
-            <div class="form-group"><label>👤 عميل</label><input type="text" id="filterClient" placeholder="اسم العميل"></div>
-            <div><button class="btn btn-primary" onclick="applyFilters()">🔍 تصفية</button></div>
-            <div><button class="btn btn-info" onclick="resetFilters()">🗑️ إعادة ضبط</button></div>
-            <div><button class="btn btn-warning" onclick="exportToExcel()">📥 تصدير Excel</button></div>
-        </div>
-        <div style="overflow-x: auto;">
-            <table id="ordersTable">
-                <thead>
-                    <tr><th>#</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>الوزن (طن)</th><th>السعر/طن</th><th>الإجمالي</th><th>نوع البحص</th><th>حالة التعديل</th><th>إجراءات</th></tr>
-                </thead>
-                <tbody id="ordersBody"></tbody>
-            </table>
-        </div>
-    </div>
-    <footer>✅ الطلبات النقدية مقفلة ولا يمكن تعديلها بعد الحفظ. يمكن حذفها فقط.</footer>
-</div>
-
-<script>
-    // ==================== إعدادات التخزين ====================
-    let cashOrders = [];
-    const STORAGE_KEY = 'cash_orders';
-
-    // تحميل البيانات من localStorage
-    function loadOrdersFromStorage() {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            try {
-                cashOrders = JSON.parse(stored);
-            } catch(e) { cashOrders = []; }
-        } else {
-            cashOrders = [];
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+            if (data) options.body = JSON.stringify(data);
+            const res = await fetch(`${API_BASE}${endpoint}`, options);
+            if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
         }
-        // ترتيب تنازلي حسب التاريخ (الأحدث أولاً)
-        cashOrders.sort((a,b) => new Date(b.dateTime) - new Date(a.dateTime));
-        renderStatsAndTable();
-    }
 
-    // حفظ البيانات إلى localStorage
-    function saveOrdersToStorage() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(cashOrders));
-        renderStatsAndTable();
-    }
-
-    // حساب الإجمالي تلقائياً
-    function updateTotal() {
-        const weight = parseFloat(document.getElementById('weight').value) || 0;
-        const price = parseFloat(document.getElementById('price').value) || 0;
-        const total = weight * price;
-        document.getElementById('totalAmount').value = total.toFixed(2);
-    }
-
-    document.getElementById('weight').addEventListener('input', updateTotal);
-    document.getElementById('price').addEventListener('input', updateTotal);
-
-    // حفظ طلب جديد (مقفل)
-    function saveOrder() {
-        const clientName = document.getElementById('clientName').value.trim();
-        const clientPhone = document.getElementById('clientPhone').value.trim();
-        const weight = parseFloat(document.getElementById('weight').value);
-        const price = parseFloat(document.getElementById('price').value);
-        const material = document.getElementById('materialType').value;
-        let orderTime = document.getElementById('orderTime').value;
-        if (!orderTime) orderTime = new Date().toISOString().slice(0,16);
-        if (!clientName) { showToast('يرجى إدخال اسم العميل', 'error'); return; }
-        if (isNaN(weight) || weight <= 0) { showToast('الوزن يجب أن يكون أكبر من صفر', 'error'); return; }
-        if (isNaN(price) || price <= 0) { showToast('السعر يجب أن يكون أكبر من صفر', 'error'); return; }
-
-        const total = weight * price;
-        const newOrder = {
-            id: Date.now(),
-            clientName,
-            clientPhone,
-            weight,
-            price,
-            material,
-            dateTime: orderTime,
-            total: total,
-            locked: true,   // مقفل نهائياً
-            createdAt: new Date().toISOString()
-        };
-        cashOrders.unshift(newOrder);
-        saveOrdersToStorage();
-        // تفريغ الحقول
-        document.getElementById('clientName').value = '';
-        document.getElementById('clientPhone').value = '';
-        document.getElementById('weight').value = '';
-        document.getElementById('price').value = '';
-        document.getElementById('orderTime').value = '';
-        document.getElementById('totalAmount').value = '';
-        showToast('✅ تم حفظ الطلب النقدي بنجاح (مقفل للتعديل)', 'success');
-    }
-
-    // حذف طلب (لا يمكن التعديل، فقط حذف)
-    function deleteOrder(id) {
-        if (confirm('هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع.')) {
-            cashOrders = cashOrders.filter(o => o.id != id);
-            saveOrdersToStorage();
-            showToast('تم حذف الطلب', 'info');
+        // التحقق من الصلاحيات: هل يملك صلاحية viewOrders أو viewReports على الأقل لعرض الصفحة
+        function hasRequiredPermissions() {
+            return (currentUserRole === 'admin') || 
+                   (currentUserPermissions.viewOrders === true) || 
+                   (currentUserPermissions.viewReports === true);
         }
-    }
 
-    // ==================== الفلاتر والإحصائيات ====================
-    let currentFilters = { startDate: '', endDate: '', client: '' };
-
-    function applyFilters() {
-        currentFilters.startDate = document.getElementById('filterStartDate').value;
-        currentFilters.endDate = document.getElementById('filterEndDate').value;
-        currentFilters.client = document.getElementById('filterClient').value.trim();
-        renderStatsAndTable();
-    }
-
-    function resetFilters() {
-        document.getElementById('filterStartDate').value = '';
-        document.getElementById('filterEndDate').value = '';
-        document.getElementById('filterClient').value = '';
-        currentFilters = { startDate: '', endDate: '', client: '' };
-        renderStatsAndTable();
-    }
-
-    function filterOrders(orders) {
-        return orders.filter(order => {
-            const orderDate = order.dateTime.split('T')[0];
-            if (currentFilters.startDate && orderDate < currentFilters.startDate) return false;
-            if (currentFilters.endDate && orderDate > currentFilters.endDate) return false;
-            if (currentFilters.client && !order.clientName.includes(currentFilters.client)) return false;
-            return true;
-        });
-    }
-
-    // عرض الإحصائيات والجدول
-    function renderStatsAndTable() {
-        const filtered = filterOrders(cashOrders);
-        // إحصائيات
-        const totalOrders = filtered.length;
-        const totalWeight = filtered.reduce((sum, o) => sum + o.weight, 0);
-        const totalRevenue = filtered.reduce((sum, o) => sum + o.total, 0);
-        const avgPrice = totalWeight ? totalRevenue / totalWeight : 0;
-        document.getElementById('statsGrid').innerHTML = `
-            <div class="stat-card"><div class="number">${totalOrders}</div><p>📋 عدد الطلبات</p></div>
-            <div class="stat-card"><div class="number">${totalWeight.toFixed(2)} طن</div><p>⚖️ إجمالي الوزن</p></div>
-            <div class="stat-card"><div class="number">${totalRevenue.toLocaleString()} ر.س</div><p>💰 إجمالي الإيرادات</p></div>
-            <div class="stat-card"><div class="number">${avgPrice.toFixed(2)} ر.س/طن</div><p>📈 متوسط السعر</p></div>
-        `;
-        // عرض الجدول
-        const tbody = document.getElementById('ordersBody');
-        if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">لا توجد طلبات</td></tr>';
-            return;
-        }
-        tbody.innerHTML = filtered.map((order, idx) => {
-            const dateStr = order.dateTime.replace('T', ' ');
-            return `
-                <tr>
-                    <td>${idx+1}</td>
-                    <td>${dateStr}</td>
-                    <td>${escapeHtml(order.clientName)}</td>
-                    <td>${escapeHtml(order.clientPhone)}</td>
-                    <td>${order.weight.toFixed(2)}</td>
-                    <td>${order.price.toFixed(2)}</td>
-                    <td>${order.total.toLocaleString()} ريال</td>
-                    <td>${order.material}</td>
-                    <td><span class="locked">🔒 مقفل</span></td>
-                    <td><button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">🗑️ حذف</button></td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    // ==================== تصدير Excel منسق ====================
-    async function exportToExcel() {
-        const filtered = filterOrders(cashOrders);
-        if (!filtered.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
-        showLoading(true);
-        try {
-            // استخدام ExcelJS للتنسيق المتقدم (إذا كان متاحاً)
-            if (typeof ExcelJS !== 'undefined') {
-                const workbook = new ExcelJS.Workbook();
-                workbook.creator = 'نظام الكسارة';
-                const sheet = workbook.addWorksheet('الطلبات النقدية');
-                sheet.views = [{ rightToLeft: true }];
-                // عنوان
-                sheet.mergeCells('A1:J1');
-                sheet.getCell('A1').value = '📊 تقرير الطلبات النقدية';
-                sheet.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-                sheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF667EEA' } };
-                sheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
-                sheet.getRow(1).height = 40;
-                // رؤوس الأعمدة
-                const headers = ['#', 'التاريخ', 'العميل', 'الهاتف', 'الوزن (طن)', 'السعر/طن', 'الإجمالي (ر.س)', 'نوع البحص', 'الحالة'];
-                const headerRow = sheet.addRow(headers);
-                headerRow.eachCell(cell => {
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4facfe' } };
-                    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-                    cell.alignment = { horizontal: 'center' };
-                    cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
-                });
-                // البيانات
-                filtered.forEach((order, idx) => {
-                    const row = sheet.addRow([
-                        idx+1,
-                        order.dateTime.replace('T', ' '),
-                        order.clientName,
-                        order.clientPhone,
-                        order.weight,
-                        order.price,
-                        order.total,
-                        order.material,
-                        'مقفل'
-                    ]);
-                    row.eachCell((cell, colNum) => {
-                        cell.alignment = { horizontal: 'center' };
-                        cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
-                        if (colNum === 7) cell.numFmt = '#,##0.00';
-                        if (colNum === 5 || colNum === 6) cell.numFmt = '#,##0.00';
-                    });
-                    if (idx % 2 === 0) {
-                        row.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } });
-                    }
-                });
-                // إجمالي
-                const totalWeight = filtered.reduce((s,o)=>s+o.weight,0);
-                const totalRevenue = filtered.reduce((s,o)=>s+o.total,0);
-                const footerRow = sheet.addRow(['', '', '', '', 'الإجمالي', '', totalRevenue, '', '']);
-                footerRow.getCell(5).value = 'الإجمالي';
-                footerRow.getCell(5).font = { bold: true };
-                footerRow.getCell(7).value = totalRevenue;
-                footerRow.getCell(7).numFmt = '#,##0.00';
-                footerRow.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
-                // ضبط العرض
-                sheet.columns = [
-                    { width: 8 }, { width: 20 }, { width: 20 }, { width: 15 }, { width: 12 },
-                    { width: 12 }, { width: 18 }, { width: 12 }, { width: 12 }
-                ];
-                const buffer = await workbook.xlsx.writeBuffer();
-                saveAs(new Blob([buffer]), `تقرير_الطلبات_النقدية_${new Date().toISOString().slice(0,10)}.xlsx`);
-                showToast('✅ تم تصدير التقرير بنجاح', 'success');
-            } else {
-                // Fallback إلى XLSX البسيط
-                const ws = XLSX.utils.json_to_sheet(filtered.map(o => ({
-                    'التاريخ': o.dateTime,
-                    'العميل': o.clientName,
-                    'الهاتف': o.clientPhone,
-                    'الوزن (طن)': o.weight,
-                    'السعر/طن': o.price,
-                    'الإجمالي': o.total,
-                    'نوع البحص': o.material
-                })));
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'الطلبات النقدية');
-                XLSX.writeFile(wb, `طلبات_نقدية_${new Date().toISOString().slice(0,10)}.xlsx`);
-                showToast('تم التصدير', 'success');
+        function updateAlertBadge() {
+            const badge = document.getElementById('alertBadge');
+            const alertBar = document.getElementById('alertBar');
+            const countSpan = document.getElementById('alertCount');
+            const barMessage = document.getElementById('alertBarMessage');
+            if (!badge) return;
+            
+            // فقط إذا كان المستخدم يملك صلاحية إدارة التوزيع أو هو admin يظهر له التنبيه
+            const canManageDist = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+            if (!canManageDist) {
+                badge.classList.add('hidden');
+                alertBar.classList.add('hidden');
+                return;
             }
-        } catch(e) {
-            showToast('خطأ في التصدير: '+e.message, 'error');
+            
+            const totalOrdersElem = document.getElementById('totalOrders');
+            const totalTripsElem = document.getElementById('totalTrips');
+            const totalOrders = parseInt(totalOrdersElem?.textContent) || 0;
+            const totalTrips = parseInt(totalTripsElem?.textContent) || 0;
+            const pending = Math.max(0, totalOrders - totalTrips);
+            
+            if (pending > 0) {
+                badge.classList.remove('hidden');
+                alertBar.classList.remove('hidden');
+                countSpan.textContent = pending;
+                barMessage.innerHTML = `📬 يوجد ${pending} طلب جديد غير موزع! اضغط للانتقال للتوزيع.`;
+            } else {
+                badge.classList.add('hidden');
+                alertBar.classList.add('hidden');
+            }
         }
-        showLoading(false);
-    }
 
-    // Helper functions
-    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
-    function showToast(msg, type) {
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.innerText = msg;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-    }
-    function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
-    function logout() { if(confirm('تسجيل الخروج؟')) fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login.html'); }
-
-    // شريط التنقل (بسيط مع إضافة الصفحة الحالية)
-    function loadNav() {
-        fetch('/api/me', { credentials: 'include' })
-            .then(r => r.json())
-            .then(data => {
-                if (data.user) {
-                    const nav = document.getElementById('navLinks');
-                    if (nav) {
-                        nav.innerHTML = `
-                            <a href="index.html" class="nav-link">📊 الرئيسية</a>
-                            <a href="orders.html" class="nav-link">📝 الطلبات</a>
-                            <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
-                            <a href="trucks.html" class="nav-link">🚛 السيارات</a>
-                            <a href="products.html" class="nav-link">📦 أنواع البحص</a>
-                            <a href="factories.html" class="nav-link">🏭 المصانع</a>
-                            <a href="reports.html" class="nav-link">📊 التقارير</a>
-                            <a href="scale_report.html" class="nav-link">⚖️ الميزان</a>
-                            <a href="expenses.html" class="nav-link">💰 مصاريف السيارات</a>
-                            <a href="cash_orders.html" class="nav-link active">💰 طلبات نقدية</a>
-                            <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
-                            <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
-                            <a href="users.html" class="nav-link">👥 المستخدمين</a>
-                            <a href="logs.html" class="nav-link">📜 السجلات</a>
-                        `;
-                    }
-                } else {
-                    window.location.href = '/login.html';
+        function playBeep() {
+            if (currentUserRole !== 'admin' && currentUserRole !== 'user') return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    const ctx = new AudioContext();
+                    if (ctx.state === 'suspended') ctx.resume();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = 880;
+                    gain.gain.value = 0.2;
+                    osc.start();
+                    gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
+                    osc.stop(ctx.currentTime + 0.5);
+                    setTimeout(() => ctx.close(), 600);
                 }
-            })
-            .catch(() => window.location.href = '/login.html');
-    }
-
-    // تهيئة الصفحة
-    document.addEventListener('DOMContentLoaded', () => {
-        loadNav();
-        loadOrdersFromStorage();
-        // تعيين الوقت الحالي افتراضياً في حقل الوقت
-        if (!document.getElementById('orderTime').value) {
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            document.getElementById('orderTime').value = now.toISOString().slice(0,16);
+            } catch(e) {}
         }
-        updateTotal();
-    });
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+        function goToDistribution() {
+            // التحقق من صلاحية إدارة التوزيع قبل التوجيه
+            const canManageDist = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+            if (!canManageDist) {
+                showToast('غير مصرح لك بالوصول إلى صفحة التوزيع', 'error');
+                return;
+            }
+            window.location.href = 'distribution.html';
+        }
+
+        async function silentUpdate() {
+            // لا تقم بالتحديث إذا لم يكن المستخدم مصرحاً له برؤية البيانات أصلاً
+            if (!hasRequiredPermissions()) return;
+            try {
+                const [settings, dayData] = await Promise.all([
+                    apiCall('/settings'),
+                    apiCall(`/day/${currentDate}`)
+                ]);
+                const orders = dayData.orders || [];
+                const distribution = dayData.distribution || [];
+                const trucks = settings.trucks || [];
+
+                const distributedMap = new Map();
+                distribution.forEach(d => { if (!distributedMap.has(d.orderId)) distributedMap.set(d.orderId, d); });
+                const uniqueDistributions = Array.from(distributedMap.values());
+                const distributedCount = uniqueDistributions.length;
+                const activeTrucksSet = new Set(uniqueDistributions.map(d => d.truck?.number).filter(Boolean));
+                const activeTrucksCount = activeTrucksSet.size;
+                const target = trucks.length * 2;
+                const percentage = target > 0 ? Math.min(100, Math.round((distributedCount / target) * 100)) : 0;
+
+                document.getElementById('totalOrders').textContent = orders.length;
+                document.getElementById('totalTrips').textContent = distributedCount;
+                document.getElementById('activeTrucks').textContent = activeTrucksCount;
+                document.getElementById('completedPercentage').textContent = percentage + '%';
+
+                const factoryStats = {};
+                orders.forEach(order => { const f = order.factory || 'غير محدد'; factoryStats[f] = (factoryStats[f] || 0) + 1; });
+                const materialStats = {};
+                orders.forEach(order => { const m = order.material || 'غير محدد'; materialStats[m] = (materialStats[m] || 0) + 1; });
+
+                renderFactoriesChart(factoryStats);
+                renderMaterialsChart(materialStats);
+
+                const recent = orders.slice(-10).reverse().map(order => ({
+                    factory: order.factory || '—',
+                    material: order.material || '—',
+                    time: (order.time && order.time !== 'undefined') ? order.time : '—',
+                    timestamp: order.timestamp || '—'
+                }));
+                const tbody = document.getElementById('recentOrdersBody');
+                if (!recent.length) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد طلبات اليوم<\/td><\/tr>';
+                else tbody.innerHTML = recent.map((o, i) => `<tr><td>${i+1}<\/td><td>${o.factory}<\/td><td>${o.material}<\/td><td>${o.time}<\/td><td>${o.timestamp}<\/td><\/tr>`).join('');
+
+                if (orders.length > lastOrderCount && lastOrderCount > 0) {
+                    const newOrdersCount = orders.length - lastOrderCount;
+                    playBeep();
+                    showToast(`🔔 تم استلام ${newOrdersCount} طلب جديد! اضغط على الظرف الأحمر للتوزيع.`, 'warning');
+                }
+                lastOrderCount = orders.length;
+                updateAlertBadge();
+                
+            } catch(e) { console.error('خطأ في التحديث الخلفي:', e); }
+        }
+
+        async function manualCheckOrders() {
+            if (!hasRequiredPermissions()) {
+                showToast('غير مصرح لك بتحديث البيانات', 'error');
+                return;
+            }
+            showToast('جاري تحديث البيانات...', 'info');
+            await silentUpdate();
+            showToast('تم تحديث البيانات بنجاح', 'success');
+        }
+
+        function startBackgroundPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            setTimeout(() => silentUpdate(), 1000);
+            pollingInterval = setInterval(() => {
+                silentUpdate();
+            }, 10000);
+            console.log('🚀 بدء التحديث التلقائي في الخلفية (كل 10 ثوانٍ)');
+        }
+
+        function renderFactoriesChart(stats) {
+            const ctx = document.getElementById('factoriesChart').getContext('2d');
+            if (factoriesChart) factoriesChart.destroy();
+            const labels = Object.keys(stats);
+            const data = Object.values(stats);
+            factoriesChart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets: [{ label: 'عدد الطلبات', data, backgroundColor: 'rgba(102,126,234,0.8)' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#fff' } } }, scales: { x: { ticks: { color: '#a8b2d1' } }, y: { ticks: { color: '#a8b2d1' }, beginAtZero: true } } }
+            });
+        }
+
+        function renderMaterialsChart(stats) {
+            const ctx = document.getElementById('materialsChart').getContext('2d');
+            if (materialsChart) materialsChart.destroy();
+            const labels = Object.keys(stats);
+            const data = Object.values(stats);
+            const colors = ['#667eea', '#f5576c', '#38ef7d', '#4facfe', '#f093fb'];
+            materialsChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels, datasets: [{ data, backgroundColor: colors }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
+            });
+        }
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'newOrderTimestamp') {
+                console.log('🔄 تم اكتشاف طلب جديد، جارٍ التحديث');
+                manualCheckOrders();
+            }
+        });
+
+        function showToast(msg, type) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            if (type === 'success') toast.style.background = '#11998e';
+            else if (type === 'error') toast.style.background = '#eb3349';
+            else if (type === 'warning') toast.style.background = '#f093fb';
+            else toast.style.background = '#4facfe';
+            toast.className = 'toast';
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+
+        function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
+
+        function logout() {
+            const logoutBtn = document.querySelector('button[onclick="logout()"]');
+            if (logoutBtn) {
+                logoutBtn.disabled = true;
+                logoutBtn.style.opacity = '0.5';
+                logoutBtn.innerText = '⏳ جاري...';
+            }
+            if (pollingInterval) clearInterval(pollingInterval);
+            fetch('/api/logout', { method: 'POST', credentials: 'include' })
+                .then(() => { localStorage.clear(); window.location.href = '/login.html'; })
+                .catch(() => { localStorage.clear(); window.location.href = '/login.html'; });
+        }
+
+        // دالة بناء روابط التنقل بناءً على الصلاحيات
+function buildNavLinks() {
+    const links = [];
+    if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
+        links.push('<a href="index.html" class="nav-link active">📊 الرئيسية</a>');
+    if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') 
+        links.push('<a href="orders.html" class="nav-link">📝 الطلبات</a>');
+    if (currentUserPermissions.viewDistribution === true || currentUserRole === 'admin') 
+        links.push('<a href="distribution.html" class="nav-link">🚚 التوزيع</a>');
+    if (currentUserPermissions.viewTrucks === true || currentUserRole === 'admin') 
+        links.push('<a href="trucks.html" class="nav-link">🚛 السيارات</a>');
+    
+    // المنتجات والمصانع (تعتمد على صلاحية viewSettings)
+    if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') {
+        links.push('<a href="products.html" class="nav-link">📦 أنواع البحص</a>');
+        links.push('<a href="factories.html" class="nav-link">🏭 المصانع</a>');
+    }
+    
+    // التقارير (viewReports)
+    if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') {
+        links.push('<a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>');
+        links.push('<a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان الشهرية</a>');
+        links.push('<a href="trucks-failed.html" class="nav-link">⚠️ السيارات الغير مستوفية</a>');
+        links.push('<a href="distribution-quality.html" class="nav-link">📈 جودة التوزيع</a>');
+        links.push('<a href="expenses.html" class="nav-link">💰 مصاريف السيارات</a>');   // ✅ إضافة الصفحة الجديدة
+    }
+    
+    // الإعدادات والحظر والمستخدمين والسجلات
+    if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') 
+        links.push('<a href="settings.html" class="nav-link">⚙️ الإعدادات</a>');
+    if (currentUserPermissions.manageRestrictions === true || currentUserRole === 'admin') 
+        links.push('<a href="restrictions.html" class="nav-link">⛔ الحظر</a>');
+    if (currentUserPermissions.manageUsers === true || currentUserRole === 'admin') 
+        links.push('<a href="users.html" class="nav-link">👥 المستخدمين</a>');
+    if (currentUserPermissions.viewBackup === true || currentUserRole === 'admin') 
+        links.push('<a href="logs.html" class="nav-link">📜 السجلات</a>');
+    
+    return links.join('');
+}
+        function loadNav() {
+            fetch('/api/me', { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.user) {
+                        currentUserRole = data.user.role;
+                        currentUserPermissions = data.user.permissions || {};
+                        
+                        // إذا كان العميل (client) يُعاد توجيهه إلى orders.html
+                        if (currentUserRole === 'client') {
+                            window.location.href = '/orders.html';
+                            return;
+                        }
+                        
+                        // التحقق من الصلاحيات لعرض الصفحة
+                        if (!hasRequiredPermissions()) {
+                            document.getElementById('authorizedContent').classList.add('hidden');
+                            document.getElementById('unauthorizedMsg').classList.remove('hidden');
+                            showLoading(false);
+                            return;
+                        }
+                        
+                        // إظهار المحتوى المصرح به
+                        document.getElementById('authorizedContent').classList.remove('hidden');
+                        document.getElementById('unauthorizedMsg').classList.add('hidden');
+                        
+                        // إظهار/إخفاء الأزرار الإدارية بناءً على صلاحية manageDistribution
+                        const canManageDist = (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true);
+                        const manualBtn = document.getElementById('manualUpdateBtn');
+                        const goDistBtn = document.getElementById('goDistBtn');
+                        if (manualBtn) manualBtn.style.display = canManageDist ? 'inline-block' : 'none';
+                        if (goDistBtn) goDistBtn.style.display = canManageDist ? 'inline-block' : 'none';
+                        
+                        // بناء روابط التنقل
+                        document.getElementById('navLinks').innerHTML = buildNavLinks();
+                        
+                        // بدء تحميل البيانات والتحديث الدوري
+                        showLoading(true);
+                        silentUpdate().finally(() => showLoading(false));
+                        startBackgroundPolling();
+                    } else {
+                        window.location.href = '/login.html';
+                    }
+                })
+                .catch(() => window.location.href = '/login.html');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNav();
+        });
+    </script>
 </body>
 </html>
