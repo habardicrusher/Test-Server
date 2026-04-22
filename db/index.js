@@ -13,7 +13,7 @@ pool.connect((err, client, release) => {
     release();
 });
 
-// ==================== دوال مساعدة للجداول ====================
+// ==================== جداول الإعدادات ====================
 async function initSettingsTable() {
     try {
         await pool.query(`
@@ -53,6 +53,7 @@ async function initSettingsTable() {
     }
 }
 
+// ==================== جداول السجلات ====================
 async function initLogsTable() {
     try {
         await pool.query(`
@@ -78,25 +79,7 @@ async function initLogsTable() {
     }
 }
 
-async function initReportsTable() {
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS reports (
-                id SERIAL PRIMARY KEY,
-                filename VARCHAR(255),
-                report_date DATE,
-                data JSONB,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        console.log('✅ جدول التقارير جاهز');
-    } catch (err) {
-        console.error('❌ خطأ في إنشاء جدول التقارير:', err);
-    }
-}
-
-// ==================== دوال السجلات (Logs) ====================
-async function addLog(username, action, details, location) {
+async function addLog(username, action, details = null, location = null) {
     try {
         await pool.query(
             'INSERT INTO logs (username, action, details, location) VALUES ($1, $2, $3, $4)',
@@ -107,7 +90,7 @@ async function addLog(username, action, details, location) {
     }
 }
 
-async function getLogs(limit, offset) {
+async function getLogs(limit = 500, offset = 0) {
     const res = await pool.query('SELECT * FROM logs ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]);
     return res.rows;
 }
@@ -117,15 +100,36 @@ async function getLogsCount() {
     return parseInt(res.rows[0].count);
 }
 
-// ==================== دوال التقارير (Reports) ====================
+// ==================== جداول التقارير ====================
+async function initReportsTable() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS reports (
+                id SERIAL PRIMARY KEY,
+                report_date DATE NOT NULL,
+                filename VARCHAR(255),
+                total_rows INTEGER,
+                matched_count INTEGER,
+                not_matched_count INTEGER,
+                achievement_rate DECIMAL(5,2),
+                details JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('✅ جدول التقارير جاهز');
+    } catch (err) {
+        console.error('❌ خطأ في إنشاء جدول التقارير:', err);
+    }
+}
+
 async function saveReport(reportData) {
-    const { filename, report_date, data } = reportData;
+    const { report_date, filename, total_rows, matched_count, not_matched_count, achievement_rate, details } = reportData;
     const res = await pool.query(
-        `INSERT INTO reports (filename, report_date, data, created_at)
-         VALUES ($1, $2, $3, NOW()) RETURNING id`,
-        [filename, report_date, JSON.stringify(data)]
+        `INSERT INTO reports (report_date, filename, total_rows, matched_count, not_matched_count, achievement_rate, details)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+        [report_date, filename, total_rows, matched_count, not_matched_count, achievement_rate, JSON.stringify(details)]
     );
-    return { id: res.rows[0].id };
+    return res.rows[0];
 }
 
 async function getReports(filters = {}) {
