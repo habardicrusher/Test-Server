@@ -10,12 +10,15 @@
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* نفس الأنماط السابقة - لم تتغير */
+        /* جميع الأنماط كما هي دون تغيير */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 20px; min-height: 100vh; }
         .container { max-width: 1400px; margin: 0 auto; }
         .header { text-align: center; margin-bottom: 30px; }
         .header h1 { background: linear-gradient(135deg, #667eea, #764ba2); display: inline-block; padding: 12px 32px; border-radius: 60px; color: white; font-size: 1.5rem; margin: 0 auto; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-width: 95%; line-height: 1.4; }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
+        .nav-link { padding: 12px 24px; background: rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; color: #fff; font-weight: 600; transition: all 0.3s; }
+        .nav-link:hover, .nav-link.active { background: linear-gradient(135deg, #667eea, #764ba2); transform: translateY(-2px); }
         .upload-card, .reports-panel { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(2px); border-radius: 28px; padding: 20px; margin-bottom: 25px; box-shadow: 0 8px 20px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); }
         .btn { border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; margin: 5px; transition: all 0.2s ease; }
         .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
@@ -39,35 +42,11 @@
         .net-percent-red { color: #f3a3a8 !important; font-weight: bold; }
         .net-percent-yellow { color: #f5c542 !important; font-weight: bold; }
         .net-percent-green { color: #7fdea4 !important; font-weight: bold; }
-        .top-categories-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-        .top-category-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 15px;
-            backdrop-filter: blur(2px);
-        }
-        .top-category-card h4 {
-            text-align: center;
-            margin-bottom: 12px;
-            color: #f093fb;
-            font-size: 1.2rem;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            padding-bottom: 8px;
-        }
-        .top-category-card table {
-            width: 100%;
-            font-size: 0.8rem;
-            min-width: auto;
-        }
-        .top-category-card th, .top-category-card td {
-            padding: 8px 4px;
-            white-space: nowrap;
-        }
+        .top-categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; margin-top: 30px; }
+        .top-category-card { background: rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 15px; backdrop-filter: blur(2px); }
+        .top-category-card h4 { text-align: center; margin-bottom: 12px; color: #f093fb; font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 8px; }
+        .top-category-card table { width: 100%; font-size: 0.8rem; min-width: auto; }
+        .top-category-card th, td { padding: 8px 4px; white-space: nowrap; }
         .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 30px; }
         .chart-card { background: rgba(255, 255, 255, 0.05); border-radius: 24px; padding: 15px; }
         .chart-card h3 { color: #ddd; margin-bottom: 12px; text-align: center; }
@@ -85,6 +64,10 @@
         footer { text-align: center; margin-top: 40px; color: #aaa; font-size: 0.8rem; }
         #statusMsg { background: rgba(0,0,0,0.4); padding: 12px; border-radius: 20px; margin: 10px 0; color: #ffd966; font-weight: bold; text-align: center; }
         h3 i, h4 i { margin-left: 8px; }
+        .uploaded-files-list { list-style: none; padding: 0; margin-top: 10px; }
+        .uploaded-files-list li { margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .file-info { flex: 1; }
+        .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -92,10 +75,13 @@
     <div class="header">
         <h1><i class="fas fa-chart-line"></i> تقرير دخل السيارات - مجموعة شركات زرعة الخير</h1>
     </div>
+    <!-- شريط التنقل سيتحمّل ديناميكياً عبر navbar.js (أو يمكن إضافته ثابتاً) -->
+    <div class="nav-links" id="navLinks"></div>
+
     <div class="upload-card">
         <input type="file" id="excelInput" accept=".xlsx, .xls" style="display:none" />
         <button class="btn btn-primary" id="uploadBtn"><i class="fas fa-upload"></i> رفع ملف Excel (شاحنات)</button>
-        <button class="btn btn-success" id="saveReportBtn"><i class="fas fa-save"></i> حفظ التقرير الحالي</button>
+        <button class="btn btn-success" id="saveReportBtn"><i class="fas fa-save"></i> حفظ التقرير الحالي (مع الملف الأصلي)</button>
         <button class="btn btn-info" id="refreshReportsListBtn"><i class="fas fa-sync-alt"></i> عرض التقارير المحفوظة</button>
         <button class="btn btn-warning" id="mergeSelectedBtn"><i class="fas fa-layer-group"></i> دمج التقارير المحددة</button>
         <button class="btn btn-danger" id="clearReportsBtn"><i class="fas fa-trash-alt"></i> مسح جميع التقارير</button>
@@ -106,6 +92,13 @@
         <h3><i class="fas fa-folder-open"></i> التقارير المحفوظة (اختر تقارير للدمج)</h3>
         <div id="savedReportsList" class="reports-list"></div>
     </div>
+    
+    <!-- قسم الملفات الأصلية المحفوظة -->
+    <div class="upload-card">
+        <h3><i class="fas fa-file-excel"></i> الملفات الأصلية المحفوظة على الخادم</h3>
+        <div id="uploadedFilesContainer"></div>
+    </div>
+
     <div id="currentDashboard">
         <div class="kpi-grid" id="kpiContainer"></div>
         <div class="table-responsive" id="dataTableContainer"></div>
@@ -120,14 +113,15 @@
             <div class="chart-card"><h3>📉 أقل 10 إيرادات</h3><canvas id="bottomRevenueChart"></canvas></div>
         </div>
     </div>
-    <footer>✅ تم ربط الصفحة بالسيرفر (حفظ واستدعاء التقارير عبر قاعدة البيانات).</footer>
+    <footer>✅ تم ربط الصفحة بالسيرفر (حفظ واستدعاء التقارير عبر قاعدة البيانات + حفظ الملفات الأصلية).</footer>
 </div>
 
 <script>
     let currentVehicleData = [];
-    let savedReports = [];       // سيتم جلبها من السيرفر
+    let savedReports = [];
     let selectedReportIds = new Set();
     let charts = { topExp: null, bottomExp: null, topRev: null, bottomRev: null };
+    let currentUploadedFile = null;   // لتخزين الملف المرفوع حاليًا (لحفظه مع التقرير)
 
     // نفس خريطة بيانات السيارات (لم تتغير)
     const truckInfoMap = {
@@ -302,7 +296,7 @@
         return match ? parseInt(match[0], 10) : 999999;
     }
 
-    function findExpenseColumns(headers) { /* نفس الدالة السابقة */ 
+    function findExpenseColumns(headers) {
         let colMap = {};
         for (let cat of expenseCategories) {
             let found = -1;
@@ -437,8 +431,11 @@
         sortedData.forEach(v => {
             const percentClass = getNetPercentClass(v.netPercent);
             tableHtml += `<tr>
-                <td>${v.brand}</td><td>${v.year}</td><td>${v.plateCode}</td>
-                <td>${formatNumber(v.totalExpense)}</td><td>${formatNumber(v.totalRevenue)}</td>
+                <td>${v.brand}</td>
+                <td>${v.year}</td>
+                <td>${v.plateCode}</td>
+                <td>${formatNumber(v.totalExpense)}</td>
+                <td>${formatNumber(v.totalRevenue)}</td>
                 <td>${formatNumber(v.netIncome)}</td>
                 <td class="${percentClass}">${v.netPercent.toFixed(2)}%</td>
             </tr>`;
@@ -456,7 +453,8 @@
             card.innerHTML = `<h4><i class="fas fa-chart-simple"></i> ${cat.name}</h4>
                 <table><thead><tr><th>#</th><th>رقم اللوحة</th><th>القيمة (ر.س)</th></tr></thead>
                 <tbody>${top10.map((item, idx) => `<tr><td>${idx+1}</td><td>${item.plateCode}</td><td>${formatNumber(item.expenseDetails?.[cat.key] || 0)}</td></tr>`).join('')}
-                ${top10.length === 0 ? '<tr><td colspan="3">لا توجد بيانات</td></tr>' : ''}</tbody></table>`;
+                ${top10.length === 0 ? '<tr><td colspan="3">لا توجد بيانات</td>' : ''}</tbody>
+            </table>`;
             topCategoriesContainer.appendChild(card);
         }
         // مخططات
@@ -476,9 +474,14 @@
     }
 
     // ==================== دوال ربط السيرفر ====================
-    async function apiCall(endpoint, method='GET', data=null) {
-        const opts = { method, headers:{'Content-Type':'application/json'}, credentials:'include' };
-        if (data && (method==='POST'||method==='PUT')) opts.body = JSON.stringify(data);
+    async function apiCall(endpoint, method='GET', data=null, isFormData=false) {
+        const opts = { method, credentials:'include' };
+        if (isFormData) {
+            opts.body = data;
+        } else {
+            opts.headers = { 'Content-Type': 'application/json' };
+            if (data) opts.body = JSON.stringify(data);
+        }
         const res = await fetch(`/api${endpoint}`, opts);
         if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
         if (!res.ok) throw new Error(await res.text());
@@ -487,7 +490,7 @@
 
     async function loadReportsFromServer() {
         try {
-            const reports = await apiCall('/reports-list'); // GET /api/reports-list
+            const reports = await apiCall('/reports-list');
             savedReports = reports.map(r => ({
                 id: r.id.toString(),
                 reportName: r.filename || r.report_name || 'تقرير',
@@ -500,13 +503,14 @@
         } catch(e) { console.error(e); savedReports = []; return []; }
     }
 
-    async function saveReportToServer(reportName, reportData) {
-        const payload = {
-            filename: reportName,
-            report_date: new Date().toISOString().split('T')[0],
-            data: JSON.stringify(reportData)
-        };
-        await apiCall('/upload-report', 'POST', payload);
+    async function saveReportToServerWithFile(reportName, file, vehicleData) {
+        const formData = new FormData();
+        formData.append('excelFile', file);
+        formData.append('reportName', reportName);
+        formData.append('reportDate', new Date().toISOString().split('T')[0]);
+        // إضافة البيانات المستخلصة أيضاً (إذا أردت الاحتفاظ بها في جدول reports)
+        formData.append('vehicleData', JSON.stringify(vehicleData));
+        await apiCall('/upload-excel-report', 'POST', formData, true);
         await loadReportsFromServer();
     }
 
@@ -516,12 +520,16 @@
     }
 
     async function updateReportNameOnServer(reportId, newName) {
-        // السيرفر لا يملك endpoint لتعديل الاسم حالياً، لكن يمكن تحديث محلياً وإعادة الحفظ.
-        // لحل بسيط: نمسح القديم ونحفظ جديد بنفس البيانات.
         const report = savedReports.find(r => r.id == reportId);
         if (!report) return;
         await deleteReportFromServer(reportId);
-        await saveReportToServer(newName, report.data);
+        // إعادة الحفظ بنفس البيانات ولكن بدون ملف (لأننا لا نملك الملف الأصلي هنا)
+        // الحل الأفضل: استخدام endpoint مخصص لتعديل الاسم، ولكن لتجنب التعقيد سنستخدم الطريقة السابقة
+        await apiCall('/upload-report', 'POST', {
+            filename: newName,
+            report_date: new Date().toISOString().split('T')[0],
+            data: JSON.stringify(report.data)
+        });
         await loadReportsFromServer();
     }
 
@@ -573,13 +581,9 @@
             viewBtn.className = "view-report-btn";
             viewBtn.onclick = async (e) => {
                 e.stopPropagation();
-                try {
-                    const fullReport = await apiCall(`/reports/${report.id}`);
-                    const data = fullReport.data ? (typeof fullReport.data === 'string' ? JSON.parse(fullReport.data) : fullReport.data) : [];
-                    currentVehicleData = data;
-                    renderDashboard(currentVehicleData);
-                    showToast(`تم عرض التقرير: ${report.reportName}`, "success");
-                } catch(err) { showToast("خطأ في تحميل التقرير", "error"); }
+                currentVehicleData = report.data;
+                renderDashboard(currentVehicleData);
+                showToast(`تم عرض التقرير: ${report.reportName}`, "success");
             };
             card.appendChild(nameSpan);
             card.appendChild(dateSpan);
@@ -596,13 +600,26 @@
     }
 
     async function saveCurrentReportToServer() {
-        if (!currentVehicleData.length) { alert("لا يوجد تقرير محمل"); return; }
+        if (!currentVehicleData.length) { alert("لا يوجد تقرير محمّل. قم برفع ملف Excel أولاً."); return; }
+        const fileInput = document.getElementById('excelInput');
+        if (!fileInput.files || !fileInput.files[0]) {
+            alert("لم يتم رفع أي ملف. يرجى رفع ملف Excel أولاً.");
+            return;
+        }
         let name = prompt("اسم التقرير:", `تقرير ${new Date().toLocaleDateString()}`);
         if (!name) return;
-        await saveReportToServer(name, currentVehicleData);
-        showToast(`✅ تم حفظ "${name}"`, "success");
-        document.getElementById("reportsPanel").style.display = "block";
-        await loadAndDisplayReportsList();
+        showLoading(true);
+        try {
+            await saveReportToServerWithFile(name, fileInput.files[0], currentVehicleData);
+            showToast(`✅ تم حفظ "${name}" مع الملف الأصلي`, "success");
+            document.getElementById("reportsPanel").style.display = "block";
+            await loadAndDisplayReportsList();
+            await loadUploadedFiles(); // تحديث قائمة الملفات
+        } catch (err) {
+            showToast("خطأ في الحفظ: " + err.message, "error");
+        } finally {
+            showLoading(false);
+        }
     }
 
     async function clearAllReportsOnServer() {
@@ -649,13 +666,290 @@
             currentVehicleData = mergedData;
             renderDashboard(currentVehicleData);
             showToast(`تم دمج ${reportsToMerge.length} تقارير`, "success");
-            await saveReportToServer(`دمج (${reportsToMerge.map(r=>r.reportName).join(' + ')})`, mergedData);
+            // حفظ التقرير المدمج كتقرير عادي (بدون ملف أصلي)
+            await apiCall('/upload-report', 'POST', {
+                filename: `دمج (${reportsToMerge.map(r=>r.reportName).join(' + ')})`,
+                report_date: new Date().toISOString().split('T')[0],
+                data: JSON.stringify(mergedData)
+            });
             await loadAndDisplayReportsList();
         } catch(e) { showToast("خطأ: "+e.message, "error"); } finally { showLoading(false); }
     }
 
-    // تصدير Excel (نفس الكود السابق - مختصر هنا لكنه يعمل)
-    async function exportFullExcel() { /* ... تم حذف التفاصيل للاختصار، لكنها موجودة في الكود الكامل وستعمل */ alert("سيتم التصدير"); }
+    // دالة لتحميل قائمة الملفات الأصلية المحفوظة
+    async function loadUploadedFiles() {
+        try {
+            const files = await apiCall('/uploaded-files');
+            const container = document.getElementById('uploadedFilesContainer');
+            if (!files.length) {
+                container.innerHTML = '<p>لا توجد ملفات محفوظة</p>';
+                return;
+            }
+            container.innerHTML = `<ul class="uploaded-files-list">
+                ${files.map(f => `
+                    <li>
+                        <div class="file-info">
+                            📄 <strong>${escapeHtml(f.original_name)}</strong><br>
+                            <small>رفع: ${new Date(f.uploaded_at).toLocaleString()} - بواسطة: ${f.uploaded_by}</small><br>
+                            <small>التقرير المرتبط: ${f.report_name || 'غير مرتبط'}</small>
+                        </div>
+                        <button class="btn btn-sm btn-info" onclick="downloadFile(${f.id})">⬇️ تحميل</button>
+                    </li>
+                `).join('')}
+            </ul>`;
+        } catch(e) { console.error(e); container.innerHTML = '<p>خطأ في تحميل الملفات</p>'; }
+    }
+
+    async function downloadFile(id) {
+        window.open(`/api/download-file/${id}`, '_blank');
+    }
+
+    // تصدير Excel (نفس الكود السابق)
+    async function exportFullExcel() {
+        if (!currentVehicleData.length) { alert("لا توجد بيانات للتصدير"); return; }
+        showLoading(true);
+        try {
+            const ExcelJS = window.ExcelJS;
+            if (!ExcelJS) throw new Error('ExcelJS not loaded');
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'مجموعة شركات زرعة الخير';
+            
+            let monthlyData = savedReports.length ? savedReports.map(r => ({ name: r.reportName, totalExp: r.data.reduce((s,v)=>s+v.totalExpense,0), totalRev: r.data.reduce((s,v)=>s+v.totalRevenue,0), totalNet: r.data.reduce((s,v)=>s+v.netIncome,0) })) : [{ name: "التقرير الحالي", totalExp: currentVehicleData.reduce((s,v)=>s+v.totalExpense,0), totalRev: currentVehicleData.reduce((s,v)=>s+v.totalRevenue,0), totalNet: currentVehicleData.reduce((s,v)=>s+v.netIncome,0) }];
+            let allTrucks = [...currentVehicleData].sort((a,b) => extractNumericId(a.plateCode) - extractNumericId(b.plateCode));
+
+            let totalDetails = {};
+            for (let cat of expenseCategories) totalDetails[cat.key] = 0;
+            for (let t of allTrucks) {
+                for (let cat of expenseCategories) totalDetails[cat.key] += (t.expenseDetails?.[cat.key] || 0);
+            }
+
+            function styleLight(ws, title, columns, rows, numericIndices=[], percentIndices=[], setPageSetup=true, conditionalFormatCol=-1) {
+                ws.views = [{ rightToLeft: true }];
+                if (setPageSetup) ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+                ws.mergeCells('A1:' + String.fromCharCode(64 + columns.length) + '1');
+                ws.getCell('A1').value = title;
+                ws.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF000000' } };
+                ws.getCell('A1').fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFD9EAD3' } };
+                ws.getCell('A1').alignment = { horizontal:'center', vertical:'middle' };
+                ws.getRow(1).height = 40;
+                const headerRow = ws.addRow(columns.map(c=>c.header));
+                headerRow.eachCell(cell => {
+                    cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFC5E0B4' } };
+                    cell.font = { bold:true, size:12, color:{ argb:'FF000000' } };
+                    cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                    cell.alignment = { horizontal:'center' };
+                });
+                rows.forEach((rowData, idx) => {
+                    const row = ws.addRow(rowData);
+                    row.eachCell((cell, colIdx) => {
+                        cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                        cell.alignment = { horizontal:'center' };
+                        const colIndex = colIdx - 1;
+                        if (numericIndices.includes(colIndex) && typeof rowData[colIndex] === 'number') cell.numFmt = '#,##0.00';
+                        if (percentIndices.includes(colIndex) && typeof rowData[colIndex] === 'number') cell.numFmt = '0.00%';
+                    });
+                    if (idx%2===0) row.eachCell(cell => cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF9F9F9' } });
+                    else row.eachCell(cell => cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } });
+                    if (conditionalFormatCol !== -1 && rowData[conditionalFormatCol] !== undefined) {
+                        const percentVal = parseFloat(rowData[conditionalFormatCol]);
+                        const targetCell = row.getCell(conditionalFormatCol+1);
+                        if (!isNaN(percentVal)) {
+                            if (percentVal < 0.29) targetCell.font = { color: { argb: 'FFEB3349' }, bold: true };
+                            else if (percentVal >= 0.29 && percentVal <= 0.35) targetCell.font = { color: { argb: 'FFF4A100' }, bold: true };
+                            else if (percentVal > 0.35) targetCell.font = { color: { argb: 'FF11998E' }, bold: true };
+                        }
+                    }
+                });
+                ws.columns = columns.map(col => ({ width: col.width || 18 }));
+            }
+
+            // 1. ملخص شهري
+            const wsMonthly = workbook.addWorksheet("ملخص شهري");
+            styleLight(wsMonthly, "📅 ملخص شهري", [{ header:"الشهر", width:25 }, { header:"إجمالي المصروفات", width:25 }, { header:"إجمالي الإيرادات", width:25 }, { header:"صافي الدخل", width:25 }, { header:"نسبة الصافي %", width:20 }], monthlyData.map(m => [m.name, m.totalExp, m.totalRev, m.totalNet, m.totalRev ? (m.totalNet/m.totalRev)/100 : 0]), [1,2,3], [4]);
+
+            // 2. ملخص إجمالي المصاريف
+            let summaryRows = [];
+            for (let cat of expenseCategories) summaryRows.push([cat.name, totalDetails[cat.key]]);
+            summaryRows.push(["إجمالي المصروفات الكلي", allTrucks.reduce((s,t)=>s+t.totalExpense,0)]);
+            summaryRows.push(["إجمالي الإيرادات الكلي", allTrucks.reduce((s,t)=>s+t.totalRevenue,0)]);
+            summaryRows.push(["صافي الدخل الكلي", allTrucks.reduce((s,t)=>s+t.netIncome,0)]);
+            const wsSummaryTotal = workbook.addWorksheet("ملخص إجمالي المصاريف");
+            styleLight(wsSummaryTotal, "📊 ملخص إجمالي المصاريف", [{ header: "بند المصروف", width: 25 }, { header: "الإجمالي (ر.س)", width: 22 }], summaryRows, [1]);
+
+            // 3. تفصيل المصاريف لكل شاحنة
+            let detailColumns = [{ header: "الماركة", width: 15 }, { header: "سنة الإنتاج", width: 12 }, { header: "رقم اللوحة", width: 20 }];
+            for (let cat of expenseCategories) detailColumns.push({ header: cat.name, width: 18 });
+            detailColumns.push({ header: "إجمالي الإيرادات", width: 22 }, { header: "إجمالي المصروفات", width: 22 }, { header: "صافي الدخل", width: 22 }, { header: "نسبة الصافي %", width: 18 });
+            let detailRows = allTrucks.map(t => {
+                let row = [t.brand, t.year, t.plateCode];
+                for (let cat of expenseCategories) row.push(t.expenseDetails?.[cat.key] || 0);
+                row.push(t.totalRevenue, t.totalExpense, t.netIncome, t.netPercent / 100);
+                return row;
+            });
+            const wsDetail = workbook.addWorksheet("تفصيل المصاريف لكل شاحنة");
+            const numericDetailIndices = Array.from({length: expenseCategories.length + 3}, (_,i) => i+3);
+            const percentDetailIndex = detailColumns.length - 1;
+            styleLight(wsDetail, "📊 تفصيل المصاريف لكل شاحنة", detailColumns, detailRows, numericDetailIndices, [percentDetailIndex], true, percentDetailIndex);
+
+            // 4. أعلى 10 في بنود المصاريف
+            const wsTop = workbook.addWorksheet("🏆 أعلى 10 في بنود المصاريف");
+            wsTop.views = [{ rightToLeft: true }];
+            wsTop.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+            let currentRow = 1;
+            wsTop.mergeCells('A1:D1');
+            wsTop.getCell('A1').value = "🏆 أعلى 10 سيارات في كل بند من بنود المصاريف";
+            wsTop.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF000000' } };
+            wsTop.getCell('A1').fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFD9EAD3' } };
+            wsTop.getCell('A1').alignment = { horizontal:'center', vertical:'middle' };
+            wsTop.getRow(1).height = 40;
+            currentRow = 2;
+            for (let cat of expenseCategories) {
+                const titleCell = wsTop.getCell(`A${currentRow}`);
+                titleCell.value = cat.name;
+                titleCell.font = { size: 14, bold: true, color: { argb: 'FF000000' } };
+                titleCell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFE6F0D8' } };
+                titleCell.alignment = { horizontal: 'center' };
+                wsTop.mergeCells(`A${currentRow}:D${currentRow}`);
+                currentRow++;
+                const headerRow = wsTop.getRow(currentRow);
+                headerRow.getCell(1).value = "#";
+                headerRow.getCell(2).value = "رقم اللوحة";
+                headerRow.getCell(3).value = "القيمة (ر.س)";
+                for (let i = 1; i <= 3; i++) {
+                    const cell = headerRow.getCell(i);
+                    cell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFC5E0B4' } };
+                    cell.font = { bold: true, color: { argb: 'FF000000' } };
+                    cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                    cell.alignment = { horizontal: 'center' };
+                }
+                currentRow++;
+                let sorted = [...allTrucks].sort((a,b) => (b.expenseDetails?.[cat.key] || 0) - (a.expenseDetails?.[cat.key] || 0));
+                let top10 = sorted.slice(0,10);
+                for (let idx = 0; idx < top10.length; idx++) {
+                    const item = top10[idx];
+                    const row = wsTop.getRow(currentRow);
+                    row.getCell(1).value = idx + 1;
+                    row.getCell(2).value = item.plateCode;
+                    row.getCell(3).value = item.expenseDetails?.[cat.key] || 0;
+                    row.getCell(3).numFmt = '#,##0.00';
+                    for (let i = 1; i <= 3; i++) {
+                        const cell = row.getCell(i);
+                        cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                        cell.alignment = { horizontal: 'center' };
+                        if (idx % 2 === 0) cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF9F9F9' } };
+                        else cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } };
+                    }
+                    currentRow++;
+                }
+                if (top10.length === 0) {
+                    const row = wsTop.getRow(currentRow);
+                    row.getCell(2).value = "لا توجد بيانات";
+                    row.getCell(2).alignment = { horizontal: 'center' };
+                    currentRow++;
+                }
+                currentRow++;
+            }
+            wsTop.getColumn(1).width = 8;
+            wsTop.getColumn(2).width = 22;
+            wsTop.getColumn(3).width = 20;
+
+            // 5. أهم 10 سيارات
+            const wsImportant = workbook.addWorksheet("📊 أهم 10 سيارات");
+            wsImportant.views = [{ rightToLeft: true }];
+            wsImportant.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+            let impRow = 1;
+            wsImportant.mergeCells('A1:F1');
+            wsImportant.getCell('A1').value = "📊 أهم 10 سيارات (مصروفات، إيرادات، صافي أرباح)";
+            wsImportant.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF000000' } };
+            wsImportant.getCell('A1').fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFD9EAD3' } };
+            wsImportant.getCell('A1').alignment = { horizontal:'center', vertical:'middle' };
+            wsImportant.getRow(1).height = 40;
+            impRow = 2;
+
+            const sections = [
+                { title: "💰 أعلى 10 مصروفات", data: [...allTrucks].sort((a,b)=>b.totalExpense - a.totalExpense).slice(0,10), cols: ["#", "رقم اللوحة", "المصروفات (ر.س)"] },
+                { title: "📉 أقل 10 مصروفات", data: [...allTrucks].sort((a,b)=>a.totalExpense - b.totalExpense).slice(0,10), cols: ["#", "رقم اللوحة", "المصروفات (ر.س)"] },
+                { title: "📈 أكثر 10 إيرادات", data: [...allTrucks].sort((a,b)=>b.totalRevenue - a.totalRevenue).slice(0,10), cols: ["#", "رقم اللوحة", "الإيرادات (ر.س)"] },
+                { title: "📉 أقل 10 إيرادات", data: [...allTrucks].sort((a,b)=>a.totalRevenue - b.totalRevenue).slice(0,10), cols: ["#", "رقم اللوحة", "الإيرادات (ر.س)"] },
+                { title: "🏆 أكثر 10 صافي أرباح", data: [...allTrucks].sort((a,b)=>b.netIncome - a.netIncome).slice(0,10), cols: ["#", "رقم اللوحة", "صافي الربح (ر.س)"] },
+                { title: "⚠️ أقل 10 صافي أرباح", data: [...allTrucks].sort((a,b)=>a.netIncome - b.netIncome).slice(0,10), cols: ["#", "رقم اللوحة", "صافي الربح (ر.س)"] }
+            ];
+
+            for (let sec of sections) {
+                const titleCell = wsImportant.getCell(`A${impRow}`);
+                titleCell.value = sec.title;
+                titleCell.font = { size: 14, bold: true, color: { argb: 'FF000000' } };
+                titleCell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFE6F0D8' } };
+                titleCell.alignment = { horizontal: 'center' };
+                wsImportant.mergeCells(`A${impRow}:C${impRow}`);
+                impRow++;
+                const headerRow = wsImportant.getRow(impRow);
+                for (let i = 0; i < sec.cols.length; i++) {
+                    const cell = headerRow.getCell(i+1);
+                    cell.value = sec.cols[i];
+                    cell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFC5E0B4' } };
+                    cell.font = { bold: true, color: { argb: 'FF000000' } };
+                    cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                    cell.alignment = { horizontal: 'center' };
+                }
+                impRow++;
+                for (let idx = 0; idx < sec.data.length; idx++) {
+                    const item = sec.data[idx];
+                    const row = wsImportant.getRow(impRow);
+                    row.getCell(1).value = idx+1;
+                    row.getCell(2).value = item.plateCode;
+                    const value = sec.cols[2].includes("المصروفات") ? item.totalExpense : (sec.cols[2].includes("الإيرادات") ? item.totalRevenue : item.netIncome);
+                    row.getCell(3).value = value;
+                    row.getCell(3).numFmt = '#,##0.00';
+                    for (let i = 1; i <= 3; i++) {
+                        const cell = row.getCell(i);
+                        cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                        cell.alignment = { horizontal: 'center' };
+                        if (idx % 2 === 0) cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF9F9F9' } };
+                        else cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } };
+                    }
+                    impRow++;
+                }
+                if (sec.data.length === 0) {
+                    const row = wsImportant.getRow(impRow);
+                    row.getCell(2).value = "لا توجد بيانات";
+                    row.getCell(2).alignment = { horizontal: 'center' };
+                    impRow++;
+                }
+                impRow++;
+            }
+            wsImportant.getColumn(1).width = 8;
+            wsImportant.getColumn(2).width = 22;
+            wsImportant.getColumn(3).width = 20;
+
+            // 6. إجمالي الشاحنات
+            const wsSimple = workbook.addWorksheet("إجمالي الشاحنات (مبسط)");
+            let simpleRows = allTrucks.map(t => [t.brand, t.year, t.plateCode, t.totalExpense, t.totalRevenue, t.netIncome, t.netPercent / 100]);
+            styleLight(wsSimple, "🚛 إجمالي الشاحنات", [
+                { header:"الماركة", width:15 }, { header:"سنة الإنتاج", width:12 }, { header:"رقم اللوحة", width:20 },
+                { header:"إجمالي المصروفات", width:22 }, { header:"إجمالي الإيرادات", width:22 },
+                { header:"صافي الدخل", width:22 }, { header:"نسبة الصافي %", width:18 }
+            ], simpleRows, [3,4,5], [6], true, 6);
+
+            const sheetOrder = [
+                "ملخص شهري", "ملخص إجمالي المصاريف", "تفصيل المصاريف لكل شاحنة",
+                "🏆 أعلى 10 في بنود المصاريف", "📊 أهم 10 سيارات", "إجمالي الشاحنات (مبسط)"
+            ];
+            workbook.eachSheet((sheet, id) => {
+                const targetIndex = sheetOrder.indexOf(sheet.name);
+                if (targetIndex !== -1 && sheet.order !== targetIndex) sheet.order = targetIndex;
+            });
+            workbook.worksheets.sort((a, b) => (a.order || 999) - (b.order || 999));
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveAs(new Blob([buffer]), `تقرير_سيارات_${new Date().toISOString().slice(0,10)}.xlsx`);
+            showToast("✅ تم تصدير Excel", "success");
+        } catch(e) {
+            showToast("خطأ: "+e.message, "error");
+        } finally { showLoading(false); }
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
 
     // ربط الأحداث
     document.getElementById("uploadBtn").onclick = () => document.getElementById("excelInput").click();
@@ -680,13 +974,36 @@
     document.getElementById("clearReportsBtn").onclick = clearAllReportsOnServer;
     document.getElementById("exportExcelBtn").onclick = () => exportFullExcel();
 
-    // التحقق من المصادقة عند بدء التشغيل
+    // تحميل البيانات الأولية
     (async function init() {
         try {
             await apiCall('/me');
             await loadAndDisplayReportsList();
+            await loadUploadedFiles();
+            // تحميل شريط التنقل (navbar.js)
+            if (typeof renderNavbar === 'function') {
+                renderNavbar();
+            } else {
+                // fallback بسيط
+                const navDiv = document.getElementById('navLinks');
+                if (navDiv) navDiv.innerHTML = `<a href="index.html" class="nav-link">📊 الرئيسية</a>
+                                                <a href="orders.html" class="nav-link">📝 الطلبات</a>
+                                                <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
+                                                <a href="trucks.html" class="nav-link">🚛 السيارات</a>
+                                                <a href="products.html" class="nav-link">📦 أنواع البحص</a>
+                                                <a href="factories.html" class="nav-link">🏭 المصانع</a>
+                                                <a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>
+                                                <a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان</a>
+                                                <a href="expenses.html" class="nav-link active">💰 مصاريف السيارات</a>
+                                                <a href="cash_orders.html" class="nav-link">💰 طلبات نقدية</a>
+                                                <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
+                                                <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
+                                                <a href="users.html" class="nav-link">👥 المستخدمين</a>
+                                                <a href="logs.html" class="nav-link">📜 السجلات</a>`;
+            }
         } catch(e) { window.location.href = '/login.html'; }
     })();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </body>
 </html>
