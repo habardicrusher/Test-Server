@@ -77,6 +77,9 @@
         @media (max-width:768px){ .dist-grid { flex-direction: column; } }
         .btn-analyze-individual { background: rgba(255,255,255,0.2); border: none; padding: 5px 10px; border-radius: 20px; color: #fff; cursor: pointer; font-size: 0.75rem; margin-right: 10px; }
         .btn-analyze-individual:hover { background: #667eea; }
+        /* تنسيق خاص بجدول التوقفات */
+        .stop-table th, .stop-table td { text-align: center; }
+        .stop-table .high-stop { color: #f97316; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -103,7 +106,7 @@
                 <div class="card"><h4>📋 إجمالي التجاوزات</h4><div class="number" id="totalViolations">0</div></div>
             </div>
 
-            <!-- Upload cards with individual analyze buttons -->
+            <!-- Upload cards -->
             <div class="upload-grid">
                 <div class="upload-card">
                     <h3>🚛 المسافات <button class="btn-analyze-individual" onclick="analyzeDistancesOnly()">تحليل</button></h3>
@@ -160,13 +163,13 @@
                 <div id="distSection" class="section" style="display:none;"><h2>🚛 نتائج تحليل المسافات لليوم المختار</h2><div id="distStatus" class="status-area"></div>
                     <div class="dist-grid"><div class="dist-card"><div id="distTop10Table"></div></div><div class="dist-card"><div id="distBottom10Table"></div></div><div class="dist-card"><canvas id="distChart"></canvas></div></div>
                 </div>
-                <div id="dieselSection" class="section" style="display:none;"><h2>⛽ أعلى 10 استهلاك ديزل</h2><div class="table-wrapper"><table id="dieselTable"><thead><tr><th>#</th><th>المركبة</th><th>السائق</th><th>الاستهلاك (لتر)</th><th>التكلفة</th><th>المسافة (كم)</th></tr></thead><tbody></tbody></table></div></div>
+                <div id="dieselSection" class="section" style="display:none;"><h2>⛽ أعلى 10 استهلاك ديزل</h2><div class="table-wrapper"><table id="dieselTable" class="diesel-table"><thead><tr><th>#</th><th>المركبة</th><th>الماركة</th><th>السائق</th><th>التكلفة</th><th>الاستهلاك (لتر)</th><th>المسافة (كم)</th></tr></thead><tbody></tbody></table></div></div>
                 <div id="speedingSection" class="section" style="display:none;"><h2>🚨 أعلى 10 سرعات خطيرة</h2><canvas id="criticalChartOnlyMax"></canvas>
                     <div class="table-wrapper"><table id="criticalDetailedTable"><thead><tr><th>#</th><th>رقم المركبة</th><th>السرعة القصوى</th><th>المسافة (كم)</th><th>مرات التجاوز</th><th>التوصية</th></tr></thead><tbody></tbody></table></div>
                 </div>
-                <div id="stoppageSection" class="section" style="display:none;"><h2>📊 أعلى 10 نسب توقف</h2><div id="stopTable" class="table-wrapper"></div></div>
-                <div id="scaleSection" class="section" style="display:none;"><h2>⚖️ أكثر 10 سائقين رحلات</h2><div id="scaleDriverTable" class="table-wrapper"></div><canvas id="scaleMaterialChart"></canvas><div id="scaleStats" class="status-area" style="margin-top:15px;"></div></div>
-                <div id="violationsSection" class="section" style="display:none;"><h2>📋 أكثر 10 مركبات تجاوزات</h2><div id="violTableContainer" class="table-wrapper"></div></div>
+                <div id="stoppageSection" class="section" style="display:none;"><h2>📊 أعلى 10 نسب توقف</h2><div class="table-wrapper"><table id="stopTable" class="stop-table"><thead><tr><th>#</th><th>المركبة</th><th>السائق</th><th>نسبة التوقف %</th></tr></thead><tbody></tbody></table></div></div>
+                <div id="scaleSection" class="section" style="display:none;"><h2>⚖️ أكثر 10 سائقين رحلات</h2><div class="table-wrapper"><table id="scaleDriverTable"><thead><tr><th>#</th><th>السائق</th><th>رقم الشاحنة</th><th>الرحلات</th><th>الوزن (كجم)</th></tr></thead><tbody></tbody></table></div><canvas id="scaleMaterialChart"></canvas><div id="scaleStats" class="status-area" style="margin-top:15px;"></div></div>
+                <div id="violationsSection" class="section" style="display:none;"><h2>📋 أكثر 10 مركبات تجاوزات</h2><div class="table-wrapper"><table id="violTableContainer"><thead><tr><th>#</th><th>رقم المركبة</th><th>عدد التجاوزات</th></tr></thead><tbody></tbody></table></div></div>
             </div>
             <footer>📌 يمكنك تحليل كل ملف على حدة أو استخدام الزر "تحليل جميع البيانات". تقرير Excel يحتوي على جميع البيانات الكاملة بتنسيق احترافي.</footer>
         </div>
@@ -258,7 +261,7 @@
             document.getElementById('totalViolations').innerText = currentViolRows.length;
         }
         
-        // ========== 1. Distance analysis (fixed: no "jonathan", reads vehicle from column A) ==========
+        // ========== 1. Distance analysis (vehicle from column A) ==========
         document.getElementById('distFile').addEventListener('change', e => { 
             if(e.target.files[0]){ 
                 let r=new FileReader(); 
@@ -276,7 +279,6 @@
                 const dayNum = parseInt(selectedDay);
                 const sheet = distWorkbook.Sheets[distWorkbook.SheetNames[0]];
                 const data = XLSX.utils.sheet_to_json(sheet, {header:1, defval:""});
-                // Find first non-empty row as header
                 let headerRow = 0;
                 for(let i=0;i<Math.min(data.length,20);i++) {
                     if(data[i] && data[i].length>0 && data[i][0] && String(data[i][0]).trim() !== "") {
@@ -291,13 +293,13 @@
                     let num = parseInt(h);
                     if(!isNaN(num) && num === dayNum) { dayColIdx = i; break; }
                 }
-                if(dayColIdx === -1) throw new Error(`لم يتم العثور على عمود برقم اليوم ${dayNum} في الصف الأول. تأكد من أن الأعمدة تحمل أرقام الأيام.`);
+                if(dayColIdx === -1) throw new Error(`لم يتم العثور على عمود برقم اليوم ${dayNum}`);
                 
                 const vehicles = [];
                 for(let r = headerRow + 1; r < data.length; r++) {
                     let row = data[r];
                     if(!row || row.length === 0) continue;
-                    let vehicleRaw = row[0]; // column A
+                    let vehicleRaw = row[0];
                     if(!vehicleRaw) continue;
                     let vehicle = cleanNumber(vehicleRaw);
                     let dist = parseFloat(row[dayColIdx]) || 0;
@@ -308,8 +310,8 @@
                 distProcessed = vehicles;
                 const top10 = vehicles.slice(0,10);
                 const bottom10 = [...vehicles].sort((a,b)=>a.distance-b.distance).slice(0,10);
-                document.getElementById('distTop10Table').innerHTML = `<h3 style="color:#a5b4fc;">🏆 أفضل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم اللوحة</th><th>كم</th></tr></thead><tbody>${top10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></tr></div>`;
-                document.getElementById('distBottom10Table').innerHTML = `<h3 style="color:#a5b4fc;">⚠️ أقل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم اللوحة</th><th>كم</th></tr></thead><tbody>${bottom10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
+                document.getElementById('distTop10Table').innerHTML = `<h3 style="color:#a5b4fc;">🏆 أفضل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><tr><thead><tr><th>#</th><th>رقم اللوحة</th><th>كم</th></tr></thead><tbody>${top10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
+                document.getElementById('distBottom10Table').innerHTML = `<h3 style="color:#a5b4fc;">⚠️ أقل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><tr><thead><tr><th>#</th><th>رقم اللوحة</th><th>كم</th></tr></thead><tbody>${bottom10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
                 if(distChart) distChart.destroy();
                 const ctx = document.getElementById('distChart').getContext('2d');
                 distChart = new Chart(ctx, {type:'bar', data:{labels:top10.map(v=>v.vehicle), datasets:[{label:`مسافات اليوم ${dayNum} (كم)`, data:top10.map(v=>v.distance), backgroundColor:'#667eea'}]}});
@@ -321,7 +323,11 @@
             showLoading(false);
         };
         
-        // ========== 2. Diesel analysis (handles merged cells) ==========
+        // ========== 2. Diesel analysis (ignoring extra headers, using correct column names) ==========
+        function normalizeString(str) {
+            return (str || "").toString().trim().replace(/\s+/g, " ").toLowerCase();
+        }
+        
         window.analyzeDieselOnly = async function() {
             let file = document.getElementById('dieselFile').files[0];
             if(!file) { showToast("الرجاء رفع ملف الديزل أولاً", "error"); return; }
@@ -331,22 +337,26 @@
                 let wb = XLSX.read(buf, {type:'array'});
                 let sheet = wb.Sheets[wb.SheetNames[0]];
                 let rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:""});
-                // Find header row that contains keywords
+                
+                // البحث عن صف العناوين الحقيقي
                 let headerRowIndex = -1;
-                let colMap = { vehicle: -1, driver: -1, cost: -1, fuel: -1 };
-                for(let i=0; i<Math.min(rows.length, 30); i++) {
+                let colMap = { vehicle: -1, brand: -1, driver: -1, cost: -1, fuel: -1 };
+                for(let i=0; i<Math.min(rows.length, 50); i++) {
                     let row = rows[i];
                     if(!row) continue;
+                    let foundVehicle = false, foundFuel = false;
                     for(let j=0; j<row.length; j++) {
-                        let cell = String(row[j] || "").trim().toLowerCase();
-                        if(cell.includes('مركبة') || cell.includes('vehicle')) colMap.vehicle = j;
-                        if(cell.includes('سائق') || cell.includes('driver')) colMap.driver = j;
-                        if(cell.includes('تكلفة') || cell.includes('cost') || cell.includes('اجمالي')) colMap.cost = j;
-                        if(cell.includes('استهلاك') || cell.includes('fuel') || cell.includes('لتر')) colMap.fuel = j;
+                        let cell = normalizeString(row[j]);
+                        if(cell.includes('مركبة') || cell === 'vehicle') { colMap.vehicle = j; foundVehicle = true; }
+                        if(cell.includes('ماركة') || cell === 'brand') colMap.brand = j;
+                        if(cell.includes('سائق') || cell === 'driver') colMap.driver = j;
+                        if(cell.includes('إجمالي التكلفة') || cell.includes('تكلفة') || cell === 'cost') colMap.cost = j;
+                        if(cell.includes('استهلاك') || cell.includes('fuel') || cell === 'fuel' || cell.includes('لتر')) { colMap.fuel = j; foundFuel = true; }
                     }
-                    if(colMap.vehicle !== -1 && colMap.fuel !== -1) { headerRowIndex = i; break; }
+                    if(foundVehicle && foundFuel) { headerRowIndex = i; break; }
                 }
                 if(headerRowIndex === -1) throw new Error("لم يتم العثور على أعمدة البيانات المطلوبة (مركبة، استهلاك)");
+                
                 let map = {};
                 for(let r = headerRowIndex+1; r < rows.length; r++) {
                     let row = rows[r];
@@ -354,18 +364,32 @@
                     let vehicleRaw = (colMap.vehicle !== -1 && row[colMap.vehicle]) ? row[colMap.vehicle] : null;
                     if(!vehicleRaw) continue;
                     let vehicle = cleanNumber(vehicleRaw);
+                    let brand = (colMap.brand !== -1 && row[colMap.brand]) ? row[colMap.brand] : "";
                     let driver = (colMap.driver !== -1 && row[colMap.driver]) ? row[colMap.driver] : "غير محدد";
                     let cost = (colMap.cost !== -1 && row[colMap.cost]) ? parseFloat(row[colMap.cost]) || 0 : 0;
                     let fuel = (colMap.fuel !== -1 && row[colMap.fuel]) ? parseFloat(row[colMap.fuel]) || 0 : 0;
-                    if(!map[vehicle]) map[vehicle] = {vehicle, driver, cost:0, fuel:0};
+                    
+                    if(!map[vehicle]) map[vehicle] = {vehicle, brand, driver, cost:0, fuel:0};
                     map[vehicle].cost += cost;
                     map[vehicle].fuel += fuel;
+                    // الحفاظ على الماركة والسائق من أول ظهور (يفضل لو متكررين)
+                    if(brand && !map[vehicle].brand) map[vehicle].brand = brand;
+                    if(driver && map[vehicle].driver === "غير محدد") map[vehicle].driver = driver;
                 }
                 if(Object.keys(map).length === 0) throw new Error("لا توجد بيانات صالحة في الملف");
                 dieselDataMap = map;
+                // عرض أعلى 10 استهلاك
                 const sorted = Object.values(map).sort((a,b)=>b.fuel - a.fuel).slice(0,10);
                 let tbody = document.querySelector("#dieselTable tbody");
-                tbody.innerHTML = sorted.map((x,i)=>`<tr><td>${i+1}</td><td>${x.vehicle}</td><td>${x.driver}</td><td>${x.fuel.toFixed(2)}</td><td>${x.cost.toLocaleString()}</td><td>${(x.fuel*AVG_CONSUMPTION).toFixed(0)}</td></tr>`).join('');
+                tbody.innerHTML = sorted.map((x,i)=>`<tr>
+                    <td>${i+1}</td>
+                    <td>${x.vehicle}</td>
+                    <td>${x.brand || "—"}</td>
+                    <td>${x.driver}</td>
+                    <td>${x.cost.toLocaleString()}</td>
+                    <td>${x.fuel.toFixed(2)}</td>
+                    <td class="distance-col">${(x.fuel * AVG_CONSUMPTION).toFixed(0)} كم</td>
+                </tr>`).join('');
                 document.getElementById('dieselSection').style.display = 'block';
                 updateDashboard();
                 showToast("تم تحليل الديزل بنجاح", "success");
@@ -373,7 +397,7 @@
             showLoading(false);
         };
         
-        // ========== 3. Speeding analysis (unchanged but works) ==========
+        // ========== 3. Speeding analysis ==========
         async function parseExcelAndExtract(file){
             return new Promise((resolve,reject)=>{
                 const reader=new FileReader();
@@ -406,7 +430,14 @@
                 globalFullData = extracted;
                 const critical = extracted.filter(i=>i.maxSpeed>99).sort((a,b)=>b.maxSpeed-a.maxSpeed).slice(0,10);
                 const tbody = document.querySelector("#criticalDetailedTable tbody");
-                tbody.innerHTML = critical.map((item,i)=>`<tr><td>${i+1}</td><td>${item.vehicleCleaned}</td><td class="speed-danger">${item.maxSpeed}</td><td>${item.distance.toFixed(2)} كم</td><td>${item.occurrences}</td><td>${item.maxSpeed>=110?"إيقاف فوري":"إنذار"}</td></tr>`).join('');
+                tbody.innerHTML = critical.map((item,i)=>`<tr>
+                    <td>${i+1}</td>
+                    <td>${item.vehicleCleaned}</td>
+                    <td class="speed-danger">${item.maxSpeed}</td>
+                    <td>${item.distance.toFixed(2)} كم</td>
+                    <td>${item.occurrences}</td>
+                    <td>${item.maxSpeed>=110?"إيقاف فوري":"إنذار"}</td>
+                </tr>`).join('');
                 if(chartInstance) chartInstance.destroy();
                 const ctx = document.getElementById('criticalChartOnlyMax').getContext('2d');
                 chartInstance = new Chart(ctx,{type:'bar',data:{labels:critical.map(i=>i.vehicleCleaned),datasets:[{label:'السرعة القصوى (كم/س)',data:critical.map(i=>i.maxSpeed),backgroundColor:'#dc2626'}]}});
@@ -417,7 +448,7 @@
             showLoading(false);
         };
         
-        // ========== 4. Stop analysis ==========
+        // ========== 4. Stop analysis (improved display) ==========
         window.analyzeStopOnly = async function() {
             let file = document.getElementById('stopFile').files[0];
             if(!file) { showToast("الرجاء رفع ملف الخمول أولاً", "error"); return; }
@@ -431,7 +462,12 @@
                 for(let i=4;i<rows.length;i++){ let r=rows[i]; if(!r[3]) continue; let vehicle=cleanNumber(r[3]); let driver=r[6]||''; let run=timeToHours(String(r[9]||'00:00:00')), idle=timeToHours(String(r[10]||'00:00:00')), stop=timeToHours(String(r[11]||'00:00:00')); data.push({vehicle,driver,runPercent:(run/24)*100,idlePercent:(idle/24)*100,stopPercent:(stop/24)*100}); }
                 stopGlobalData = data;
                 const top10 = data.sort((a,b)=>b.stopPercent-a.stopPercent).slice(0,10);
-                let html = `</table><thead><tr><th>#</th><th>المركبة</th><th>السائق</th><th>نسبة التوقف %</th></tr></thead><tbody>${top10.map((d,i)=>`<tr><td>${i+1}</td><td>${d.vehicle}</td><td>${d.driver}</td><td>${d.stopPercent.toFixed(1)}%</td></tr>`).join('')}</tbody></table>`;
+                let html = `<table><thead><tr><th>#</th><th>المركبة</th><th>السائق</th><th>نسبة التوقف %</th></tr></thead><tbody>${top10.map((d,i)=>`<tr>
+                    <td>${i+1}</td>
+                    <td>${d.vehicle}</td>
+                    <td>${d.driver}</td>
+                    <td class="${d.stopPercent > 30 ? 'high-stop' : ''}">${d.stopPercent.toFixed(1)}%</td>
+                </tr>`).join('')}</tbody></table>`;
                 document.getElementById('stopTable').innerHTML = html;
                 document.getElementById('stoppageSection').style.display = 'block';
                 updateDashboard();
@@ -480,11 +516,15 @@
                 let driversWithRoda = driversArr.map(d=>({...d, workDays, requiredRoda:workDays*2, percentage:((d.trips/(workDays*2))*100).toFixed(2)}));
                 scaleDrivers = driversWithRoda;
                 const top10 = driversWithRoda.slice(0,10);
-                let html = `<table><thead><tr><th>#</th><th>السائق</th><th>رقم الشاحنة</th><th>الرحلات</th><th>الوزن (كجم)</th></tr></thead><tbody>${top10.map((d,i)=>`<tr><td>${i+1}</td><td>${d.name}</td><td>${d.truckNumber}</td><td>${d.trips}</td><td>${d.totalWeight}</td></tr>`).join('')}</tbody></table>`;
-                const scaleDriverTable = document.getElementById('scaleDriverTable');
-                const scaleStats = document.getElementById('scaleStats');
-                if(scaleDriverTable) scaleDriverTable.innerHTML = html;
-                if(scaleStats) scaleStats.innerHTML = `عدد السائقين: ${driversArr.length} | إجمالي الوزن: ${(Array.from(materialStats.values()).reduce((a,b)=>a+b,0)/1000).toFixed(2)} طن`;
+                let html = `</table><thead><tr><th>#</th><th>السائق</th><th>رقم الشاحنة</th><th>الرحلات</th><th>الوزن (كجم)</th></tr></thead><tbody>${top10.map((d,i)=>`<tr>
+                    <td>${i+1}</td>
+                    <td>${d.name}</td>
+                    <td>${d.truckNumber}</td>
+                    <td>${d.trips}</td>
+                    <td>${d.totalWeight}</td>
+                </tr>`).join('')}</tbody></table>`;
+                document.getElementById('scaleDriverTable').innerHTML = html;
+                document.getElementById('scaleStats').innerHTML = `عدد السائقين: ${driversArr.length} | إجمالي الوزن: ${(Array.from(materialStats.values()).reduce((a,b)=>a+b,0)/1000).toFixed(2)} طن`;
                 const materialsArr = Array.from(materialStats.entries()).map(([n,w])=>({name:n, weight:w})).sort((a,b)=>b.weight-a.weight);
                 const canvas = document.getElementById('scaleMaterialChart');
                 if(canvas) {
@@ -536,7 +576,11 @@
                 const violCounts = new Map();
                 summaryRows.forEach(r=>{ violCounts.set(r.vehicle_no, (violCounts.get(r.vehicle_no)||0)+1); });
                 const top10 = Array.from(violCounts.entries()).map(([v,c])=>({vehicle:v, count:c})).sort((a,b)=>b.count-a.count).slice(0,10);
-                let html = `<table><thead><tr><th>#</th><th>رقم المركبة</th><th>عدد التجاوزات</th></tr></thead><tbody>${top10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.count}</td></tr>`).join('')}</tbody></table>`;
+                let html = `<tr><thead><tr><th>#</th><th>رقم المركبة</th><th>عدد التجاوزات</th></tr></thead><tbody>${top10.map((v,i)=>`<tr>
+                    <td>${i+1}</td>
+                    <td>${v.vehicle}</td>
+                    <td>${v.count}</td>
+                </tr>`).join('')}</tbody></table>`;
                 document.getElementById("violTableContainer").innerHTML = html;
                 document.getElementById('violationsSection').style.display = 'block';
                 updateDashboard();
@@ -558,7 +602,7 @@
             showToast("تم تحليل جميع البيانات بنجاح", "success");
         });
         
-        // ========== Export to Excel (no "jonathan") ==========
+        // ========== Export to Excel ==========
         async function exportAllToExcel() {
             showLoading(true);
             try {
@@ -612,42 +656,42 @@
                 summarySheet.addRow(['إجمالي التجاوزات', document.getElementById('totalViolations').innerText]);
                 styleWorksheet(summarySheet);
                 
-                // Distance sheet
+                // Distance sheet (all data)
                 if(distProcessed.length) {
                     const ws = workbook.addWorksheet('المسافات');
                     ws.addRow(['رقم الشاحنة', 'المسافة (كم)']);
                     distProcessed.forEach(v => ws.addRow([v.vehicle, v.distance]));
                     styleWorksheet(ws);
                 }
-                // Diesel sheet
+                // Diesel sheet (all data)
                 if(Object.keys(dieselDataMap).length) {
                     const ws = workbook.addWorksheet('الديزل');
-                    ws.addRow(['المركبة', 'السائق', 'التكلفة', 'الاستهلاك (لتر)', 'المسافة (كم)']);
-                    Object.values(dieselDataMap).forEach(x => ws.addRow([x.vehicle, x.driver, x.cost, x.fuel, (x.fuel*AVG_CONSUMPTION).toFixed(0)]));
+                    ws.addRow(['المركبة', 'الماركة', 'السائق', 'التكلفة', 'الاستهلاك (لتر)', 'المسافة (كم)']);
+                    Object.values(dieselDataMap).forEach(x => ws.addRow([x.vehicle, x.brand || "", x.driver, x.cost, x.fuel, (x.fuel*AVG_CONSUMPTION).toFixed(0)]));
                     styleWorksheet(ws);
                 }
-                // Speeding sheet
+                // Speeding sheet (all data)
                 if(globalFullData.length) {
                     const ws = workbook.addWorksheet('السرعات الزائدة');
                     ws.addRow(['المركبة', 'السرعة القصوى', 'المسافة (كم)', 'مرات التجاوز']);
                     globalFullData.forEach(v => ws.addRow([v.vehicleCleaned, v.maxSpeed, v.distance, v.occurrences]));
                     styleWorksheet(ws);
                 }
-                // Stop sheet
+                // Stop sheet (all data)
                 if(stopGlobalData.length) {
                     const ws = workbook.addWorksheet('الحركة والخمول');
                     ws.addRow(['المركبة', 'السائق', 'تشغيل %', 'خمول %', 'توقف %']);
                     stopGlobalData.forEach(d => ws.addRow([d.vehicle, d.driver, d.runPercent, d.idlePercent, d.stopPercent]));
                     styleWorksheet(ws);
                 }
-                // Scale sheet
+                // Scale sheet (all data)
                 if(scaleDrivers.length) {
                     const ws = workbook.addWorksheet('الميزان');
                     ws.addRow(['السائق', 'رقم الشاحنة', 'الرحلات', 'الوزن (كجم)', 'أيام العمل', 'الرودات المطلوبة', 'النسبة %']);
                     scaleDrivers.forEach(d => ws.addRow([d.name, d.truckNumber, d.trips, d.totalWeight, d.workDays, d.requiredRoda, d.percentage]));
                     styleWorksheet(ws);
                 }
-                // Violations sheet
+                // Violations sheet (all data)
                 if(currentViolRows.length) {
                     const ws = workbook.addWorksheet('التجاوزات');
                     ws.addRow(['المركبة', 'المدة داخل السياج', 'مسافة التجاوز (كم)', 'نقطة البداية', 'الخروج', 'وقت الدخول', 'نوع التجاوز']);
