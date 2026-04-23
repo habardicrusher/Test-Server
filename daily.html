@@ -229,7 +229,7 @@
         let stopGlobalData = [];
         let scaleDrivers = [];
         let currentViolRows = [];
-        let scaleMaterialChart = null;  // متغير خاص بالمخطط
+        let scaleMaterialChart = null;
         const AVG_CONSUMPTION = 3.25;
         let distWorkbook = null;
         
@@ -263,7 +263,7 @@
             document.getElementById('totalViolations').innerText = currentViolRows.length;
         }
         
-        // 1. تحليل المسافات (تم إصلاح منطق البحث عن العمود)
+        // ========== 1. تحليل المسافات (رقم اللوحة من العمود A) ==========
         document.getElementById('distFile').addEventListener('change', e => { 
             if(e.target.files[0]){ 
                 let r=new FileReader(); 
@@ -281,31 +281,34 @@
                 const dayNum = parseInt(selectedDay);
                 const sheet = distWorkbook.Sheets[distWorkbook.SheetNames[0]];
                 const data = XLSX.utils.sheet_to_json(sheet, {header:1, defval:""});
-                // البحث عن صف العناوين (الذي يحتوي على "Vehicle")
-                let headerRow = -1;
-                for(let i=0;i<data.length;i++) {
-                    const firstCell = String(data[i][0] || "").trim().toLowerCase();
-                    if(firstCell === 'vehicle') { headerRow = i; break; }
+                // البحث عن صف العناوين (أول صف يحتوي على أرقام الأيام أو أي نص)
+                let headerRow = 0; // نفترض أن الصف الأول هو صف العناوين
+                // لكن قد يكون هناك أسطر فارغة في البداية، نبحث عن أول صف غير فارغ
+                for(let i=0;i<Math.min(data.length,20);i++) {
+                    if(data[i] && data[i].length>0 && data[i][0] && String(data[i][0]).trim() !== "") {
+                        headerRow = i;
+                        break;
+                    }
                 }
-                if(headerRow === -1) throw new Error("لم يتم العثور على عمود Vehicle في الصف الأول");
-                
                 const headers = data[headerRow];
-                let vIdx = -1, dayColIdx = -1;
+                let dayColIdx = -1;
                 for(let i=0;i<headers.length;i++) {
-                    let h = String(headers[i] || "").trim().toLowerCase();
-                    if(h === 'vehicle') vIdx = i;
-                    // البحث عن عمود برقم اليوم المختار (مثل "1", "2" ...)
-                    else if(parseInt(h) === dayNum) dayColIdx = i;
+                    let h = String(headers[i] || "").trim();
+                    // محاولة تحويل إلى رقم
+                    let num = parseInt(h);
+                    if(!isNaN(num) && num === dayNum) { dayColIdx = i; break; }
                 }
-                if(vIdx === -1) throw new Error("لم يتم العثور على عمود Vehicle");
-                if(dayColIdx === -1) throw new Error(`لم يتم العثور على عمود برقم اليوم ${dayNum}. تأكد من أن الأعمدة تحمل أرقام الأيام (1,2,3,...) في الصف الأول.`);
+                if(dayColIdx === -1) throw new Error(`لم يتم العثور على عمود برقم اليوم ${dayNum} في الصف الأول. تأكد من أن الأعمدة تحمل أرقام الأيام.`);
                 
                 const vehicles = [];
                 // قراءة البيانات من الصف التالي لصف العناوين
                 for(let r = headerRow + 1; r < data.length; r++) {
                     let row = data[r];
-                    if(!row || !row[vIdx]) continue;
-                    let vehicle = cleanNumber(row[vIdx]);
+                    if(!row || row.length === 0) continue;
+                    // رقم اللوحة من العمود الأول (index 0)
+                    let vehicleRaw = row[0];
+                    if(!vehicleRaw) continue;
+                    let vehicle = cleanNumber(vehicleRaw);
                     let dist = parseFloat(row[dayColIdx]) || 0;
                     if(dist > 0) vehicles.push({vehicle, distance: dist});
                 }
@@ -314,8 +317,8 @@
                 distProcessed = vehicles;
                 const top10 = vehicles.slice(0,10);
                 const bottom10 = [...vehicles].sort((a,b)=>a.distance-b.distance).slice(0,10);
-                document.getElementById('distTop10Table').innerHTML = `<h3 style="color:#a5b4fc;">🏆 أفضل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><tr><thead><tr><th>#</th><th>رقم</th><th>كم</th></tr></thead><tbody>${top10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
-                document.getElementById('distBottom10Table').innerHTML = `<h3 style="color:#a5b4fc;">⚠️ أقل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم</th><th>كم</th></tr></thead><tbody>${bottom10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
+                document.getElementById('distTop10Table').innerHTML = `<h3 style="color:#a5b4fc;">🏆 أفضل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم اللوحة</th><th>كم</th></tr></thead><tbody>${top10.map((v,i)=>`<tr><td>${i+1} jonathan${v.vehicle} jonathan${v.distance.toFixed(2)} jonathan`).join('')}</tbody></table></div>`;
+                document.getElementById('distBottom10Table').innerHTML = `<h3 style="color:#a5b4fc;">⚠️ أقل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم اللوحة</th><th>كم</th></tr></thead><tbody>${bottom10.map((v,i)=>`<tr><td>${i+1} jonathan${v.vehicle} jonathan${v.distance.toFixed(2)} jonathan`).join('')}</tbody></table></div>`;
                 if(distChart) distChart.destroy();
                 const ctx = document.getElementById('distChart').getContext('2d');
                 distChart = new Chart(ctx, {type:'bar', data:{labels:top10.map(v=>v.vehicle), datasets:[{label:`مسافات اليوم ${dayNum} (كم)`, data:top10.map(v=>v.distance), backgroundColor:'#667eea'}]}});
@@ -327,28 +330,60 @@
             showLoading(false);
         };
         
-        // 2. تحليل الديزل
+        // ========== 2. تحليل الديزل (محسّن للبحث عن الأعمدة) ==========
         async function readDiesel(file){ return new Promise(res=>{ let r=new FileReader(); r.onload=e=>{ let wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); let sh=wb.Sheets[wb.SheetNames[0]]; res(XLSX.utils.sheet_to_json(sh,{defval:""})); }; r.readAsArrayBuffer(file); }); }
+        
         window.analyzeDieselOnly = async function() {
             let file = document.getElementById('dieselFile').files[0];
             if(!file) { showToast("الرجاء رفع ملف الديزل أولاً", "error"); return; }
             showLoading(true);
             try {
                 let data = await readDiesel(file);
+                if(!data || data.length === 0) throw new Error("الملف فارغ أو لا يحتوي على بيانات");
                 let map = {};
-                data.forEach(r=>{ let v=get(r,"المركبة"); if(!v) return; if(!map[v]) map[v]={vehicle:v, driver:get(r,"السائق"), cost:0, fuel:0}; map[v].cost+=Number(get(r,"إجمالي التكلفة"))||0; map[v].fuel+=Number(get(r,"الاستهلاك"))||0; });
+                // محاولة البحث عن الأعمدة بالعربية أو الإنجليزية
+                for(let row of data) {
+                    let vehicle = null;
+                    let driver = null;
+                    let cost = 0;
+                    let fuel = 0;
+                    // البحث عن المركبة
+                    for(let key of Object.keys(row)) {
+                        let k = key.toString().toLowerCase();
+                        if(k.includes('مركبة') || k.includes('vehicle')) vehicle = row[key];
+                        if(k.includes('سائق') || k.includes('driver')) driver = row[key];
+                        if(k.includes('تكلفة') || k.includes('cost')) cost = parseFloat(row[key]) || 0;
+                        if(k.includes('استهلاك') || k.includes('fuel') || k.includes('لتر')) fuel = parseFloat(row[key]) || 0;
+                    }
+                    // إذا لم نجد باستخدام الأسماء، نحاول استخدام أعمدة ثابتة (العمود B = مركبة، العمود C = سائق، إلخ)
+                    if(!vehicle && row[1]) vehicle = row[1];
+                    if(!driver && row[2]) driver = row[2];
+                    if(cost===0 && row[3]) cost = parseFloat(row[3]) || 0;
+                    if(fuel===0 && row[4]) fuel = parseFloat(row[4]) || 0;
+                    
+                    if(!vehicle) continue;
+                    let v = cleanNumber(vehicle);
+                    if(!map[v]) map[v] = {vehicle:v, driver:driver || "غير محدد", cost:0, fuel:0};
+                    map[v].cost += cost;
+                    map[v].fuel += fuel;
+                }
+                if(Object.keys(map).length === 0) throw new Error("لم يتم العثور على بيانات الديزل (تأكد من وجود أعمدة: المركبة، السائق، التكلفة، الاستهلاك)");
                 dieselDataMap = map;
                 const sorted = Object.values(map).sort((a,b)=>b.fuel - a.fuel).slice(0,10);
                 let tbody = document.querySelector("#dieselTable tbody");
-                tbody.innerHTML = sorted.map((x,i)=>`<tr><td>${i+1}</td><td>${x.vehicle}</td><td>${x.driver}</td><td>${x.fuel.toFixed(2)}</td><td>${x.cost.toLocaleString()}</td><td>${(x.fuel*AVG_CONSUMPTION).toFixed(0)}</td></tr>`).join('');
+                if(sorted.length === 0) tbody.innerHTML = '<tr><td colspan="6">لا توجد بيانات<td></tr>';
+                else tbody.innerHTML = sorted.map((x,i)=>`<tr><td>${i+1}</td><td>${x.vehicle}</td><td>${x.driver}</td><td>${x.fuel.toFixed(2)}</td><td>${x.cost.toLocaleString()}</td><td>${(x.fuel*AVG_CONSUMPTION).toFixed(0)}</td></tr>`).join('');
                 document.getElementById('dieselSection').style.display = 'block';
                 updateDashboard();
                 showToast("تم تحليل الديزل بنجاح", "success");
-            } catch(err) { showToast("خطأ: "+err.message, "error"); }
+            } catch(err) { 
+                console.error(err);
+                showToast("خطأ في تحليل الديزل: "+err.message, "error"); 
+            }
             showLoading(false);
         };
         
-        // 3. تحليل السرعة الزائدة (كما هو)
+        // ========== 3. تحليل السرعة الزائدة (كما هو) ==========
         async function parseExcelAndExtract(file){
             return new Promise((resolve,reject)=>{
                 const reader=new FileReader();
@@ -392,7 +427,7 @@
             showLoading(false);
         };
         
-        // 4. تحليل الحركة والخمول (كما هو)
+        // ========== 4. تحليل الحركة والخمول ==========
         window.analyzeStopOnly = async function() {
             let file = document.getElementById('stopFile').files[0];
             if(!file) { showToast("الرجاء رفع ملف الخمول أولاً", "error"); return; }
@@ -415,7 +450,7 @@
             showLoading(false);
         };
         
-        // 5. تحليل الميزان (تم إصلاح مشكلة destroy)
+        // ========== 5. تحليل الميزان ==========
         const VALID_TRUCKS = new Map([["1091","SDA"],["2757","BTA"],["2758","BTA"],["2759","BTA"],["2760","BTA"],["2762","BTA"],["2818","BTA"],["2927","BTA"],["2928","BTA"],["2929","BTA"],["3321","UXA"],["3322","UXA"],["3324","UXA"],["3325","UXA"],["3326","UXA"],["3461","KXA"],["3462","KXA"],["3963","TSA"],["4445","GSA"],["5324","SXA"],["5367","KRA"],["5520","XXA"],["5521","XXA"],["5522","XXA"],["5523","XXA"],["5524","XXA"],["5525","XXA"],["5526","XXA"],["5527","XXA"],["5528","XXA"],["5658","SXA"],["5796","VRA"],["5797","VRA"],["5800","VRA"],["6398","ERA"],["6428","TRA"],["6429","TRA"],["6430","TRA"],["6432","TRA"],["6612","DSA"],["6613","DSA"],["6614","DSA"],["6615","DSA"],["6616","DSA"],["6617","DSA"],["6618","DSA"],["6619","DSA"],["6620","DSA"],["6621","DSA"],["6622","DSA"],["6623","DSA"],["6624","DSA"],["6626","DSA"],["6629","DSA"],["6935","GSA"],["6939","GSA"],["7042","ZXA"],["7043","ZXA"],["7332","DXA"],["7682","DXA"],["7750","DXA"],["7837","DXA"],["7926","DXA"],["7927","DXA"],["7928","DXA"],["7929","DXA"],["7930","DXA"],["7974","DXA"],["7980","DXA"],["9103","HSA"],["9492","SXA"],["9493","SXA"],["9495","SXA"],["9496","SXA"]]);
         const EXCLUDED_NAMES = new Set(["eisam خ","eisam ح","عادل خ","عادل ح","mamoon","zeshan","برهان","ابراهيم"]);
         function isTruckValid(truckNumber, truckCode){ let expected=VALID_TRUCKS.get(truckNumber); if(!expected) return false; if(truckCode&&truckCode.trim()!=='') return expected===truckCode.trim(); return true; }
@@ -463,10 +498,7 @@
                 const materialsArr = Array.from(materialStats.entries()).map(([n,w])=>({name:n, weight:w})).sort((a,b)=>b.weight-a.weight);
                 const canvas = document.getElementById('scaleMaterialChart');
                 if(canvas) {
-                    // إصلاح مشكلة destroy
-                    if(scaleMaterialChart && typeof scaleMaterialChart.destroy === 'function') {
-                        scaleMaterialChart.destroy();
-                    }
+                    if(scaleMaterialChart && typeof scaleMaterialChart.destroy === 'function') scaleMaterialChart.destroy();
                     scaleMaterialChart = new Chart(canvas, {type:'bar', data:{labels:materialsArr.slice(0,5).map(m=>m.name), datasets:[{label:'الوزن(طن)', data:materialsArr.slice(0,5).map(m=>m.weight/1000), backgroundColor:'#10b981'}]}});
                 }
                 document.getElementById('scaleSection').style.display = 'block';
@@ -479,7 +511,7 @@
             showLoading(false);
         };
         
-        // 6. تحليل التجاوزات
+        // ========== 6. تحليل التجاوزات ==========
         function extractRowsFromSheetViol(ws){
             if(!ws) return [];
             const range = XLSX.utils.decode_range(ws['!ref']||'A1:A1');
@@ -539,7 +571,7 @@
             showToast("تم تحليل جميع البيانات بنجاح", "success");
         });
         
-        // تصدير Excel (باستخدام ExcelJS مع تنسيق رائع)
+        // تصدير Excel بتنسيق رائع
         async function exportAllToExcel() {
             showLoading(true);
             try {
@@ -547,7 +579,7 @@
                 workbook.creator = 'كسارة الحبردي';
                 workbook.views = [{ rightToLeft: true }];
                 
-                function styleWorksheet(ws, title) {
+                function styleWorksheet(ws) {
                     ws.properties.defaultColWidth = 20;
                     ws.properties.defaultRowHeight = 25;
                     ws.views = [{ rightToLeft: true, state: 'frozen', ySplit: 1 }];
@@ -575,7 +607,7 @@
                     });
                 }
                 
-                // ورقة الملخص
+                // ملخص
                 const summarySheet = workbook.addWorksheet('ملخص التقارير');
                 summarySheet.addRow(['تقرير كسارة الحبردي - لوحة المعلومات']);
                 summarySheet.mergeCells('A1:B1');
@@ -593,7 +625,7 @@
                 summarySheet.addRow(['إجمالي التجاوزات', document.getElementById('totalViolations').innerText]);
                 styleWorksheet(summarySheet);
                 
-                // باقي الأوراق بنفس التنسيق...
+                // باقي الأوراق
                 if(distProcessed.length) {
                     const ws = workbook.addWorksheet('المسافات');
                     ws.addRow(['رقم الشاحنة', 'المسافة (كم)']);
