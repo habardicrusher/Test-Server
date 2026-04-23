@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* جميع الأنماط كما هي (نفس السابق) */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 20px; min-height: 100vh; }
         .container { max-width: 1400px; margin: 0 auto; }
@@ -205,7 +206,7 @@
     let selectedReportIds = new Set();
     let charts = { topExp: null, bottomExp: null, topRev: null, bottomRev: null };
     let currentUploadedFile = null;
-    let hasUnsavedData = false;   // track if data loaded from file and not saved yet
+    let hasUnsavedData = false;
 
     // ---------------------- دوال مساعدة ----------------------
     function formatNumber(num) {
@@ -239,8 +240,6 @@
         if (!str) return '';
         return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
     }
-
-    // Show/hide reminder box
     function updateReminder() {
         const reminder = document.getElementById('reminderBox');
         if (reminder) {
@@ -248,7 +247,7 @@
         }
     }
 
-    // ---------------------- دوال تحليل Excel (تم تعديلها لإضافة عدد الردود والوزن) ----------------------
+    // ---------------------- دوال تحليل Excel (كما هي صحيحة) ----------------------
     function evaluateFormula(str) {
         if (typeof str !== 'string') return NaN;
         str = str.trim();
@@ -322,24 +321,19 @@
         }
         return colMap;
     }
-    
-    // دالة مساعدة للبحث عن أعمدة "عدد الردود" و "الوزن"
     function findExtraColumns(headers) {
         let tripCountIdx = -1, weightIdx = -1;
         for (let i = 0; i < headers.length; i++) {
             let cell = headers[i].toString().trim();
-            // البحث عن "عدد الردود" أو "Trip Count" أو "عدد الرحلات"
             if (cell.includes("عدد الردود") || cell.includes("عدد الرحلات") || cell.toLowerCase().includes("trip count")) {
                 tripCountIdx = i;
             }
-            // البحث عن "الوزن" أو "Weight" أو "الوزن الإجمالي"
             if (cell.includes("الوزن") || cell.toLowerCase().includes("weight") || cell.includes("الوزن الإجمالي")) {
                 weightIdx = i;
             }
         }
         return { tripCountIdx, weightIdx };
     }
-
     async function processExcelFile(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -400,33 +394,23 @@
                     }
                     const plateCode = cleanTruckId(costRaw);
                     const info = getTruckInfo(plateCode);
-                    
-                    // استخراج عدد الردود والوزن
-                    let tripCount = 0;
-                    let weight = 0;
+                    let tripCount = 0, weight = 0;
                     if (extraCols.tripCountIdx !== -1 && row[extraCols.tripCountIdx] !== undefined && row[extraCols.tripCountIdx] !== "") {
                         let rawTrips = row[extraCols.tripCountIdx];
                         tripCount = parseNumeric(rawTrips);
                         if (isNaN(tripCount)) tripCount = 0;
-                        tripCount = Math.round(tripCount); // تأكيد أنه عدد صحيح
+                        tripCount = Math.round(tripCount);
                     }
                     if (extraCols.weightIdx !== -1 && row[extraCols.weightIdx] !== undefined && row[extraCols.weightIdx] !== "") {
                         let rawWeight = row[extraCols.weightIdx];
                         weight = parseNumeric(rawWeight);
                         if (isNaN(weight)) weight = 0;
                     }
-                    
                     vehicleList.push({
-                        plateCode: plateCode,
-                        brand: info.brand,
-                        year: info.year,
-                        totalExpense: expense,
-                        totalRevenue: revenue,
-                        netIncome: net,
+                        plateCode, brand: info.brand, year: info.year,
+                        totalExpense: expense, totalRevenue: revenue, netIncome: net,
                         netPercent: (net / revenue) * 100,
-                        expenseDetails: details,
-                        tripCount: tripCount,      // عدد الردود (صحيح)
-                        weight: weight             // الوزن
+                        expenseDetails: details, tripCount, weight
                     });
                 }
                 if (!vehicleList.length) reject("لا توجد بيانات صالحة");
@@ -471,7 +455,6 @@
         });
         tableHtml += `</tbody></table>`;
         document.getElementById("dataTableContainer").innerHTML = tableHtml;
-        // أعلى 10 في بنود المصاريف
         const topCategoriesContainer = document.getElementById("topExpensesDetails");
         topCategoriesContainer.innerHTML = "";
         for (let cat of expenseCategories) {
@@ -482,11 +465,9 @@
             card.innerHTML = `<h4><i class="fas fa-chart-simple"></i> ${cat.name}</h4>
                 <table><thead><tr><th>#</th><th>رقم اللوحة</th><th>القيمة (ر.س)</th></tr></thead>
                 <tbody>${top10.map((item, idx) => `<tr><td>${idx+1}</td><td>${item.plateCode}</td><td>${formatNumber(item.expenseDetails?.[cat.key] || 0)}</td></tr>`).join('')}
-                ${top10.length === 0 ? '<tr><td colspan="3">لا توجد بيانات</td></tr>' : ''}</tbody>
-            </table>`;
+                ${top10.length === 0 ? '<tr><td colspan="3">لا توجد بيانات</td></tr>' : ''}</tbody></table>`;
             topCategoriesContainer.appendChild(card);
         }
-        // مخططات
         const topExp = [...sortedData].sort((a,b)=>b.totalExpense-a.totalExpense).slice(0,10);
         const bottomExp = [...sortedData].sort((a,b)=>a.totalExpense-b.totalExpense).slice(0,10);
         const topRev = [...sortedData].sort((a,b)=>b.totalRevenue-a.totalRevenue).slice(0,10);
@@ -502,21 +483,16 @@
         charts.bottomRev = new Chart(document.getElementById('bottomRevenueChart'), { type: 'bar', data: { labels: bottomRev.map(v=>v.plateCode), datasets: [{ label: 'أقل إيراد', data: bottomRev.map(v=>v.totalRevenue), backgroundColor: '#eb3349' }] }, options: { plugins: { legend: { labels: { color: textColor } } } } });
     }
 
-    // ---------------------- دوال ربط السيرفر ----------------------
+    // ---------------------- دوال ربط السيرفر (كما هي) ----------------------
     async function apiCall(endpoint, method='GET', data=null, isFormData=false) {
         const opts = { method, credentials:'include' };
-        if (isFormData) {
-            opts.body = data;
-        } else {
-            opts.headers = { 'Content-Type': 'application/json' };
-            if (data) opts.body = JSON.stringify(data);
-        }
+        if (isFormData) opts.body = data;
+        else { opts.headers = { 'Content-Type': 'application/json' }; if (data) opts.body = JSON.stringify(data); }
         const res = await fetch(`/api${endpoint}`, opts);
         if (res.status === 401) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
         if (!res.ok) throw new Error(await res.text());
         return res.json();
     }
-
     async function loadReportsFromServer() {
         try {
             const reports = await apiCall('/reports-list');
@@ -526,12 +502,10 @@
                 data: r.data ? (typeof r.data === 'string' ? JSON.parse(r.data) : r.data) : [],
                 createdAt: r.created_at || new Date().toISOString()
             }));
-            if (savedReports.length) document.getElementById("reportsPanel").style.display = "block";
-            else document.getElementById("reportsPanel").style.display = "none";
+            document.getElementById("reportsPanel").style.display = savedReports.length ? "block" : "none";
             return savedReports;
         } catch(e) { console.error(e); savedReports = []; return []; }
     }
-
     async function saveReportToServerWithFile(reportName, file, vehicleData) {
         const formData = new FormData();
         formData.append('excelFile', file);
@@ -542,12 +516,10 @@
         await loadReportsFromServer();
         await loadUploadedFiles();
     }
-
     async function deleteReportFromServer(reportId) {
         await apiCall(`/reports/${reportId}`, 'DELETE');
         await loadReportsFromServer();
     }
-
     async function updateReportNameOnServer(reportId, newName) {
         const report = savedReports.find(r => r.id == reportId);
         if (!report) return;
@@ -559,7 +531,6 @@
         });
         await loadReportsFromServer();
     }
-
     async function loadAndDisplayReportsList() {
         await loadReportsFromServer();
         const container = document.getElementById("savedReportsList");
@@ -625,14 +596,10 @@
             container.appendChild(card);
         });
     }
-
     async function saveCurrentReportToServer() {
         if (!currentVehicleData.length) { alert("لا يوجد تقرير محمّل. قم برفع ملف Excel أولاً."); return; }
         const fileInput = document.getElementById('excelInput');
-        if (!fileInput.files || !fileInput.files[0]) {
-            alert("لم يتم رفع أي ملف. يرجى رفع ملف Excel أولاً.");
-            return;
-        }
+        if (!fileInput.files || !fileInput.files[0]) { alert("لم يتم رفع أي ملف. يرجى رفع ملف Excel أولاً."); return; }
         let name = prompt("اسم التقرير:", `تقرير ${new Date().toLocaleDateString()}`);
         if (!name) return;
         showLoading(true);
@@ -646,11 +613,8 @@
             updateReminder();
         } catch (err) {
             showToast("خطأ في الحفظ: " + err.message, "error");
-        } finally {
-            showLoading(false);
-        }
+        } finally { showLoading(false); }
     }
-
     async function clearAllReportsOnServer() {
         if (confirm("⚠️ مسح جميع التقارير نهائياً؟")) {
             for (let rep of savedReports) await deleteReportFromServer(rep.id);
@@ -659,7 +623,6 @@
             showToast("تم مسح جميع التقارير", "success");
         }
     }
-
     async function mergeSelectedReportsServer() {
         if (selectedReportIds.size < 2) { alert("اختر تقريرين على الأقل"); return; }
         const reportsToMerge = savedReports.filter(r => selectedReportIds.has(r.id));
@@ -708,8 +671,6 @@
             await loadAndDisplayReportsList();
         } catch(e) { showToast("خطأ: "+e.message, "error"); } finally { showLoading(false); }
     }
-
-    // ---------------------- تحميل وعرض الملفات الأصلية ----------------------
     async function loadUploadedFiles() {
         try {
             const response = await fetch('/api/uploaded-files', { credentials: 'include' });
@@ -721,127 +682,367 @@
                 container.innerHTML = '<p style="color:#aaa;">📂 لا توجد ملفات محفوظة على الخادم</p>';
                 return;
             }
-            container.innerHTML = `
-                <ul class="uploaded-files-list">
-                    ${files.map(f => `
-                        <li>
-                            <div class="file-info">
-                                📄 <strong>${escapeHtml(f.original_name)}</strong><br>
-                                <small>رفع: ${new Date(f.uploaded_at).toLocaleString()} - بواسطة: ${escapeHtml(f.uploaded_by)}</small><br>
-                                <small>التقرير المرتبط: ${escapeHtml(f.report_name || 'غير مرتبط')}</small>
-                            </div>
-                            <button class="btn btn-sm btn-info" onclick="downloadFile(${f.id})">⬇️ تحميل الملف الأصلي</button>
-                        </li>
-                    `).join('')}
-                </ul>
-            `;
+            container.innerHTML = `<ul class="uploaded-files-list">${files.map(f => `<li><div class="file-info">📄 <strong>${escapeHtml(f.original_name)}</strong><br><small>رفع: ${new Date(f.uploaded_at).toLocaleString()} - بواسطة: ${escapeHtml(f.uploaded_by)}</small><br><small>التقرير المرتبط: ${escapeHtml(f.report_name || 'غير مرتبط')}</small></div><button class="btn btn-sm btn-info" onclick="downloadFile(${f.id})">⬇️ تحميل الملف الأصلي</button></li>`).join('')}</ul>`;
         } catch (err) {
-            console.error('خطأ في تحميل الملفات:', err);
+            console.error(err);
             const container = document.getElementById('uploadedFilesContainer');
             if (container) container.innerHTML = '<p style="color:#f00;">❌ خطأ في تحميل الملفات</p>';
         }
     }
-
     async function downloadFile(fileId) {
-        try {
-            window.open(`/api/download-file/${fileId}`, '_blank');
-        } catch (err) {
-            showToast('فشل تحميل الملف', 'error');
-        }
+        try { window.open(`/api/download-file/${fileId}`, '_blank'); } catch (err) { showToast('فشل تحميل الملف', 'error'); }
     }
 
-    // ---------------------- تصدير Excel (تمت إضافة ورقة "أقل 10 سيارات استهلاك") ----------------------
-async function exportFullExcel() {
-    if (!currentVehicleData.length) { alert("لا توجد بيانات للتصدير"); return; }
-    showLoading(true);
-    try {
-        const ExcelJS = window.ExcelJS;
-        if (!ExcelJS) throw new Error('ExcelJS not loaded');
-        const workbook = new ExcelJS.Workbook();
-        workbook.creator = 'مجموعة شركات زرعة الخير';
-        
-        // ... (كل الكود السابق حتى إنشاء wsDetail) ...
-        // اختصاراً: نفترض أن المتغيرات allTrucks, expenseCategories معرفة مسبقاً كما في الكود السابق.
-        
-        // إضافة ورقة "أقل 10 سيارات في بنود المصاريف" (تفصيل لكل بند)
-        const wsLowestDetailed = workbook.addWorksheet("📉 أقل 10 في بنود المصاريف");
-        wsLowestDetailed.views = [{ rightToLeft: true }];
-        wsLowestDetailed.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
-        // عنوان رئيسي
-        wsLowestDetailed.mergeCells('A1:D1');
-        wsLowestDetailed.getCell('A1').value = "📉 أقل 10 سيارات في كل بند من بنود المصاريف";
-        wsLowestDetailed.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF000000' } };
-        wsLowestDetailed.getCell('A1').fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFD9EAD3' } };
-        wsLowestDetailed.getCell('A1').alignment = { horizontal:'center', vertical:'middle' };
-        wsLowestDetailed.getRow(1).height = 40;
-        let currentRow = 2;
-        for (let cat of expenseCategories) {
-            // ترتيب تصاعدي (أقل قيمة أولاً)
-            let sortedByExpense = [...allTrucks].sort((a,b) => (a.expenseDetails?.[cat.key] || 0) - (b.expenseDetails?.[cat.key] || 0));
-            let lowest10 = sortedByExpense.slice(0,10);
-            // عنوان البند
-            wsLowestDetailed.mergeCells(`A${currentRow}:D${currentRow}`);
-            wsLowestDetailed.getCell(`A${currentRow}`).value = cat.name;
-            wsLowestDetailed.getCell(`A${currentRow}`).font = { size: 14, bold: true, color: { argb: 'FF000000' } };
-            wsLowestDetailed.getCell(`A${currentRow}`).fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFE6F0D8' } };
-            wsLowestDetailed.getCell(`A${currentRow}`).alignment = { horizontal: 'center' };
-            currentRow++;
-            // رأس الجدول
-            const headerRow = wsLowestDetailed.getRow(currentRow);
-            headerRow.getCell(1).value = "#";
-            headerRow.getCell(2).value = "رقم اللوحة";
-            headerRow.getCell(3).value = "القيمة (ر.س)";
-            for (let i = 1; i <= 3; i++) {
-                const cell = headerRow.getCell(i);
-                cell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFC5E0B4' } };
-                cell.font = { bold: true, color: { argb: 'FF000000' } };
-                cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
-                cell.alignment = { horizontal: 'center' };
+    // ---------------------- تصدير Excel (النسخة الكاملة مع الورقة الجديدة) ----------------------
+    async function exportFullExcel() {
+        if (!currentVehicleData.length) { alert("لا توجد بيانات للتصدير"); return; }
+        showLoading(true);
+        try {
+            const ExcelJS = window.ExcelJS;
+            if (!ExcelJS) throw new Error('ExcelJS not loaded');
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'مجموعة شركات زرعة الخير';
+            
+            // إعداد البيانات
+            let monthlyData = savedReports.length ? savedReports.map(r => ({ name: r.reportName, totalExp: r.data.reduce((s,v)=>s+v.totalExpense,0), totalRev: r.data.reduce((s,v)=>s+v.totalRevenue,0), totalNet: r.data.reduce((s,v)=>s+v.netIncome,0) })) : [{ name: "التقرير الحالي", totalExp: currentVehicleData.reduce((s,v)=>s+v.totalExpense,0), totalRev: currentVehicleData.reduce((s,v)=>s+v.totalRevenue,0), totalNet: currentVehicleData.reduce((s,v)=>s+v.netIncome,0) }];
+            let allTrucks = [...currentVehicleData].sort((a,b) => parseInt(a.plateCode.match(/\d+/)?.[0] || 0) - parseInt(b.plateCode.match(/\d+/)?.[0] || 0));
+            let totalDetails = {};
+            for (let cat of expenseCategories) totalDetails[cat.key] = 0;
+            for (let t of allTrucks) {
+                for (let cat of expenseCategories) totalDetails[cat.key] += (t.expenseDetails?.[cat.key] || 0);
             }
-            currentRow++;
-            // البيانات
-            for (let idx = 0; idx < lowest10.length; idx++) {
-                const item = lowest10[idx];
-                const row = wsLowestDetailed.getRow(currentRow);
-                row.getCell(1).value = idx + 1;
-                row.getCell(2).value = item.plateCode;
-                row.getCell(3).value = item.expenseDetails?.[cat.key] || 0;
-                row.getCell(3).numFmt = '#,##0.00';
+            
+            // دالة styleLight (نفس السابق)
+            function styleLight(ws, title, columns, rows, numericIndices=[], percentIndices=[], setPageSetup=true, conditionalFormatCol=-1) {
+                ws.views = [{ rightToLeft: true }];
+                if (setPageSetup) ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+                ws.mergeCells('A1:' + String.fromCharCode(64 + columns.length) + '1');
+                ws.getCell('A1').value = title;
+                ws.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF000000' } };
+                ws.getCell('A1').fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFD9EAD3' } };
+                ws.getCell('A1').alignment = { horizontal:'center', vertical:'middle' };
+                ws.getRow(1).height = 40;
+                const headerRow = ws.addRow(columns.map(c=>c.header));
+                headerRow.eachCell(cell => {
+                    cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFC5E0B4' } };
+                    cell.font = { bold:true, size:12, color:{ argb:'FF000000' } };
+                    cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                    cell.alignment = { horizontal:'center' };
+                });
+                rows.forEach((rowData, idx) => {
+                    const row = ws.addRow(rowData);
+                    row.eachCell((cell, colIdx) => {
+                        cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                        cell.alignment = { horizontal:'center' };
+                        const colIndex = colIdx - 1;
+                        if (numericIndices.includes(colIndex) && typeof rowData[colIndex] === 'number') cell.numFmt = '#,##0.00';
+                        if (percentIndices.includes(colIndex) && typeof rowData[colIndex] === 'number') cell.numFmt = '0.00%';
+                    });
+                    if (idx%2===0) row.eachCell(cell => cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF9F9F9' } });
+                    else row.eachCell(cell => cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } });
+                    if (conditionalFormatCol !== -1 && rowData[conditionalFormatCol] !== undefined) {
+                        const percentVal = parseFloat(rowData[conditionalFormatCol]);
+                        const targetCell = row.getCell(conditionalFormatCol+1);
+                        if (!isNaN(percentVal)) {
+                            if (percentVal < 0.29) targetCell.font = { color: { argb: 'FFEB3349' }, bold: true };
+                            else if (percentVal >= 0.29 && percentVal <= 0.35) targetCell.font = { color: { argb: 'FFF4A100' }, bold: true };
+                            else if (percentVal > 0.35) targetCell.font = { color: { argb: 'FF11998E' }, bold: true };
+                        }
+                    }
+                });
+                ws.columns = columns.map(col => ({ width: col.width || 18 }));
+            }
+            
+            // ورقة ملخص شهري
+            const wsMonthly = workbook.addWorksheet("ملخص شهري");
+            styleLight(wsMonthly, "📅 ملخص شهري", [{ header:"الشهر", width:25 }, { header:"إجمالي المصروفات", width:25 }, { header:"إجمالي الإيرادات", width:25 }, { header:"صافي الدخل", width:25 }, { header:"نسبة الصافي %", width:20 }], monthlyData.map(m => [m.name, m.totalExp, m.totalRev, m.totalNet, m.totalRev ? (m.totalNet/m.totalRev)/100 : 0]), [1,2,3], [4]);
+            
+            // ورقة ملخص إجمالي المصاريف
+            const wsSummaryTotal = workbook.addWorksheet("ملخص إجمالي المصاريف");
+            let summaryRows = [];
+            for (let cat of expenseCategories) summaryRows.push([cat.name, totalDetails[cat.key]]);
+            summaryRows.push(["إجمالي المصروفات الكلي", allTrucks.reduce((s,t)=>s+t.totalExpense,0)]);
+            summaryRows.push(["إجمالي الإيرادات الكلي", allTrucks.reduce((s,t)=>s+t.totalRevenue,0)]);
+            summaryRows.push(["صافي الدخل الكلي", allTrucks.reduce((s,t)=>s+t.netIncome,0)]);
+            styleLight(wsSummaryTotal, "📊 ملخص إجمالي المصاريف", [{ header: "بند المصروف", width: 25 }, { header: "الإجمالي (ر.س)", width: 22 }], summaryRows, [1]);
+            
+            // ورقة تفصيل المصاريف لكل شاحنة (مع عدد الردود والوزن)
+            let detailColumns = [
+                { header: "الماركة", width: 15 }, { header: "سنة الإنتاج", width: 12 }, { header: "رقم اللوحة", width: 20 },
+                { header: "عدد الردود", width: 12 }, { header: "الوزن (طن)", width: 12 },
+                ...expenseCategories.map(cat => ({ header: cat.name, width: 18 })),
+                { header: "إجمالي الإيرادات", width: 22 }, { header: "إجمالي المصروفات", width: 22 },
+                { header: "صافي الدخل", width: 22 }, { header: "نسبة الصافي %", width: 18 }
+            ];
+            let detailRows = allTrucks.map(t => {
+                let row = [t.brand, t.year, t.plateCode, t.tripCount || 0, (t.weight || 0) / 1000];
+                for (let cat of expenseCategories) row.push(t.expenseDetails?.[cat.key] || 0);
+                row.push(t.totalRevenue, t.totalExpense, t.netIncome, t.netPercent / 100);
+                return row;
+            });
+            const wsDetail = workbook.addWorksheet("تفصيل المصاريف لكل شاحنة");
+            const numericDetailIndices = [4, ...Array.from({length: expenseCategories.length + 3}, (_,i) => i+5)];
+            const percentDetailIndex = detailColumns.length - 1;
+            styleLight(wsDetail, "📊 تفصيل المصاريف لكل شاحنة", detailColumns, detailRows, numericDetailIndices, [percentDetailIndex], true, percentDetailIndex);
+            wsDetail.getColumn(4).numFmt = '0'; // عدد الردود بدون فواصل عشرية
+            
+            // ورقة أعلى 10 في بنود المصاريف
+            const wsTop = workbook.addWorksheet("🏆 أعلى 10 في بنود المصاريف");
+            wsTop.views = [{ rightToLeft: true }];
+            wsTop.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+            let currentRow = 1;
+            wsTop.mergeCells('A1:D1');
+            wsTop.getCell('A1').value = "🏆 أعلى 10 سيارات في كل بند من بنود المصاريف";
+            wsTop.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF000000' } };
+            wsTop.getCell('A1').fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFD9EAD3' } };
+            wsTop.getCell('A1').alignment = { horizontal:'center', vertical:'middle' };
+            wsTop.getRow(1).height = 40;
+            currentRow = 2;
+            for (let cat of expenseCategories) {
+                wsTop.mergeCells(`A${currentRow}:D${currentRow}`);
+                wsTop.getCell(`A${currentRow}`).value = cat.name;
+                wsTop.getCell(`A${currentRow}`).font = { size: 14, bold: true, color: { argb: 'FF000000' } };
+                wsTop.getCell(`A${currentRow}`).fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFE6F0D8' } };
+                wsTop.getCell(`A${currentRow}`).alignment = { horizontal: 'center' };
+                currentRow++;
+                const headerRow = wsTop.getRow(currentRow);
+                headerRow.getCell(1).value = "#";
+                headerRow.getCell(2).value = "رقم اللوحة";
+                headerRow.getCell(3).value = "القيمة (ر.س)";
                 for (let i = 1; i <= 3; i++) {
-                    const cell = row.getCell(i);
+                    const cell = headerRow.getCell(i);
+                    cell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFC5E0B4' } };
+                    cell.font = { bold: true, color: { argb: 'FF000000' } };
                     cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
                     cell.alignment = { horizontal: 'center' };
-                    if (idx % 2 === 0) cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF9F9F9' } };
-                    else cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } };
+                }
+                currentRow++;
+                let sorted = [...allTrucks].sort((a,b) => (b.expenseDetails?.[cat.key] || 0) - (a.expenseDetails?.[cat.key] || 0));
+                let top10 = sorted.slice(0,10);
+                for (let idx = 0; idx < top10.length; idx++) {
+                    const item = top10[idx];
+                    const row = wsTop.getRow(currentRow);
+                    row.getCell(1).value = idx + 1;
+                    row.getCell(2).value = item.plateCode;
+                    row.getCell(3).value = item.expenseDetails?.[cat.key] || 0;
+                    row.getCell(3).numFmt = '#,##0.00';
+                    for (let i = 1; i <= 3; i++) {
+                        const cell = row.getCell(i);
+                        cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                        cell.alignment = { horizontal: 'center' };
+                        if (idx % 2 === 0) cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF9F9F9' } };
+                        else cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } };
+                    }
+                    currentRow++;
+                }
+                if (top10.length === 0) {
+                    const row = wsTop.getRow(currentRow);
+                    row.getCell(2).value = "لا توجد بيانات";
+                    row.getCell(2).alignment = { horizontal: 'center' };
+                    currentRow++;
                 }
                 currentRow++;
             }
-            if (lowest10.length === 0) {
-                const row = wsLowestDetailed.getRow(currentRow);
-                row.getCell(2).value = "لا توجد بيانات";
-                row.getCell(2).alignment = { horizontal: 'center' };
+            wsTop.getColumn(1).width = 8; wsTop.getColumn(2).width = 22; wsTop.getColumn(3).width = 20;
+            
+            // ورقة أقل 10 في بنود المصاريف (الجديدة)
+            const wsLowestDetailed = workbook.addWorksheet("📉 أقل 10 في بنود المصاريف");
+            wsLowestDetailed.views = [{ rightToLeft: true }];
+            wsLowestDetailed.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+            wsLowestDetailed.mergeCells('A1:D1');
+            wsLowestDetailed.getCell('A1').value = "📉 أقل 10 سيارات في كل بند من بنود المصاريف";
+            wsLowestDetailed.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF000000' } };
+            wsLowestDetailed.getCell('A1').fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFD9EAD3' } };
+            wsLowestDetailed.getCell('A1').alignment = { horizontal:'center', vertical:'middle' };
+            wsLowestDetailed.getRow(1).height = 40;
+            currentRow = 2;
+            for (let cat of expenseCategories) {
+                let sortedByExpense = [...allTrucks].sort((a,b) => (a.expenseDetails?.[cat.key] || 0) - (b.expenseDetails?.[cat.key] || 0));
+                let lowest10 = sortedByExpense.slice(0,10);
+                wsLowestDetailed.mergeCells(`A${currentRow}:D${currentRow}`);
+                wsLowestDetailed.getCell(`A${currentRow}`).value = cat.name;
+                wsLowestDetailed.getCell(`A${currentRow}`).font = { size: 14, bold: true, color: { argb: 'FF000000' } };
+                wsLowestDetailed.getCell(`A${currentRow}`).fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFE6F0D8' } };
+                wsLowestDetailed.getCell(`A${currentRow}`).alignment = { horizontal: 'center' };
+                currentRow++;
+                const headerRow = wsLowestDetailed.getRow(currentRow);
+                headerRow.getCell(1).value = "#";
+                headerRow.getCell(2).value = "رقم اللوحة";
+                headerRow.getCell(3).value = "القيمة (ر.س)";
+                for (let i = 1; i <= 3; i++) {
+                    const cell = headerRow.getCell(i);
+                    cell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFC5E0B4' } };
+                    cell.font = { bold: true, color: { argb: 'FF000000' } };
+                    cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                    cell.alignment = { horizontal: 'center' };
+                }
+                currentRow++;
+                for (let idx = 0; idx < lowest10.length; idx++) {
+                    const item = lowest10[idx];
+                    const row = wsLowestDetailed.getRow(currentRow);
+                    row.getCell(1).value = idx + 1;
+                    row.getCell(2).value = item.plateCode;
+                    row.getCell(3).value = item.expenseDetails?.[cat.key] || 0;
+                    row.getCell(3).numFmt = '#,##0.00';
+                    for (let i = 1; i <= 3; i++) {
+                        const cell = row.getCell(i);
+                        cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                        cell.alignment = { horizontal: 'center' };
+                        if (idx % 2 === 0) cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF9F9F9' } };
+                        else cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } };
+                    }
+                    currentRow++;
+                }
+                if (lowest10.length === 0) {
+                    const row = wsLowestDetailed.getRow(currentRow);
+                    row.getCell(2).value = "لا توجد بيانات";
+                    row.getCell(2).alignment = { horizontal: 'center' };
+                    currentRow++;
+                }
                 currentRow++;
             }
-            currentRow++; // سطر فارغ بين البنود
-        }
-        wsLowestDetailed.getColumn(1).width = 8;
-        wsLowestDetailed.getColumn(2).width = 22;
-        wsLowestDetailed.getColumn(3).width = 20;
-        
-        // تحديث ترتيب الأوراق ليشمل الورقة الجديدة
-        const sheetOrder = ["ملخص شهري", "ملخص إجمالي المصاريف", "تفصيل المصاريف لكل شاحنة", "🏆 أعلى 10 في بنود المصاريف", "📉 أقل 10 في بنود المصاريف", "📊 أهم 10 سيارات", "أقل 10 سيارات استهلاك", "إجمالي الشاحنات (مبسط)"];
-        workbook.eachSheet((sheet, id) => {
-            const targetIndex = sheetOrder.indexOf(sheet.name);
-            if (targetIndex !== -1 && sheet.order !== targetIndex) sheet.order = targetIndex;
-        });
-        workbook.worksheets.sort((a, b) => (a.order || 999) - (b.order || 999));
-        const buffer = await workbook.xlsx.writeBuffer();
-        saveAs(new Blob([buffer]), `تقرير_سيارات_${new Date().toISOString().slice(0,10)}.xlsx`);
-        showToast("✅ تم تصدير Excel", "success");
-    } catch(e) {
-        showToast("خطأ: "+e.message, "error");
-    } finally { showLoading(false); }
-}
+            wsLowestDetailed.getColumn(1).width = 8; wsLowestDetailed.getColumn(2).width = 22; wsLowestDetailed.getColumn(3).width = 20;
+            
+            // ورقة أهم 10 سيارات
+            const wsImportant = workbook.addWorksheet("📊 أهم 10 سيارات");
+            wsImportant.views = [{ rightToLeft: true }];
+            wsImportant.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+            let impRow = 1;
+            wsImportant.mergeCells('A1:F1');
+            wsImportant.getCell('A1').value = "📊 أهم 10 سيارات (مصروفات، إيرادات، صافي أرباح)";
+            wsImportant.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF000000' } };
+            wsImportant.getCell('A1').fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFD9EAD3' } };
+            wsImportant.getCell('A1').alignment = { horizontal:'center', vertical:'middle' };
+            wsImportant.getRow(1).height = 40;
+            impRow = 2;
+            const sections = [
+                { title: "💰 أعلى 10 مصروفات", data: [...allTrucks].sort((a,b)=>b.totalExpense - a.totalExpense).slice(0,10), cols: ["#", "رقم اللوحة", "المصروفات (ر.س)"] },
+                { title: "📉 أقل 10 مصروفات", data: [...allTrucks].sort((a,b)=>a.totalExpense - b.totalExpense).slice(0,10), cols: ["#", "رقم اللوحة", "المصروفات (ر.س)"] },
+                { title: "📈 أكثر 10 إيرادات", data: [...allTrucks].sort((a,b)=>b.totalRevenue - a.totalRevenue).slice(0,10), cols: ["#", "رقم اللوحة", "الإيرادات (ر.س)"] },
+                { title: "📉 أقل 10 إيرادات", data: [...allTrucks].sort((a,b)=>a.totalRevenue - b.totalRevenue).slice(0,10), cols: ["#", "رقم اللوحة", "الإيرادات (ر.س)"] },
+                { title: "🏆 أكثر 10 صافي أرباح", data: [...allTrucks].sort((a,b)=>b.netIncome - a.netIncome).slice(0,10), cols: ["#", "رقم اللوحة", "صافي الربح (ر.س)"] },
+                { title: "⚠️ أقل 10 صافي أرباح", data: [...allTrucks].sort((a,b)=>a.netIncome - b.netIncome).slice(0,10), cols: ["#", "رقم اللوحة", "صافي الربح (ر.س)"] }
+            ];
+            for (let sec of sections) {
+                wsImportant.mergeCells(`A${impRow}:C${impRow}`);
+                wsImportant.getCell(`A${impRow}`).value = sec.title;
+                wsImportant.getCell(`A${impRow}`).font = { size: 14, bold: true, color: { argb: 'FF000000' } };
+                wsImportant.getCell(`A${impRow}`).fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFE6F0D8' } };
+                wsImportant.getCell(`A${impRow}`).alignment = { horizontal: 'center' };
+                impRow++;
+                const headerRow = wsImportant.getRow(impRow);
+                for (let i = 0; i < sec.cols.length; i++) {
+                    const cell = headerRow.getCell(i+1);
+                    cell.value = sec.cols[i];
+                    cell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFC5E0B4' } };
+                    cell.font = { bold: true, color: { argb: 'FF000000' } };
+                    cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                    cell.alignment = { horizontal: 'center' };
+                }
+                impRow++;
+                for (let idx = 0; idx < sec.data.length; idx++) {
+                    const item = sec.data[idx];
+                    const row = wsImportant.getRow(impRow);
+                    row.getCell(1).value = idx+1;
+                    row.getCell(2).value = item.plateCode;
+                    const value = sec.cols[2].includes("المصروفات") ? item.totalExpense : (sec.cols[2].includes("الإيرادات") ? item.totalRevenue : item.netIncome);
+                    row.getCell(3).value = value;
+                    row.getCell(3).numFmt = '#,##0.00';
+                    for (let i = 1; i <= 3; i++) {
+                        const cell = row.getCell(i);
+                        cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+                        cell.alignment = { horizontal: 'center' };
+                        if (idx % 2 === 0) cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF9F9F9' } };
+                        else cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } };
+                    }
+                    impRow++;
+                }
+                if (sec.data.length === 0) {
+                    const row = wsImportant.getRow(impRow);
+                    row.getCell(2).value = "لا توجد بيانات";
+                    row.getCell(2).alignment = { horizontal: 'center' };
+                    impRow++;
+                }
+                impRow++;
+            }
+            wsImportant.getColumn(1).width = 8; wsImportant.getColumn(2).width = 22; wsImportant.getColumn(3).width = 20;
+            
+            // ورقة أقل 10 سيارات استهلاك (ملخص إجمالي المصروفات)
+            const lowestExpense = [...allTrucks].sort((a,b) => a.totalExpense - b.totalExpense).slice(0,10);
+            const wsLowest = workbook.addWorksheet("أقل 10 سيارات استهلاك");
+            wsLowest.views = [{ rightToLeft: true }];
+            wsLowest.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+            wsLowest.mergeCells('A1:F1');
+            wsLowest.getCell('A1').value = "📉 أقل 10 سيارات من حيث إجمالي المصروفات (الاستهلاك)";
+            wsLowest.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF000000' } };
+            wsLowest.getCell('A1').fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFD9EAD3' } };
+            wsLowest.getCell('A1').alignment = { horizontal:'center', vertical:'middle' };
+            wsLowest.getRow(1).height = 40;
+            const lowHeaders = ["#", "رقم اللوحة", "الماركة", "إجمالي المصروفات (ر.س)", "عدد الردود", "الوزن (طن)"];
+            const lowHeaderRow = wsLowest.addRow(lowHeaders);
+            lowHeaderRow.eachCell(cell => {
+                cell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FF2E86C1' } };
+                cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+            });
+            wsLowest.getRow(2).height = 25;
+            lowestExpense.forEach((item, idx) => {
+                const row = wsLowest.addRow([idx+1, item.plateCode, item.brand, item.totalExpense, item.tripCount || 0, ((item.weight || 0)/1000).toFixed(2)]);
+                row.eachCell((cell, colNum) => {
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                    cell.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+                    if (colNum === 4) cell.numFmt = '#,##0.00';
+                    if (colNum === 5) cell.numFmt = '0';
+                    if (colNum === 6) cell.numFmt = '#,##0.00';
+                });
+                if (idx % 2 === 0) row.eachCell(cell => cell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFF9F9F9' } });
+                else row.eachCell(cell => cell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFEAF2F8' } });
+            });
+            wsLowest.columns = [{ width: 8 }, { width: 22 }, { width: 15 }, { width: 22 }, { width: 12 }, { width: 12 }];
+            
+            // ورقة إجمالي الشاحنات (مبسط)
+            const wsSimple = workbook.addWorksheet("إجمالي الشاحنات (مبسط)");
+            let simpleRows = allTrucks.map(t => [t.brand, t.year, t.plateCode, t.totalExpense, t.totalRevenue, t.netIncome, t.netPercent / 100]);
+            styleLight(wsSimple, "🚛 إجمالي الشاحنات", [
+                { header:"الماركة", width:15 }, { header:"سنة الإنتاج", width:12 }, { header:"رقم اللوحة", width:20 },
+                { header:"إجمالي المصروفات", width:22 }, { header:"إجمالي الإيرادات", width:22 },
+                { header:"صافي الدخل", width:22 }, { header:"نسبة الصافي %", width:18 }
+            ], simpleRows, [3,4,5], [6], true, 6);
+            
+            // ترتيب الأوراق
+            const sheetOrder = ["ملخص شهري", "ملخص إجمالي المصاريف", "تفصيل المصاريف لكل شاحنة", "🏆 أعلى 10 في بنود المصاريف", "📉 أقل 10 في بنود المصاريف", "📊 أهم 10 سيارات", "أقل 10 سيارات استهلاك", "إجمالي الشاحنات (مبسط)"];
+            workbook.eachSheet((sheet, id) => {
+                const targetIndex = sheetOrder.indexOf(sheet.name);
+                if (targetIndex !== -1 && sheet.order !== targetIndex) sheet.order = targetIndex;
+            });
+            workbook.worksheets.sort((a, b) => (a.order || 999) - (b.order || 999));
+            
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveAs(new Blob([buffer]), `تقرير_سيارات_${new Date().toISOString().slice(0,10)}.xlsx`);
+            showToast("✅ تم تصدير Excel", "success");
+        } catch(e) {
+            showToast("خطأ: "+e.message, "error");
+        } finally { showLoading(false); }
+    }
+
+    // ---------------------- أحداث الصفحة ----------------------
+    document.getElementById("uploadBtn").onclick = () => document.getElementById("excelInput").click();
+    document.getElementById("excelInput").onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        currentUploadedFile = file;
+        showLoading(true);
+        try {
+            const data = await processExcelFile(file);
+            currentVehicleData = data;
+            renderDashboard(data);
+            hasUnsavedData = true;
+            updateReminder();
+            showToast(`✅ تم تحليل ${data.length} سيارة، تذكر حفظ التقرير!`, "success");
+        } catch (err) { showToast("خطأ: "+err.message, "error"); }
+        finally { showLoading(false); }
+    };
     document.getElementById("saveReportBtn").onclick = saveCurrentReportToServer;
     document.getElementById("refreshReportsListBtn").onclick = async () => {
         document.getElementById("reportsPanel").style.display = "block";
@@ -857,25 +1058,21 @@ async function exportFullExcel() {
             await apiCall('/me');
             await loadAndDisplayReportsList();
             await loadUploadedFiles();
-            if (typeof renderNavbar === 'function') {
-                renderNavbar();
-            } else {
-                const navDiv = document.getElementById('navLinks');
-                if (navDiv) navDiv.innerHTML = `<a href="index.html" class="nav-link">📊 الرئيسية</a>
-                                                <a href="orders.html" class="nav-link">📝 الطلبات</a>
-                                                <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
-                                                <a href="trucks.html" class="nav-link">🚛 السيارات</a>
-                                                <a href="products.html" class="nav-link">📦 أنواع البحص</a>
-                                                <a href="factories.html" class="nav-link">🏭 المصانع</a>
-                                                <a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>
-                                                <a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان</a>
-                                                <a href="expenses.html" class="nav-link active">💰 مصاريف السيارات</a>
-                                                <a href="cash_orders.html" class="nav-link">💰 طلبات نقدية</a>
-                                                <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
-                                                <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
-                                                <a href="users.html" class="nav-link">👥 المستخدمين</a>
-                                                <a href="logs.html" class="nav-link">📜 السجلات</a>`;
-            }
+            const navDiv = document.getElementById('navLinks');
+            if (navDiv) navDiv.innerHTML = `<a href="index.html" class="nav-link">📊 الرئيسية</a>
+                                            <a href="orders.html" class="nav-link">📝 الطلبات</a>
+                                            <a href="distribution.html" class="nav-link">🚚 التوزيع</a>
+                                            <a href="trucks.html" class="nav-link">🚛 السيارات</a>
+                                            <a href="products.html" class="nav-link">📦 أنواع البحص</a>
+                                            <a href="factories.html" class="nav-link">🏭 المصانع</a>
+                                            <a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>
+                                            <a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان</a>
+                                            <a href="expenses.html" class="nav-link active">💰 مصاريف السيارات</a>
+                                            <a href="cash_orders.html" class="nav-link">💰 طلبات نقدية</a>
+                                            <a href="settings.html" class="nav-link">⚙️ الإعدادات</a>
+                                            <a href="restrictions.html" class="nav-link">⛔ الحظر</a>
+                                            <a href="users.html" class="nav-link">👥 المستخدمين</a>
+                                            <a href="logs.html" class="nav-link">📜 السجلات</a>`;
         } catch(e) { window.location.href = '/login.html'; }
     })();
 </script>
