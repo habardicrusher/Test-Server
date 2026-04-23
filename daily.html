@@ -42,8 +42,6 @@
         .input-group select option { background: #1a1a2e; }
         input[type="file"] { width: 100%; padding: 10px; border-radius: 40px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-weight: bold; cursor: pointer; border: none; text-align: center; margin-bottom: 10px; }
         input[type="file"]::file-selector-button { background: rgba(255,255,255,0.2); border: none; padding: 6px 12px; border-radius: 30px; color: white; margin-left: 10px; cursor: pointer; }
-        .btn-sm { background: rgba(255,255,255,0.15); border: none; padding: 6px 12px; border-radius: 20px; color: white; cursor: pointer; font-size: 0.8rem; margin-top: 8px; width: 100%; transition: 0.2s; }
-        .btn-sm:hover { background: #667eea; transform: scale(1.02); }
         .btn-group { display: flex; justify-content: center; gap: 20px; margin: 30px 0; }
         .btn { border: none; padding: 12px 32px; border-radius: 40px; font-weight: 700; cursor: pointer; transition: 0.3s; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
         .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
@@ -95,7 +93,7 @@
             </div>
             <div class="nav-links" id="navLinks"></div>
 
-            <!-- Dashboard ملخص سريع -->
+            <!-- Dashboard -->
             <div class="dashboard-cards">
                 <div class="card"><h4>🚛 إجمالي الشاحنات</h4><div class="number" id="totalTrucks">0</div></div>
                 <div class="card"><h4>⛽ إجمالي استهلاك الديزل (لتر)</h4><div class="number" id="totalDiesel">0</div></div>
@@ -105,7 +103,7 @@
                 <div class="card"><h4>📋 إجمالي التجاوزات</h4><div class="number" id="totalViolations">0</div></div>
             </div>
 
-            <!-- قسم رفع الملفات مع أزرار تحليل فردية -->
+            <!-- Upload cards with individual analyze buttons -->
             <div class="upload-grid">
                 <div class="upload-card">
                     <h3>🚛 المسافات <button class="btn-analyze-individual" onclick="analyzeDistancesOnly()">تحليل</button></h3>
@@ -157,7 +155,7 @@
                 <button class="btn btn-success" id="exportAllExcelBtn"><i class="fas fa-file-excel"></i> حفظ تقرير Excel منسق وملون</button>
             </div>
 
-            <!-- مناطق النتائج -->
+            <!-- Results sections -->
             <div id="resultsArea">
                 <div id="distSection" class="section" style="display:none;"><h2>🚛 نتائج تحليل المسافات لليوم المختار</h2><div id="distStatus" class="status-area"></div>
                     <div class="dist-grid"><div class="dist-card"><div id="distTop10Table"></div></div><div class="dist-card"><div id="distBottom10Table"></div></div><div class="dist-card"><canvas id="distChart"></canvas></div></div>
@@ -176,7 +174,7 @@
     </div>
 
     <script>
-        // ========== دوال النظام والمصادقة ==========
+        // ========== Auth and navigation ==========
         const API_BASE = '/api';
         let currentUserRole = null;
         let currentUserPermissions = {};
@@ -220,7 +218,7 @@
             return links.join('');
         }
         
-        // ========== بيانات التحليل ==========
+        // ========== Data variables ==========
         let distProcessed = [];
         let distChart = null;
         let dieselDataMap = {};
@@ -233,10 +231,8 @@
         const AVG_CONSUMPTION = 3.25;
         let distWorkbook = null;
         
-        // دوال مساعدة
+        // Helper functions
         function cleanNumber(raw) { let d = String(raw).replace(/[^\d]/g, ''); return d || '?'; }
-        function norm(s) { return (s || "").toString().replace(/\u200f|\u200e/g, "").replace(/\s+/g, ""); }
-        function get(row, key) { let k = Object.keys(row).find(x => norm(x).includes(norm(key))); return k ? row[k] : 0; }
         function cleanVehicleNumber(raw) { if (!raw) return "غير محدد"; let str = String(raw).trim().replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0)-1632)); let digits = str.replace(/[^\d]/g, ''); return digits.length ? digits : "بدون رقم"; }
         function toEnglishNumbers(val) { if (val === undefined) return ""; return String(val).replace(/[\u0660-\u0669]/g, c => String(c.charCodeAt(0)-1632)); }
         function timeToHours(t) { let p = t.split(':'); return (parseInt(p[0])||0)+(parseInt(p[1])||0)/60+(parseInt(p[2])||0)/3600; }
@@ -249,7 +245,6 @@
         function parseCoordsViol(v) { let t=cleanTextViol(v); let m=t.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/); return m ? {lat:parseFloat(m[1]), lon:parseFloat(m[2])} : null; }
         function haversineKmViol(lat1,lon1,lat2,lon2) { const R=6371; const dLat=(lat2-lat1)*Math.PI/180; const dLon=(lon2-lon1)*Math.PI/180; const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2; const c=2*Math.asin(Math.sqrt(a)); return R*c; }
         
-        // تحديث اللوحة العلوية
         function updateDashboard() {
             document.getElementById('totalTrucks').innerText = distProcessed.length || 0;
             const totalFuel = Object.values(dieselDataMap).reduce((s,x)=>s+x.fuel,0);
@@ -263,7 +258,7 @@
             document.getElementById('totalViolations').innerText = currentViolRows.length;
         }
         
-        // ========== 1. تحليل المسافات (رقم اللوحة من العمود A) ==========
+        // ========== 1. Distance analysis (fixed: no "jonathan", reads vehicle from column A) ==========
         document.getElementById('distFile').addEventListener('change', e => { 
             if(e.target.files[0]){ 
                 let r=new FileReader(); 
@@ -281,9 +276,8 @@
                 const dayNum = parseInt(selectedDay);
                 const sheet = distWorkbook.Sheets[distWorkbook.SheetNames[0]];
                 const data = XLSX.utils.sheet_to_json(sheet, {header:1, defval:""});
-                // البحث عن صف العناوين (أول صف يحتوي على أرقام الأيام أو أي نص)
-                let headerRow = 0; // نفترض أن الصف الأول هو صف العناوين
-                // لكن قد يكون هناك أسطر فارغة في البداية، نبحث عن أول صف غير فارغ
+                // Find first non-empty row as header
+                let headerRow = 0;
                 for(let i=0;i<Math.min(data.length,20);i++) {
                     if(data[i] && data[i].length>0 && data[i][0] && String(data[i][0]).trim() !== "") {
                         headerRow = i;
@@ -294,19 +288,16 @@
                 let dayColIdx = -1;
                 for(let i=0;i<headers.length;i++) {
                     let h = String(headers[i] || "").trim();
-                    // محاولة تحويل إلى رقم
                     let num = parseInt(h);
                     if(!isNaN(num) && num === dayNum) { dayColIdx = i; break; }
                 }
                 if(dayColIdx === -1) throw new Error(`لم يتم العثور على عمود برقم اليوم ${dayNum} في الصف الأول. تأكد من أن الأعمدة تحمل أرقام الأيام.`);
                 
                 const vehicles = [];
-                // قراءة البيانات من الصف التالي لصف العناوين
                 for(let r = headerRow + 1; r < data.length; r++) {
                     let row = data[r];
                     if(!row || row.length === 0) continue;
-                    // رقم اللوحة من العمود الأول (index 0)
-                    let vehicleRaw = row[0];
+                    let vehicleRaw = row[0]; // column A
                     if(!vehicleRaw) continue;
                     let vehicle = cleanNumber(vehicleRaw);
                     let dist = parseFloat(row[dayColIdx]) || 0;
@@ -317,8 +308,8 @@
                 distProcessed = vehicles;
                 const top10 = vehicles.slice(0,10);
                 const bottom10 = [...vehicles].sort((a,b)=>a.distance-b.distance).slice(0,10);
-                document.getElementById('distTop10Table').innerHTML = `<h3 style="color:#a5b4fc;">🏆 أفضل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم اللوحة</th><th>كم</th></tr></thead><tbody>${top10.map((v,i)=>`<tr><td>${i+1} jonathan${v.vehicle} jonathan${v.distance.toFixed(2)} jonathan`).join('')}</tbody></table></div>`;
-                document.getElementById('distBottom10Table').innerHTML = `<h3 style="color:#a5b4fc;">⚠️ أقل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم اللوحة</th><th>كم</th></tr></thead><tbody>${bottom10.map((v,i)=>`<tr><td>${i+1} jonathan${v.vehicle} jonathan${v.distance.toFixed(2)} jonathan`).join('')}</tbody></table></div>`;
+                document.getElementById('distTop10Table').innerHTML = `<h3 style="color:#a5b4fc;">🏆 أفضل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم اللوحة</th><th>كم</th></tr></thead><tbody>${top10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></tr></div>`;
+                document.getElementById('distBottom10Table').innerHTML = `<h3 style="color:#a5b4fc;">⚠️ أقل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم اللوحة</th><th>كم</th></tr></thead><tbody>${bottom10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
                 if(distChart) distChart.destroy();
                 const ctx = document.getElementById('distChart').getContext('2d');
                 distChart = new Chart(ctx, {type:'bar', data:{labels:top10.map(v=>v.vehicle), datasets:[{label:`مسافات اليوم ${dayNum} (كم)`, data:top10.map(v=>v.distance), backgroundColor:'#667eea'}]}});
@@ -330,60 +321,59 @@
             showLoading(false);
         };
         
-        // ========== 2. تحليل الديزل (محسّن للبحث عن الأعمدة) ==========
-        async function readDiesel(file){ return new Promise(res=>{ let r=new FileReader(); r.onload=e=>{ let wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); let sh=wb.Sheets[wb.SheetNames[0]]; res(XLSX.utils.sheet_to_json(sh,{defval:""})); }; r.readAsArrayBuffer(file); }); }
-        
+        // ========== 2. Diesel analysis (handles merged cells) ==========
         window.analyzeDieselOnly = async function() {
             let file = document.getElementById('dieselFile').files[0];
             if(!file) { showToast("الرجاء رفع ملف الديزل أولاً", "error"); return; }
             showLoading(true);
             try {
-                let data = await readDiesel(file);
-                if(!data || data.length === 0) throw new Error("الملف فارغ أو لا يحتوي على بيانات");
-                let map = {};
-                // محاولة البحث عن الأعمدة بالعربية أو الإنجليزية
-                for(let row of data) {
-                    let vehicle = null;
-                    let driver = null;
-                    let cost = 0;
-                    let fuel = 0;
-                    // البحث عن المركبة
-                    for(let key of Object.keys(row)) {
-                        let k = key.toString().toLowerCase();
-                        if(k.includes('مركبة') || k.includes('vehicle')) vehicle = row[key];
-                        if(k.includes('سائق') || k.includes('driver')) driver = row[key];
-                        if(k.includes('تكلفة') || k.includes('cost')) cost = parseFloat(row[key]) || 0;
-                        if(k.includes('استهلاك') || k.includes('fuel') || k.includes('لتر')) fuel = parseFloat(row[key]) || 0;
+                let buf = await file.arrayBuffer();
+                let wb = XLSX.read(buf, {type:'array'});
+                let sheet = wb.Sheets[wb.SheetNames[0]];
+                let rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:""});
+                // Find header row that contains keywords
+                let headerRowIndex = -1;
+                let colMap = { vehicle: -1, driver: -1, cost: -1, fuel: -1 };
+                for(let i=0; i<Math.min(rows.length, 30); i++) {
+                    let row = rows[i];
+                    if(!row) continue;
+                    for(let j=0; j<row.length; j++) {
+                        let cell = String(row[j] || "").trim().toLowerCase();
+                        if(cell.includes('مركبة') || cell.includes('vehicle')) colMap.vehicle = j;
+                        if(cell.includes('سائق') || cell.includes('driver')) colMap.driver = j;
+                        if(cell.includes('تكلفة') || cell.includes('cost') || cell.includes('اجمالي')) colMap.cost = j;
+                        if(cell.includes('استهلاك') || cell.includes('fuel') || cell.includes('لتر')) colMap.fuel = j;
                     }
-                    // إذا لم نجد باستخدام الأسماء، نحاول استخدام أعمدة ثابتة (العمود B = مركبة، العمود C = سائق، إلخ)
-                    if(!vehicle && row[1]) vehicle = row[1];
-                    if(!driver && row[2]) driver = row[2];
-                    if(cost===0 && row[3]) cost = parseFloat(row[3]) || 0;
-                    if(fuel===0 && row[4]) fuel = parseFloat(row[4]) || 0;
-                    
-                    if(!vehicle) continue;
-                    let v = cleanNumber(vehicle);
-                    if(!map[v]) map[v] = {vehicle:v, driver:driver || "غير محدد", cost:0, fuel:0};
-                    map[v].cost += cost;
-                    map[v].fuel += fuel;
+                    if(colMap.vehicle !== -1 && colMap.fuel !== -1) { headerRowIndex = i; break; }
                 }
-                if(Object.keys(map).length === 0) throw new Error("لم يتم العثور على بيانات الديزل (تأكد من وجود أعمدة: المركبة، السائق، التكلفة، الاستهلاك)");
+                if(headerRowIndex === -1) throw new Error("لم يتم العثور على أعمدة البيانات المطلوبة (مركبة، استهلاك)");
+                let map = {};
+                for(let r = headerRowIndex+1; r < rows.length; r++) {
+                    let row = rows[r];
+                    if(!row || row.length === 0) continue;
+                    let vehicleRaw = (colMap.vehicle !== -1 && row[colMap.vehicle]) ? row[colMap.vehicle] : null;
+                    if(!vehicleRaw) continue;
+                    let vehicle = cleanNumber(vehicleRaw);
+                    let driver = (colMap.driver !== -1 && row[colMap.driver]) ? row[colMap.driver] : "غير محدد";
+                    let cost = (colMap.cost !== -1 && row[colMap.cost]) ? parseFloat(row[colMap.cost]) || 0 : 0;
+                    let fuel = (colMap.fuel !== -1 && row[colMap.fuel]) ? parseFloat(row[colMap.fuel]) || 0 : 0;
+                    if(!map[vehicle]) map[vehicle] = {vehicle, driver, cost:0, fuel:0};
+                    map[vehicle].cost += cost;
+                    map[vehicle].fuel += fuel;
+                }
+                if(Object.keys(map).length === 0) throw new Error("لا توجد بيانات صالحة في الملف");
                 dieselDataMap = map;
                 const sorted = Object.values(map).sort((a,b)=>b.fuel - a.fuel).slice(0,10);
                 let tbody = document.querySelector("#dieselTable tbody");
-                if(sorted.length === 0) tbody.innerHTML = '<tr><td colspan="6">لا توجد بيانات<td></tr>';
-                else tbody.innerHTML = sorted.map((x,i)=>`<tr><td>${i+1}</td><td>${x.vehicle}</td><td>${x.driver}</td><td>${x.fuel.toFixed(2)}</td><td>${x.cost.toLocaleString()}</td><td>${(x.fuel*AVG_CONSUMPTION).toFixed(0)}</td></tr>`).join('');
+                tbody.innerHTML = sorted.map((x,i)=>`<tr><td>${i+1}</td><td>${x.vehicle}</td><td>${x.driver}</td><td>${x.fuel.toFixed(2)}</td><td>${x.cost.toLocaleString()}</td><td>${(x.fuel*AVG_CONSUMPTION).toFixed(0)}</td></tr>`).join('');
                 document.getElementById('dieselSection').style.display = 'block';
                 updateDashboard();
                 showToast("تم تحليل الديزل بنجاح", "success");
-            } catch(err) { 
-                console.error(err);
-                showToast("خطأ في تحليل الديزل: "+err.message, "error"); 
-            }
+            } catch(err) { showToast("خطأ: "+err.message, "error"); }
             showLoading(false);
         };
         
-        // ========== 3. تحليل السرعة الزائدة (كما هو) ==========
+        // ========== 3. Speeding analysis (unchanged but works) ==========
         async function parseExcelAndExtract(file){
             return new Promise((resolve,reject)=>{
                 const reader=new FileReader();
@@ -427,7 +417,7 @@
             showLoading(false);
         };
         
-        // ========== 4. تحليل الحركة والخمول ==========
+        // ========== 4. Stop analysis ==========
         window.analyzeStopOnly = async function() {
             let file = document.getElementById('stopFile').files[0];
             if(!file) { showToast("الرجاء رفع ملف الخمول أولاً", "error"); return; }
@@ -441,7 +431,7 @@
                 for(let i=4;i<rows.length;i++){ let r=rows[i]; if(!r[3]) continue; let vehicle=cleanNumber(r[3]); let driver=r[6]||''; let run=timeToHours(String(r[9]||'00:00:00')), idle=timeToHours(String(r[10]||'00:00:00')), stop=timeToHours(String(r[11]||'00:00:00')); data.push({vehicle,driver,runPercent:(run/24)*100,idlePercent:(idle/24)*100,stopPercent:(stop/24)*100}); }
                 stopGlobalData = data;
                 const top10 = data.sort((a,b)=>b.stopPercent-a.stopPercent).slice(0,10);
-                let html = `<table><thead><tr><th>#</th><th>المركبة</th><th>السائق</th><th>نسبة التوقف %</th></tr></thead><tbody>${top10.map((d,i)=>`<tr><td>${i+1}</td><td>${d.vehicle}</td><td>${d.driver}</td><td>${d.stopPercent.toFixed(1)}%</td></tr>`).join('')}</tbody></table>`;
+                let html = `</table><thead><tr><th>#</th><th>المركبة</th><th>السائق</th><th>نسبة التوقف %</th></tr></thead><tbody>${top10.map((d,i)=>`<tr><td>${i+1}</td><td>${d.vehicle}</td><td>${d.driver}</td><td>${d.stopPercent.toFixed(1)}%</td></tr>`).join('')}</tbody></table>`;
                 document.getElementById('stopTable').innerHTML = html;
                 document.getElementById('stoppageSection').style.display = 'block';
                 updateDashboard();
@@ -450,7 +440,7 @@
             showLoading(false);
         };
         
-        // ========== 5. تحليل الميزان ==========
+        // ========== 5. Scale analysis ==========
         const VALID_TRUCKS = new Map([["1091","SDA"],["2757","BTA"],["2758","BTA"],["2759","BTA"],["2760","BTA"],["2762","BTA"],["2818","BTA"],["2927","BTA"],["2928","BTA"],["2929","BTA"],["3321","UXA"],["3322","UXA"],["3324","UXA"],["3325","UXA"],["3326","UXA"],["3461","KXA"],["3462","KXA"],["3963","TSA"],["4445","GSA"],["5324","SXA"],["5367","KRA"],["5520","XXA"],["5521","XXA"],["5522","XXA"],["5523","XXA"],["5524","XXA"],["5525","XXA"],["5526","XXA"],["5527","XXA"],["5528","XXA"],["5658","SXA"],["5796","VRA"],["5797","VRA"],["5800","VRA"],["6398","ERA"],["6428","TRA"],["6429","TRA"],["6430","TRA"],["6432","TRA"],["6612","DSA"],["6613","DSA"],["6614","DSA"],["6615","DSA"],["6616","DSA"],["6617","DSA"],["6618","DSA"],["6619","DSA"],["6620","DSA"],["6621","DSA"],["6622","DSA"],["6623","DSA"],["6624","DSA"],["6626","DSA"],["6629","DSA"],["6935","GSA"],["6939","GSA"],["7042","ZXA"],["7043","ZXA"],["7332","DXA"],["7682","DXA"],["7750","DXA"],["7837","DXA"],["7926","DXA"],["7927","DXA"],["7928","DXA"],["7929","DXA"],["7930","DXA"],["7974","DXA"],["7980","DXA"],["9103","HSA"],["9492","SXA"],["9493","SXA"],["9495","SXA"],["9496","SXA"]]);
         const EXCLUDED_NAMES = new Set(["eisam خ","eisam ح","عادل خ","عادل ح","mamoon","zeshan","برهان","ابراهيم"]);
         function isTruckValid(truckNumber, truckCode){ let expected=VALID_TRUCKS.get(truckNumber); if(!expected) return false; if(truckCode&&truckCode.trim()!=='') return expected===truckCode.trim(); return true; }
@@ -504,14 +494,11 @@
                 document.getElementById('scaleSection').style.display = 'block';
                 updateDashboard();
                 showToast("تم تحليل الميزان بنجاح", "success");
-            } catch(err) { 
-                console.error(err);
-                showToast("خطأ في تحليل الميزان: "+err.message, "error"); 
-            }
+            } catch(err) { showToast("خطأ: "+err.message, "error"); }
             showLoading(false);
         };
         
-        // ========== 6. تحليل التجاوزات ==========
+        // ========== 6. Violations analysis ==========
         function extractRowsFromSheetViol(ws){
             if(!ws) return [];
             const range = XLSX.utils.decode_range(ws['!ref']||'A1:A1');
@@ -558,7 +545,7 @@
             showLoading(false);
         };
         
-        // زر التحليل الشامل
+        // Analyze all button
         document.getElementById('analyzeAllBtn').addEventListener('click', async () => {
             showLoading(true);
             await analyzeDistancesOnly();
@@ -571,7 +558,7 @@
             showToast("تم تحليل جميع البيانات بنجاح", "success");
         });
         
-        // تصدير Excel بتنسيق رائع
+        // ========== Export to Excel (no "jonathan") ==========
         async function exportAllToExcel() {
             showLoading(true);
             try {
@@ -607,7 +594,7 @@
                     });
                 }
                 
-                // ملخص
+                // Summary sheet
                 const summarySheet = workbook.addWorksheet('ملخص التقارير');
                 summarySheet.addRow(['تقرير كسارة الحبردي - لوحة المعلومات']);
                 summarySheet.mergeCells('A1:B1');
@@ -625,37 +612,42 @@
                 summarySheet.addRow(['إجمالي التجاوزات', document.getElementById('totalViolations').innerText]);
                 styleWorksheet(summarySheet);
                 
-                // باقي الأوراق
+                // Distance sheet
                 if(distProcessed.length) {
                     const ws = workbook.addWorksheet('المسافات');
                     ws.addRow(['رقم الشاحنة', 'المسافة (كم)']);
                     distProcessed.forEach(v => ws.addRow([v.vehicle, v.distance]));
                     styleWorksheet(ws);
                 }
+                // Diesel sheet
                 if(Object.keys(dieselDataMap).length) {
                     const ws = workbook.addWorksheet('الديزل');
                     ws.addRow(['المركبة', 'السائق', 'التكلفة', 'الاستهلاك (لتر)', 'المسافة (كم)']);
                     Object.values(dieselDataMap).forEach(x => ws.addRow([x.vehicle, x.driver, x.cost, x.fuel, (x.fuel*AVG_CONSUMPTION).toFixed(0)]));
                     styleWorksheet(ws);
                 }
+                // Speeding sheet
                 if(globalFullData.length) {
                     const ws = workbook.addWorksheet('السرعات الزائدة');
                     ws.addRow(['المركبة', 'السرعة القصوى', 'المسافة (كم)', 'مرات التجاوز']);
                     globalFullData.forEach(v => ws.addRow([v.vehicleCleaned, v.maxSpeed, v.distance, v.occurrences]));
                     styleWorksheet(ws);
                 }
+                // Stop sheet
                 if(stopGlobalData.length) {
                     const ws = workbook.addWorksheet('الحركة والخمول');
                     ws.addRow(['المركبة', 'السائق', 'تشغيل %', 'خمول %', 'توقف %']);
                     stopGlobalData.forEach(d => ws.addRow([d.vehicle, d.driver, d.runPercent, d.idlePercent, d.stopPercent]));
                     styleWorksheet(ws);
                 }
+                // Scale sheet
                 if(scaleDrivers.length) {
                     const ws = workbook.addWorksheet('الميزان');
                     ws.addRow(['السائق', 'رقم الشاحنة', 'الرحلات', 'الوزن (كجم)', 'أيام العمل', 'الرودات المطلوبة', 'النسبة %']);
                     scaleDrivers.forEach(d => ws.addRow([d.name, d.truckNumber, d.trips, d.totalWeight, d.workDays, d.requiredRoda, d.percentage]));
                     styleWorksheet(ws);
                 }
+                // Violations sheet
                 if(currentViolRows.length) {
                     const ws = workbook.addWorksheet('التجاوزات');
                     ws.addRow(['المركبة', 'المدة داخل السياج', 'مسافة التجاوز (كم)', 'نقطة البداية', 'الخروج', 'وقت الدخول', 'نوع التجاوز']);
@@ -674,7 +666,7 @@
         }
         document.getElementById('exportAllExcelBtn').addEventListener('click', exportAllToExcel);
         
-        // تحميل بيانات المستخدم والصلاحيات
+        // ========== Load user ==========
         async function loadUserAndInit() {
             showLoading(true);
             try {
