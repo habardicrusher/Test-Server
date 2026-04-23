@@ -244,7 +244,7 @@
         }
     }
 
-    // ---------------------- دوال تحليل Excel (نفس السابق) ----------------------
+    // ---------------------- دوال تحليل Excel (تم تعديلها لإضافة عدد الردود والوزن) ----------------------
     function evaluateFormula(str) {
         if (typeof str !== 'string') return NaN;
         str = str.trim();
@@ -318,6 +318,24 @@
         }
         return colMap;
     }
+    
+    // دالة مساعدة للبحث عن أعمدة "عدد الردود" و "الوزن"
+    function findExtraColumns(headers) {
+        let tripCountIdx = -1, weightIdx = -1;
+        for (let i = 0; i < headers.length; i++) {
+            let cell = headers[i].toString().trim();
+            // البحث عن "عدد الردود" أو "Trip Count" أو "عدد الرحلات"
+            if (cell.includes("عدد الردود") || cell.includes("عدد الرحلات") || cell.toLowerCase().includes("trip count")) {
+                tripCountIdx = i;
+            }
+            // البحث عن "الوزن" أو "Weight" أو "الوزن الإجمالي"
+            if (cell.includes("الوزن") || cell.toLowerCase().includes("weight") || cell.includes("الوزن الإجمالي")) {
+                weightIdx = i;
+            }
+        }
+        return { tripCountIdx, weightIdx };
+    }
+
     async function processExcelFile(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -356,6 +374,7 @@
                     return;
                 }
                 const expenseCols = findExpenseColumns(headers);
+                const extraCols = findExtraColumns(headers);
                 const vehicleList = [];
                 for (let r = headerRowIdx + 1; r < rows.length; r++) {
                     const row = rows[r];
@@ -377,6 +396,21 @@
                     }
                     const plateCode = cleanTruckId(costRaw);
                     const info = getTruckInfo(plateCode);
+                    
+                    // استخراج عدد الردود والوزن
+                    let tripCount = 0;
+                    let weight = 0;
+                    if (extraCols.tripCountIdx !== -1 && row[extraCols.tripCountIdx] !== undefined && row[extraCols.tripCountIdx] !== "") {
+                        let rawTrips = row[extraCols.tripCountIdx];
+                        tripCount = parseNumeric(rawTrips);
+                        if (isNaN(tripCount)) tripCount = 0;
+                    }
+                    if (extraCols.weightIdx !== -1 && row[extraCols.weightIdx] !== undefined && row[extraCols.weightIdx] !== "") {
+                        let rawWeight = row[extraCols.weightIdx];
+                        weight = parseNumeric(rawWeight);
+                        if (isNaN(weight)) weight = 0;
+                    }
+                    
                     vehicleList.push({
                         plateCode: plateCode,
                         brand: info.brand,
@@ -385,7 +419,9 @@
                         totalRevenue: revenue,
                         netIncome: net,
                         netPercent: (net / revenue) * 100,
-                        expenseDetails: details
+                        expenseDetails: details,
+                        tripCount: tripCount,      //新增
+                        weight: weight             //新增
                     });
                 }
                 if (!vehicleList.length) reject("لا توجد بيانات صالحة");
@@ -499,7 +535,7 @@
         formData.append('vehicleData', JSON.stringify(vehicleData));
         await apiCall('/upload-excel-report', 'POST', formData, true);
         await loadReportsFromServer();
-        await loadUploadedFiles();  // تحديث قائمة الملفات (حتى لو مخفية)
+        await loadUploadedFiles();
     }
 
     async function deleteReportFromServer(reportId) {
@@ -601,7 +637,6 @@
             document.getElementById("reportsPanel").style.display = "block";
             await loadAndDisplayReportsList();
             await loadUploadedFiles();
-            // بعد الحفظ، نعيد تعيين حالة البيانات غير المحفوظة
             hasUnsavedData = false;
             updateReminder();
         } catch (err) {
@@ -634,7 +669,8 @@
                     if (!truckMap.has(key)) {
                         truckMap.set(key, {
                             brand: v.brand, year: v.year, plateCode: key,
-                            expense: 0, revenue: 0, net: 0, details: {}
+                            expense: 0, revenue: 0, net: 0, details: {},
+                            tripCount: 0, weight: 0
                         });
                         for (let cat of expenseCategories) truckMap.get(key).details[cat.key] = 0;
                     }
@@ -642,6 +678,8 @@
                     t.expense += v.totalExpense;
                     t.revenue += v.totalRevenue;
                     t.net += v.netIncome;
+                    t.tripCount += v.tripCount || 0;
+                    t.weight += v.weight || 0;
                     if (v.expenseDetails) for (let cat of expenseCategories) t.details[cat.key] += (v.expenseDetails[cat.key] || 0);
                 }
             }
@@ -649,7 +687,9 @@
                 plateCode: vals.plateCode, brand: vals.brand, year: vals.year,
                 totalExpense: vals.expense, totalRevenue: vals.revenue, netIncome: vals.net,
                 netPercent: vals.revenue ? (vals.net/vals.revenue)*100 : 0,
-                expenseDetails: vals.details
+                expenseDetails: vals.details,
+                tripCount: vals.tripCount,
+                weight: vals.weight
             }));
             mergedData.sort((a,b) => a.netPercent - b.netPercent);
             currentVehicleData = mergedData;
@@ -664,7 +704,7 @@
         } catch(e) { showToast("خطأ: "+e.message, "error"); } finally { showLoading(false); }
     }
 
-    // ---------------------- تحميل وعرض الملفات الأصلية (مخفي لكن الوظيفة باقية) ----------------------
+    // ---------------------- تحميل وعرض الملفات الأصلية ----------------------
     async function loadUploadedFiles() {
         try {
             const response = await fetch('/api/uploaded-files', { credentials: 'include' });
@@ -705,7 +745,7 @@
         }
     }
 
-    // ---------------------- تصدير Excel (نسخة محسنة) ----------------------
+    // ---------------------- تصدير Excel (تم تعديله لإضافة عمودي عدد الردود والوزن) ----------------------
     async function exportFullExcel() {
         if (!currentVehicleData.length) { alert("لا توجد بيانات للتصدير"); return; }
         showLoading(true);
@@ -770,19 +810,32 @@
             summaryRows.push(["إجمالي الإيرادات الكلي", allTrucks.reduce((s,t)=>s+t.totalRevenue,0)]);
             summaryRows.push(["صافي الدخل الكلي", allTrucks.reduce((s,t)=>s+t.netIncome,0)]);
             styleLight(wsSummaryTotal, "📊 ملخص إجمالي المصاريف", [{ header: "بند المصروف", width: 25 }, { header: "الإجمالي (ر.س)", width: 22 }], summaryRows, [1]);
-            let detailColumns = [{ header: "الماركة", width: 15 }, { header: "سنة الإنتاج", width: 12 }, { header: "رقم اللوحة", width: 20 }];
-            for (let cat of expenseCategories) detailColumns.push({ header: cat.name, width: 18 });
-            detailColumns.push({ header: "إجمالي الإيرادات", width: 22 }, { header: "إجمالي المصروفات", width: 22 }, { header: "صافي الدخل", width: 22 }, { header: "نسبة الصافي %", width: 18 });
+            
+            // تفصيل المصاريف لكل شاحنة (تم إضافة عمودي عدد الردود والوزن)
+            let detailColumns = [
+                { header: "الماركة", width: 15 },
+                { header: "سنة الإنتاج", width: 12 },
+                { header: "رقم اللوحة", width: 20 },
+                { header: "عدد الردود", width: 12 },      //新增
+                { header: "الوزن (طن)", width: 12 },      //新增 (افترضنا الوزن بالأطنان، يمكن تعديل الوحدة)
+                ...expenseCategories.map(cat => ({ header: cat.name, width: 18 })),
+                { header: "إجمالي الإيرادات", width: 22 },
+                { header: "إجمالي المصروفات", width: 22 },
+                { header: "صافي الدخل", width: 22 },
+                { header: "نسبة الصافي %", width: 18 }
+            ];
             let detailRows = allTrucks.map(t => {
-                let row = [t.brand, t.year, t.plateCode];
+                let row = [t.brand, t.year, t.plateCode, t.tripCount || 0, (t.weight || 0) / 1000]; // تحويل الوزن إلى طن افتراضياً
                 for (let cat of expenseCategories) row.push(t.expenseDetails?.[cat.key] || 0);
                 row.push(t.totalRevenue, t.totalExpense, t.netIncome, t.netPercent / 100);
                 return row;
             });
             const wsDetail = workbook.addWorksheet("تفصيل المصاريف لكل شاحنة");
-            const numericDetailIndices = Array.from({length: expenseCategories.length + 3}, (_,i) => i+3);
+            const numericDetailIndices = [3,4, ...Array.from({length: expenseCategories.length + 3}, (_,i) => i+5)];
             const percentDetailIndex = detailColumns.length - 1;
             styleLight(wsDetail, "📊 تفصيل المصاريف لكل شاحنة", detailColumns, detailRows, numericDetailIndices, [percentDetailIndex], true, percentDetailIndex);
+            
+            // باقي الأوراق دون تغيير (أعلى 10 في بنود المصاريف، أهم 10 سيارات، إجمالي الشاحنات)
             const wsTop = workbook.addWorksheet("🏆 أعلى 10 في بنود المصاريف");
             wsTop.views = [{ rightToLeft: true }];
             wsTop.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
@@ -842,6 +895,7 @@
             wsTop.getColumn(1).width = 8;
             wsTop.getColumn(2).width = 22;
             wsTop.getColumn(3).width = 20;
+            
             const wsImportant = workbook.addWorksheet("📊 أهم 10 سيارات");
             wsImportant.views = [{ rightToLeft: true }];
             wsImportant.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
@@ -906,6 +960,7 @@
             wsImportant.getColumn(1).width = 8;
             wsImportant.getColumn(2).width = 22;
             wsImportant.getColumn(3).width = 20;
+            
             const wsSimple = workbook.addWorksheet("إجمالي الشاحنات (مبسط)");
             let simpleRows = allTrucks.map(t => [t.brand, t.year, t.plateCode, t.totalExpense, t.totalRevenue, t.netIncome, t.netPercent / 100]);
             styleLight(wsSimple, "🚛 إجمالي الشاحنات", [
@@ -913,6 +968,7 @@
                 { header:"إجمالي المصروفات", width:22 }, { header:"إجمالي الإيرادات", width:22 },
                 { header:"صافي الدخل", width:22 }, { header:"نسبة الصافي %", width:18 }
             ], simpleRows, [3,4,5], [6], true, 6);
+            
             const sheetOrder = ["ملخص شهري", "ملخص إجمالي المصاريف", "تفصيل المصاريف لكل شاحنة", "🏆 أعلى 10 في بنود المصاريف", "📊 أهم 10 سيارات", "إجمالي الشاحنات (مبسط)"];
             workbook.eachSheet((sheet, id) => {
                 const targetIndex = sheetOrder.indexOf(sheet.name);
@@ -958,7 +1014,7 @@
         try {
             await apiCall('/me');
             await loadAndDisplayReportsList();
-            await loadUploadedFiles(); // still called but hidden container
+            await loadUploadedFiles();
             if (typeof renderNavbar === 'function') {
                 renderNavbar();
             } else {
