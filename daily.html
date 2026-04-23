@@ -146,7 +146,6 @@
             <div id="resultsArea">
                 <div id="distSection" class="section" style="display:none;"><h2>🚛 نتائج تحليل المسافات لليوم المختار</h2><div id="distStatus" class="status-area"></div>
                     <div class="dist-grid"><div class="dist-card"><div id="distTop10Table"></div></div><div class="dist-card"><div id="distBottom10Table"></div></div><div class="dist-card"><canvas id="distChart"></canvas></div></div>
-                    <div id="distAllTable" style="display:none;"></div>
                 </div>
                 <div id="dieselSection" class="section" style="display:none;"><h2>⛽ أعلى 10 استهلاك ديزل</h2><div class="table-wrapper"><table id="dieselTable"><thead><tr><th>#</th><th>المركبة</th><th>السائق</th><th>الاستهلاك (لتر)</th><th>التكلفة</th><th>المسافة (كم)</th></tr></thead><tbody></tbody></table></div></div>
                 <div id="speedingSection" class="section" style="display:none;"><h2>🚨 أعلى 10 سرعات خطيرة</h2><canvas id="criticalChartOnlyMax"></canvas>
@@ -180,11 +179,35 @@
         function showToast(msg, type) { const container = document.getElementById('toastContainer'); const toast = document.createElement('div'); toast.className = 'toast'; if (type === 'success') toast.style.background = '#11998e'; else if (type === 'error') toast.style.background = '#eb3349'; else toast.style.background = '#4facfe'; toast.textContent = msg; container.appendChild(toast); setTimeout(() => toast.remove(), 5000); }
         function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
         function logout() { fetch('/api/logout', { method: 'POST', credentials: 'include' }).finally(() => { localStorage.clear(); window.location.href = '/login.html'; }); }
-        function buildNavLinks() { /* نفس الكود السابق مع إضافة رابط التقارير المتكاملة */ return ''; } // سيتم وضعه كاملاً
+        
+        function buildNavLinks() {
+            const links = [];
+            if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') links.push('<a href="index.html" class="nav-link">📊 الرئيسية</a>');
+            if (currentUserPermissions.viewOrders === true || currentUserRole === 'admin') links.push('<a href="orders.html" class="nav-link">📝 الطلبات</a>');
+            if (currentUserPermissions.viewDistribution === true || currentUserRole === 'admin') links.push('<a href="distribution.html" class="nav-link">🚚 التوزيع</a>');
+            if (currentUserPermissions.viewTrucks === true || currentUserRole === 'admin') links.push('<a href="trucks.html" class="nav-link">🚛 السيارات</a>');
+            if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') {
+                links.push('<a href="products.html" class="nav-link">📦 أنواع البحص</a>');
+                links.push('<a href="factories.html" class="nav-link">🏭 المصانع</a>');
+            }
+            if (currentUserPermissions.viewReports === true || currentUserRole === 'admin') {
+                links.push('<a href="reports.html" class="nav-link">📊 تقارير الكسارة</a>');
+                links.push('<a href="scale_report.html" class="nav-link">⚖️ تقارير الميزان الشهرية</a>');
+                links.push('<a href="trucks-failed.html" class="nav-link">⚠️ السيارات الغير مستوفية</a>');
+                links.push('<a href="distribution-quality.html" class="nav-link">📈 جودة التوزيع</a>');
+                links.push('<a href="expenses.html" class="nav-link">💰 مصاريف السيارات</a>');
+                links.push('<a href="reports_integrated.html" class="nav-link active">📊 تقارير متكاملة</a>');
+            }
+            if (currentUserPermissions.viewSettings === true || currentUserRole === 'admin') links.push('<a href="settings.html" class="nav-link">⚙️ الإعدادات</a>');
+            if (currentUserPermissions.manageRestrictions === true || currentUserRole === 'admin') links.push('<a href="restrictions.html" class="nav-link">⛔ الحظر</a>');
+            if (currentUserPermissions.manageUsers === true || currentUserRole === 'admin') links.push('<a href="users.html" class="nav-link">👥 المستخدمين</a>');
+            if (currentUserPermissions.viewBackup === true || currentUserRole === 'admin') links.push('<a href="logs.html" class="nav-link">📜 السجلات</a>');
+            return links.join('');
+        }
         
         // ========== بيانات التحليل ==========
-        let distAllData = [];         // جميع بيانات المسافات (لكل يوم)
-        let distProcessed = [];       // بيانات اليوم المختار
+        let distAllData = [];
+        let distProcessed = [];
         let distChart = null;
         let dieselDataMap = {};
         let globalFullData = [];
@@ -194,7 +217,7 @@
         let currentViolRows = [];
         const AVG_CONSUMPTION = 3.25;
         
-        // دوال مساعدة
+        // دوال مساعدة عامة
         function cleanNumber(raw) { let d = String(raw).replace(/[^\d]/g, ''); return d || '?'; }
         function norm(s) { return (s || "").toString().replace(/\u200f|\u200e/g, "").replace(/\s+/g, ""); }
         function get(row, key) { let k = Object.keys(row).find(x => norm(x).includes(norm(key))); return k ? row[k] : 0; }
@@ -225,9 +248,8 @@
             let vIdx=-1, dayColIdx=-1;
             for(let i=0;i<headers.length;i++){ let h=String(headers[i]).trim().toLowerCase();
                 if(h==='vehicle') vIdx=i;
-                else if(parseInt(h) === selectedDay) dayColIdx=i;  // العمود الذي يحمل رقم اليوم
+                else if(parseInt(h) === selectedDay) dayColIdx=i;
             }
-            // إذا لم نجد عموداً برقم اليوم، نستخدم العمود الخامس (index 4) كحل احتياطي
             if(dayColIdx === -1 && headers.length > 4) dayColIdx = 4;
             if(dayColIdx === -1) return null;
             
@@ -244,9 +266,8 @@
         async function refreshDistances() {
             const selectedDay = parseInt(document.getElementById('daySelect').value);
             const vehicles = await processDistancesByDay(selectedDay);
-            if(!vehicles) return false;
+            if(!vehicles) { document.getElementById('distStatus').innerHTML = '❌ لم يتم العثور على بيانات لليوم المختار'; return false; }
             distProcessed = vehicles;
-            // عرض أفضل 10 وأقل 10
             const top10 = vehicles.slice(0,10);
             const bottom10 = [...vehicles].sort((a,b)=>a.distance-b.distance).slice(0,10);
             document.getElementById('distTop10Table').innerHTML = `<h3 style="color:#a5b4fc;">🏆 أفضل 10 مسافات لليوم ${selectedDay}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم</th><th>كم</th></tr></thead><tbody>${top10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
@@ -272,14 +293,35 @@
             Object.values(map).forEach(x=>{ totalFuel+=x.fuel; totalCost+=x.cost; });
             document.getElementById('totalDiesel').innerText=totalFuel.toFixed(0);
             document.getElementById('totalDieselCost').innerText=totalCost.toLocaleString();
-            // عرض أعلى 10 استهلاك
             const sorted = Object.values(map).sort((a,b)=>b.fuel - a.fuel).slice(0,10);
             let tbody=document.querySelector("#dieselTable tbody");
             tbody.innerHTML = sorted.map((x,i)=>`<tr><td>${i+1}</td><td>${x.vehicle}</td><td>${x.driver}</td><td>${x.fuel.toFixed(2)}</td><td>${x.cost.toLocaleString()}</td><td>${(x.fuel*AVG_CONSUMPTION).toFixed(0)}</td></tr>`).join('');
         }
         
-        // 3. السرعة (أعلى 10 سرعات خطيرة)
-        async function parseExcelAndExtract(file){ /* كما هو سابقاً */ return []; } // مختصراً
+        // 3. السرعة الزائدة (أعلى 10 سرعات خطيرة)
+        async function parseExcelAndExtract(file){
+            return new Promise((resolve,reject)=>{
+                const reader=new FileReader();
+                reader.onload=function(e){
+                    const data=new Uint8Array(e.target.result);
+                    const workbook=XLSX.read(data,{type:'array',cellDates:false});
+                    const firstSheet=workbook.Sheets[workbook.SheetNames[0]];
+                    const rows=XLSX.utils.sheet_to_json(firstSheet,{header:1,defval:""});
+                    let dataStartRow=-1;
+                    let colMap={vehicleIdx:-1, maxIdx:-1, distanceIdx:-1, occurrencesIdx:-1};
+                    for(let i=0;i<Math.min(rows.length,25);i++){ const row=rows[i]; if(!row) continue;
+                        for(let j=0;j<row.length;j++){ let cellVal=row[j]?String(row[j]).trim():""; if((cellVal==="Vehicle"||cellVal==="المركبة")&&colMap.vehicleIdx===-1) colMap.vehicleIdx=j; if((cellVal==="MAX"||cellVal==="Max"||cellVal==="الأعلى")&&colMap.maxIdx===-1) colMap.maxIdx=j; if((cellVal==="Distance"||cellVal==="المسافة")&&colMap.distanceIdx===-1) colMap.distanceIdx=j; if((cellVal==="No Of Time"||cellVal==="مرات التجاوز")&&colMap.occurrencesIdx===-1) colMap.occurrencesIdx=j; }
+                        if(colMap.vehicleIdx!==-1&&colMap.maxIdx!==-1){ dataStartRow=i+1; break; }
+                    }
+                    if(dataStartRow===-1){ colMap={vehicleIdx:3, maxIdx:9, distanceIdx:11, occurrencesIdx:7}; dataStartRow=4; }
+                    const extracted=[];
+                    for(let i=dataStartRow;i<rows.length;i++){ const row=rows[i]; if(!row||row.length<12) continue; let rawVehicle=row[colMap.vehicleIdx]?String(row[colMap.vehicleIdx]).trim():""; let rawMax=row[colMap.maxIdx]!==undefined?row[colMap.maxIdx]:0; let rawDistance=colMap.distanceIdx!==-1?row[colMap.distanceIdx]:0; let rawOccur=colMap.occurrencesIdx!==-1?row[colMap.occurrencesIdx]:0; if(!rawVehicle) continue; let vehicleCleaned=cleanVehicleNumber(rawVehicle); let maxSpeed=parseFloat(toEnglishNumbers(rawMax)); let distance=parseFloat(toEnglishNumbers(rawDistance)); let occurrences=parseFloat(toEnglishNumbers(rawOccur)); if(isNaN(maxSpeed)) maxSpeed=0; if(isNaN(distance)) distance=0; if(isNaN(occurrences)) occurrences=0; if(maxSpeed>90) extracted.push({vehicleCleaned, maxSpeed, distance, occurrences}); }
+                    resolve(extracted);
+                };
+                reader.onerror=()=>reject("خطأ");
+                reader.readAsArrayBuffer(file);
+            });
+        }
         async function runSpeeding(){
             let file=document.getElementById('excelInputSpeed').files[0];
             if(!file) return;
@@ -288,12 +330,12 @@
                 globalFullData=extracted;
                 const critical=extracted.filter(i=>i.maxSpeed>99).sort((a,b)=>b.maxSpeed-a.maxSpeed).slice(0,10);
                 const tbodyCrit=document.querySelector("#criticalDetailedTable tbody");
-                tbodyCrit.innerHTML=critical.map((item,i)=>`<tr><td>${i+1}</td><td>${item.vehicleCleaned}</td><td class="speed-danger">${item.maxSpeed}</td><td>${item.distance.toFixed(2)} كم</td><td>${item.occurrences}</td><td>${item.maxSpeed>=110?"إيقاف فوري":"إنذار"}</td></tr>`).join('');
+                if(tbodyCrit) tbodyCrit.innerHTML=critical.map((item,i)=>`<tr><td>${i+1}</td><td>${item.vehicleCleaned}</td><td class="speed-danger">${item.maxSpeed}</td><td>${item.distance.toFixed(2)} كم</td><td>${item.occurrences}</td><td>${item.maxSpeed>=110?"إيقاف فوري":"إنذار"}</td></tr>`).join('');
                 if(chartInstance) chartInstance.destroy();
                 const ctx=document.getElementById('criticalChartOnlyMax').getContext('2d');
                 chartInstance=new Chart(ctx,{type:'bar',data:{labels:critical.map(i=>i.vehicleCleaned),datasets:[{label:'السرعة القصوى (كم/س)',data:critical.map(i=>i.maxSpeed),backgroundColor:'#dc2626'}]}});
                 document.getElementById('criticalDriversCount').innerText=extracted.filter(i=>i.maxSpeed>99).length;
-            } catch(e){ console.error(e); }
+            } catch(e){ console.error(e); showToast("خطأ في ملف السرعة","error"); }
         }
         
         // 4. الخمول (أعلى 10 توقف)
@@ -315,10 +357,23 @@
         }
         
         // 5. الميزان (أكثر 10 سائقين رحلات)
-        const VALID_TRUCKS=new Map([/* كما هو سابقاً */]);
+        const VALID_TRUCKS=new Map([["1091","SDA"],["2757","BTA"],["2758","BTA"],["2759","BTA"],["2760","BTA"],["2762","BTA"],["2818","BTA"],["2927","BTA"],["2928","BTA"],["2929","BTA"],["3321","UXA"],["3322","UXA"],["3324","UXA"],["3325","UXA"],["3326","UXA"],["3461","KXA"],["3462","KXA"],["3963","TSA"],["4445","GSA"],["5324","SXA"],["5367","KRA"],["5520","XXA"],["5521","XXA"],["5522","XXA"],["5523","XXA"],["5524","XXA"],["5525","XXA"],["5526","XXA"],["5527","XXA"],["5528","XXA"],["5658","SXA"],["5796","VRA"],["5797","VRA"],["5800","VRA"],["6398","ERA"],["6428","TRA"],["6429","TRA"],["6430","TRA"],["6432","TRA"],["6612","DSA"],["6613","DSA"],["6614","DSA"],["6615","DSA"],["6616","DSA"],["6617","DSA"],["6618","DSA"],["6619","DSA"],["6620","DSA"],["6621","DSA"],["6622","DSA"],["6623","DSA"],["6624","DSA"],["6626","DSA"],["6629","DSA"],["6935","GSA"],["6939","GSA"],["7042","ZXA"],["7043","ZXA"],["7332","DXA"],["7682","DXA"],["7750","DXA"],["7837","DXA"],["7926","DXA"],["7927","DXA"],["7928","DXA"],["7929","DXA"],["7930","DXA"],["7974","DXA"],["7980","DXA"],["9103","HSA"],["9492","SXA"],["9493","SXA"],["9495","SXA"],["9496","SXA"]]);
         const EXCLUDED_NAMES=new Set(["eisam خ","eisam ح","عادل خ","عادل ح","mamoon","zeshan","برهان","ابراهيم"]);
         function isTruckValid(truckNumber, truckCode){ let expected=VALID_TRUCKS.get(truckNumber); if(!expected) return false; if(truckCode&&truckCode.trim()!=='') return expected===truckCode.trim(); return true; }
-        async function processScaleFile(file){ /* كما هو سابقاً */ return {driversStats:[], materialsStats:[], totalWeightAll:0}; }
+        async function processScaleFile(file){
+            let buf=await file.arrayBuffer();
+            let wb=new ExcelJS.Workbook();
+            await wb.xlsx.load(buf);
+            let sheet=wb.worksheets[0];
+            let rows=[];
+            sheet.eachRow({includeEmpty:true},(row,idx)=>{ if(idx>1) rows.push(row.values.slice(1)); });
+            let truckStats=new Map(), materialStats=new Map();
+            for(let i=0;i<rows.length;i++){ let row=rows[i]; if(!row.some(v=>v!==null&&v!==undefined&&v!=="")) continue; let truckRaw=String(row[4]??""); let cleanedTruck=keepDigitsOnly(truckRaw); let truckCode=extractTruckCode(truckRaw); let driverName=String(row[3]??"").trim(); let weight=parseFloat(row[11])||0; let materialName=(()=>{ let m={"46089":"3/8","46085":"3/4","46097":"3/16"}; return m[String(row[5]??"").trim()]||String(row[5]??"").trim(); })(); if(row.some(c=>EXCLUDED_NAMES.has(String(c).trim().toLowerCase()))) continue; if(isTruckValid(cleanedTruck,truckCode)){ if(!truckStats.has(cleanedTruck)) truckStats.set(cleanedTruck,{driver:driverName,trips:0,weight:0}); let rec=truckStats.get(cleanedTruck); rec.trips++; rec.weight+=weight; if(materialName) materialStats.set(materialName,(materialStats.get(materialName)||0)+weight); } }
+            let driversArr=Array.from(truckStats.entries()).map(([num,data])=>({name:data.driver,truckNumber:num,trips:data.trips,totalWeight:data.weight})).sort((a,b)=>b.trips-a.trips);
+            let materialsArr=Array.from(materialStats.entries()).map(([n,w])=>({name:n,weight:w})).sort((a,b)=>b.weight-a.weight);
+            let totalWeightAll=materialsArr.reduce((s,m)=>s+m.weight,0);
+            return {driversStats:driversArr, materialsStats:materialsArr, totalWeightAll};
+        }
         async function processScale(){
             let file=document.getElementById('scaleFile').files[0];
             if(!file) return;
@@ -336,6 +391,32 @@
         }
         
         // 6. التجاوزات (أكثر 10 مركبات)
+        function extractRowsFromSheetViol(ws){
+            if(!ws) return [];
+            const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+            const cellA2=ws[XLSX.utils.encode_cell({r:1,c:0})];
+            const vehicleNoRaw=cellA2?cellA2.v:"";
+            const vehicleNo=extractPlateNumberViol(vehicleNoRaw);
+            if(!vehicleNo) return [];
+            const cellB4=ws[XLSX.utils.encode_cell({r:3,c:1})];
+            const totalInside=cellB4?cleanTextViol(cellB4.v):"";
+            let headers={geofence:null, reach_time:null, reach_location:null, reach_coords:null, depart_time:null, depart_location:null, depart_coords:null, row_inside_duration:null};
+            const maxCol=range.e.c;
+            for(let C=0;C<=maxCol;C++){ const topCell=ws[XLSX.utils.encode_cell({r:3,c:C})]; const topVal=topCell?cleanTextViol(topCell.v):""; if(topVal==="Geofence") headers.geofence=C; else if(topVal==="Reach Time") headers.reach_time=C; else if(topVal==="Reach Location") headers.reach_location=C; else if(topVal==="Reach Coordinates") headers.reach_coords=C; else if(topVal==="Depart Time") headers.depart_time=C; else if(topVal==="Depart Location") headers.depart_location=C; else if(topVal==="Depart Coordinates") headers.depart_coords=C; else if(topVal==="Geofence Duration (HH:MM:SS)") headers.row_inside_duration=C; }
+            const rows=[];
+            for(let R=5;R<=range.e.r;R++){ const getVal=(colIdx)=>{ if(colIdx===null) return ""; const cell=ws[XLSX.utils.encode_cell({r:R,c:colIdx})]; return cell?cleanTextViol(cell.v):""; }; const geofence=getVal(headers.geofence); const reachTime=getVal(headers.reach_time); const reachLocation=getVal(headers.reach_location); const reachCoordsRaw=getVal(headers.reach_coords); const departTime=getVal(headers.depart_time); const departLocation=getVal(headers.depart_location); const departCoordsRaw=getVal(headers.depart_coords); const rowInside=getVal(headers.row_inside_duration); if(!geofence&&!reachTime&&!reachLocation&&!departTime) continue; let distanceKm=""; const p1=parseCoordsViol(reachCoordsRaw), p2=parseCoordsViol(departCoordsRaw); if(p1&&p2) distanceKm=Math.round(haversineKmViol(p1.lat,p1.lon,p2.lat,p2.lon)*100)/100; rows.push({vehicle_no:vehicleNo, duration_inside_fence:rowInside||totalInside, violation_distance_km:distanceKm, start_point:reachLocation, exit_from_fence:timeOnlyViol(departTime), entry_time:timeOnlyViol(reachTime), geofence_name:geofence}); }
+            return rows;
+        }
+        async function processWorkbookViol(dataBuffer){
+            const workbook=XLSX.read(dataBuffer,{type:'array'});
+            const sheets=workbook.SheetNames;
+            if(sheets.length<2) throw new Error("يجب أن يحتوي الملف على صفحة أولى وصفحات مركبات");
+            let allRows=[];
+            for(let i=1;i<sheets.length;i++){ const sheet=workbook.Sheets[sheets[i]]; if(sheet) allRows.push(...extractRowsFromSheetViol(sheet)); }
+            const uniqueMap=new Map();
+            for(const row of allRows){ const key=`${row.vehicle_no}|${row.duration_inside_fence}|${row.violation_distance_km}|${row.start_point}|${row.exit_from_fence}|${row.entry_time}|${row.geofence_name}`; if(!uniqueMap.has(key)) uniqueMap.set(key,row); }
+            return Array.from(uniqueMap.values());
+        }
         async function runViolations(){
             let file=document.getElementById('violFile').files[0];
             if(!file) return;
@@ -355,7 +436,7 @@
             } catch(err){ statusDiv.innerHTML=`❌ خطأ: ${err.message}`; }
         }
         
-        // تجميع دوال التحليل
+        // زر التحليل الشامل
         document.getElementById('analyzeAllBtn').addEventListener('click', async ()=>{
             showLoading(true);
             document.getElementById('distSection').style.display='block';
@@ -374,15 +455,70 @@
             alert("✅ تم تحليل جميع البيانات بنجاح!");
         });
         
-        // تصدير Excel (جميع البيانات الكاملة) - نفس الكود السابق مع إضافة البيانات الكاملة للمسافات
+        // تصدير Excel (جميع البيانات الكاملة) - نسخة مبسطة لكنها تعمل
         async function exportAllToExcel(){
-            // سيتم وضع نفس الكود السابق مع إضافة جميع بيانات المسافات (وليس فقط اليوم المختار)
-            // اختصاراً: سأعتمد على أن الكود الأصلي موجود ويعمل
-            alert("سيتم تصدير التقرير الكامل قريباً...");
+            showLoading(true);
+            try {
+                const workbook = new ExcelJS.Workbook();
+                workbook.creator = 'كسارة الحبردي';
+                // إضافة ورقة ملخص
+                const summary = workbook.addWorksheet("ملخص");
+                summary.addRow(["تقرير كسارة الحبردي"]).eachCell(cell=>{ cell.font={bold:true,size:14}; });
+                summary.addRow([]);
+                summary.addRow(["إجمالي الشاحنات", distProcessed.length]);
+                summary.addRow(["إجمالي استهلاك الديزل (لتر)", document.getElementById('totalDiesel').innerText]);
+                summary.addRow(["إجمالي تكلفة الديزل", document.getElementById('totalDieselCost').innerText]);
+                summary.addRow(["عدد المخالفين بالسرعة", document.getElementById('criticalDriversCount').innerText]);
+                summary.addRow(["أعلى نسبة توقف", document.getElementById('maxStopPercent').innerText]);
+                summary.addRow(["إجمالي التجاوزات", document.getElementById('totalViolations').innerText]);
+                // ورقة المسافات الكاملة
+                if(distProcessed.length){
+                    const ws = workbook.addWorksheet("المسافات");
+                    ws.addRow(["رقم الشاحنة", "المسافة (كم)"]);
+                    distProcessed.forEach(v=>ws.addRow([v.vehicle, v.distance]));
+                }
+                // ورقة الديزل الكاملة
+                if(Object.keys(dieselDataMap).length){
+                    const ws = workbook.addWorksheet("الديزل");
+                    ws.addRow(["المركبة","السائق","التكلفة","الاستهلاك (لتر)","المسافة (كم)"]);
+                    Object.values(dieselDataMap).forEach(x=>ws.addRow([x.vehicle, x.driver, x.cost, x.fuel, (x.fuel*AVG_CONSUMPTION).toFixed(0)]));
+                }
+                // ورقة السرعة الكاملة
+                if(globalFullData.length){
+                    const ws = workbook.addWorksheet("السرعات");
+                    ws.addRow(["المركبة","السرعة القصوى","المسافة","مرات التجاوز"]);
+                    globalFullData.forEach(v=>ws.addRow([v.vehicleCleaned, v.maxSpeed, v.distance, v.occurrences]));
+                }
+                // ورقة الخمول الكاملة
+                if(stopGlobalData.length){
+                    const ws = workbook.addWorksheet("الحركة والخمول");
+                    ws.addRow(["المركبة","السائق","تشغيل%","خمول%","توقف%"]);
+                    stopGlobalData.forEach(d=>ws.addRow([d.vehicle, d.driver, d.runPercent, d.idlePercent, d.stopPercent]));
+                }
+                // ورقة الميزان الكاملة
+                if(scaleDrivers.length){
+                    const ws = workbook.addWorksheet("الميزان");
+                    ws.addRow(["السائق","رقم الشاحنة","الرحلات","الوزن","أيام العمل","الرودات المطلوبة","النسبة%"]);
+                    scaleDrivers.forEach(d=>ws.addRow([d.name, d.truckNumber, d.trips, d.totalWeight, d.workDays, d.requiredRoda, d.percentage]));
+                }
+                // ورقة التجاوزات الكاملة
+                if(currentViolRows.length){
+                    const ws = workbook.addWorksheet("التجاوزات");
+                    ws.addRow(["المركبة","المدة داخل السياج","مسافة التجاوز","نقطة البداية","الخروج","وقت الدخول","نوع التجاوز"]);
+                    currentViolRows.forEach(v=>ws.addRow([v.vehicle_no, v.duration_inside_fence, v.violation_distance_km, v.start_point, v.exit_from_fence, v.entry_time, v.geofence_name]));
+                }
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), `تقرير_كسارة_الحبردي_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.xlsx`);
+                showToast("✅ تم تصدير التقرير بنجاح", "success");
+            } catch(err){
+                console.error(err);
+                showToast("❌ خطأ في التصدير", "error");
+            }
+            showLoading(false);
         }
         document.getElementById('exportAllExcelBtn').addEventListener('click', exportAllToExcel);
         
-        // ========== تحميل المستخدم والصلاحيات ==========
+        // تحميل بيانات المستخدم والصلاحيات
         async function loadUserAndInit() {
             showLoading(true);
             try {
