@@ -157,7 +157,7 @@
                 <button class="btn btn-success" id="exportAllExcelBtn"><i class="fas fa-file-excel"></i> حفظ تقرير Excel منسق وملون</button>
             </div>
 
-            <!-- مناطق النتائج (تعرض أعلى 10 فقط) -->
+            <!-- مناطق النتائج -->
             <div id="resultsArea">
                 <div id="distSection" class="section" style="display:none;"><h2>🚛 نتائج تحليل المسافات لليوم المختار</h2><div id="distStatus" class="status-area"></div>
                     <div class="dist-grid"><div class="dist-card"><div id="distTop10Table"></div></div><div class="dist-card"><div id="distBottom10Table"></div></div><div class="dist-card"><canvas id="distChart"></canvas></div></div>
@@ -229,6 +229,7 @@
         let stopGlobalData = [];
         let scaleDrivers = [];
         let currentViolRows = [];
+        let scaleMaterialChart = null;  // متغير خاص بالمخطط
         const AVG_CONSUMPTION = 3.25;
         let distWorkbook = null;
         
@@ -262,7 +263,7 @@
             document.getElementById('totalViolations').innerText = currentViolRows.length;
         }
         
-        // 1. تحليل المسافات (يتطلب رفع ملف واختيار اليوم)
+        // 1. تحليل المسافات (تم إصلاح منطق البحث عن العمود)
         document.getElementById('distFile').addEventListener('change', e => { 
             if(e.target.files[0]){ 
                 let r=new FileReader(); 
@@ -280,33 +281,44 @@
                 const dayNum = parseInt(selectedDay);
                 const sheet = distWorkbook.Sheets[distWorkbook.SheetNames[0]];
                 const data = XLSX.utils.sheet_to_json(sheet, {header:1, defval:""});
+                // البحث عن صف العناوين (الذي يحتوي على "Vehicle")
                 let headerRow = -1;
-                for(let i=0;i<data.length;i++) if(String(data[i][0]).trim().toLowerCase()==='vehicle') { headerRow=i; break; }
-                if(headerRow===-1) throw new Error("لم يتم العثور على عمود Vehicle");
+                for(let i=0;i<data.length;i++) {
+                    const firstCell = String(data[i][0] || "").trim().toLowerCase();
+                    if(firstCell === 'vehicle') { headerRow = i; break; }
+                }
+                if(headerRow === -1) throw new Error("لم يتم العثور على عمود Vehicle في الصف الأول");
+                
                 const headers = data[headerRow];
-                let vIdx=-1, dayColIdx=-1;
-                for(let i=0;i<headers.length;i++){ let h=String(headers[i]).trim().toLowerCase();
-                    if(h==='vehicle') vIdx=i;
-                    else if(parseInt(h) === dayNum) dayColIdx=i;
+                let vIdx = -1, dayColIdx = -1;
+                for(let i=0;i<headers.length;i++) {
+                    let h = String(headers[i] || "").trim().toLowerCase();
+                    if(h === 'vehicle') vIdx = i;
+                    // البحث عن عمود برقم اليوم المختار (مثل "1", "2" ...)
+                    else if(parseInt(h) === dayNum) dayColIdx = i;
                 }
-                if(dayColIdx === -1 && headers.length > 4) dayColIdx = 4;
-                if(dayColIdx === -1) throw new Error(`لم يتم العثور على عمود لليوم ${dayNum}`);
-                const vehicles=[];
-                for(let r=headerRow+1;r<data.length;r++){ let row=data[r]; if(!row||!row[vIdx]) continue; 
-                    let vehicle=cleanNumber(row[vIdx]); 
-                    let dist=parseFloat(row[dayColIdx])||0; 
-                    if(dist>0) vehicles.push({vehicle,distance:dist});
+                if(vIdx === -1) throw new Error("لم يتم العثور على عمود Vehicle");
+                if(dayColIdx === -1) throw new Error(`لم يتم العثور على عمود برقم اليوم ${dayNum}. تأكد من أن الأعمدة تحمل أرقام الأيام (1,2,3,...) في الصف الأول.`);
+                
+                const vehicles = [];
+                // قراءة البيانات من الصف التالي لصف العناوين
+                for(let r = headerRow + 1; r < data.length; r++) {
+                    let row = data[r];
+                    if(!row || !row[vIdx]) continue;
+                    let vehicle = cleanNumber(row[vIdx]);
+                    let dist = parseFloat(row[dayColIdx]) || 0;
+                    if(dist > 0) vehicles.push({vehicle, distance: dist});
                 }
-                if(vehicles.length===0) throw new Error("لا توجد بيانات مسافات لهذا اليوم");
+                if(vehicles.length === 0) throw new Error("لا توجد بيانات مسافات لهذا اليوم");
                 vehicles.sort((a,b)=>b.distance-a.distance);
                 distProcessed = vehicles;
                 const top10 = vehicles.slice(0,10);
                 const bottom10 = [...vehicles].sort((a,b)=>a.distance-b.distance).slice(0,10);
-                document.getElementById('distTop10Table').innerHTML = `<h3 style="color:#a5b4fc;">🏆 أفضل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم</th><th>كم</th></tr></thead><tbody>${top10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
-                document.getElementById('distBottom10Table').innerHTML = `<h3 style="color:#a5b4fc;">⚠️ أقل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم</th><th>كم</th></tr></thead><tbody>${bottom10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody><tr></div>`;
+                document.getElementById('distTop10Table').innerHTML = `<h3 style="color:#a5b4fc;">🏆 أفضل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><tr><thead><tr><th>#</th><th>رقم</th><th>كم</th></tr></thead><tbody>${top10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
+                document.getElementById('distBottom10Table').innerHTML = `<h3 style="color:#a5b4fc;">⚠️ أقل 10 مسافات لليوم ${dayNum}</h3><div class="table-wrapper"><table><thead><tr><th>#</th><th>رقم</th><th>كم</th></tr></thead><tbody>${bottom10.map((v,i)=>`<tr><td>${i+1}</td><td>${v.vehicle}</td><td>${v.distance.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
                 if(distChart) distChart.destroy();
-                const ctx=document.getElementById('distChart').getContext('2d');
-                distChart=new Chart(ctx,{type:'bar',data:{labels:top10.map(v=>v.vehicle),datasets:[{label:`مسافات اليوم ${dayNum} (كم)`,data:top10.map(v=>v.distance),backgroundColor:'#667eea'}]}});
+                const ctx = document.getElementById('distChart').getContext('2d');
+                distChart = new Chart(ctx, {type:'bar', data:{labels:top10.map(v=>v.vehicle), datasets:[{label:`مسافات اليوم ${dayNum} (كم)`, data:top10.map(v=>v.distance), backgroundColor:'#667eea'}]}});
                 document.getElementById('distStatus').innerHTML = `✅ تمت المعالجة: ${vehicles.length} شاحنة لليوم ${dayNum}`;
                 document.getElementById('distSection').style.display = 'block';
                 updateDashboard();
@@ -336,7 +348,7 @@
             showLoading(false);
         };
         
-        // 3. تحليل السرعة الزائدة
+        // 3. تحليل السرعة الزائدة (كما هو)
         async function parseExcelAndExtract(file){
             return new Promise((resolve,reject)=>{
                 const reader=new FileReader();
@@ -380,7 +392,7 @@
             showLoading(false);
         };
         
-        // 4. تحليل الحركة والخمول
+        // 4. تحليل الحركة والخمول (كما هو)
         window.analyzeStopOnly = async function() {
             let file = document.getElementById('stopFile').files[0];
             if(!file) { showToast("الرجاء رفع ملف الخمول أولاً", "error"); return; }
@@ -394,7 +406,7 @@
                 for(let i=4;i<rows.length;i++){ let r=rows[i]; if(!r[3]) continue; let vehicle=cleanNumber(r[3]); let driver=r[6]||''; let run=timeToHours(String(r[9]||'00:00:00')), idle=timeToHours(String(r[10]||'00:00:00')), stop=timeToHours(String(r[11]||'00:00:00')); data.push({vehicle,driver,runPercent:(run/24)*100,idlePercent:(idle/24)*100,stopPercent:(stop/24)*100}); }
                 stopGlobalData = data;
                 const top10 = data.sort((a,b)=>b.stopPercent-a.stopPercent).slice(0,10);
-                let html = `</table><thead>华盛<th>#</th><th>المركبة</th><th>السائق</th><th>نسبة التوقف %</th></tr></thead><tbody>${top10.map((d,i)=>`<tr><td>${i+1}</td><td>${d.vehicle}</td><td>${d.driver}</td><td>${d.stopPercent.toFixed(1)}%</td></tr>`).join('')}</tbody></table>`;
+                let html = `<table><thead><tr><th>#</th><th>المركبة</th><th>السائق</th><th>نسبة التوقف %</th></tr></thead><tbody>${top10.map((d,i)=>`<tr><td>${i+1}</td><td>${d.vehicle}</td><td>${d.driver}</td><td>${d.stopPercent.toFixed(1)}%</td></tr>`).join('')}</tbody></table>`;
                 document.getElementById('stopTable').innerHTML = html;
                 document.getElementById('stoppageSection').style.display = 'block';
                 updateDashboard();
@@ -403,7 +415,7 @@
             showLoading(false);
         };
         
-        // 5. تحليل الميزان (مع فحص العناصر)
+        // 5. تحليل الميزان (تم إصلاح مشكلة destroy)
         const VALID_TRUCKS = new Map([["1091","SDA"],["2757","BTA"],["2758","BTA"],["2759","BTA"],["2760","BTA"],["2762","BTA"],["2818","BTA"],["2927","BTA"],["2928","BTA"],["2929","BTA"],["3321","UXA"],["3322","UXA"],["3324","UXA"],["3325","UXA"],["3326","UXA"],["3461","KXA"],["3462","KXA"],["3963","TSA"],["4445","GSA"],["5324","SXA"],["5367","KRA"],["5520","XXA"],["5521","XXA"],["5522","XXA"],["5523","XXA"],["5524","XXA"],["5525","XXA"],["5526","XXA"],["5527","XXA"],["5528","XXA"],["5658","SXA"],["5796","VRA"],["5797","VRA"],["5800","VRA"],["6398","ERA"],["6428","TRA"],["6429","TRA"],["6430","TRA"],["6432","TRA"],["6612","DSA"],["6613","DSA"],["6614","DSA"],["6615","DSA"],["6616","DSA"],["6617","DSA"],["6618","DSA"],["6619","DSA"],["6620","DSA"],["6621","DSA"],["6622","DSA"],["6623","DSA"],["6624","DSA"],["6626","DSA"],["6629","DSA"],["6935","GSA"],["6939","GSA"],["7042","ZXA"],["7043","ZXA"],["7332","DXA"],["7682","DXA"],["7750","DXA"],["7837","DXA"],["7926","DXA"],["7927","DXA"],["7928","DXA"],["7929","DXA"],["7930","DXA"],["7974","DXA"],["7980","DXA"],["9103","HSA"],["9492","SXA"],["9493","SXA"],["9495","SXA"],["9496","SXA"]]);
         const EXCLUDED_NAMES = new Set(["eisam خ","eisam ح","عادل خ","عادل ح","mamoon","zeshan","برهان","ابراهيم"]);
         function isTruckValid(truckNumber, truckCode){ let expected=VALID_TRUCKS.get(truckNumber); if(!expected) return false; if(truckCode&&truckCode.trim()!=='') return expected===truckCode.trim(); return true; }
@@ -451,13 +463,19 @@
                 const materialsArr = Array.from(materialStats.entries()).map(([n,w])=>({name:n, weight:w})).sort((a,b)=>b.weight-a.weight);
                 const canvas = document.getElementById('scaleMaterialChart');
                 if(canvas) {
-                    if(window.scaleMaterialChart) window.scaleMaterialChart.destroy();
-                    window.scaleMaterialChart = new Chart(canvas,{type:'bar',data:{labels:materialsArr.slice(0,5).map(m=>m.name),datasets:[{label:'الوزن(طن)',data:materialsArr.slice(0,5).map(m=>m.weight/1000),backgroundColor:'#10b981'}]}});
+                    // إصلاح مشكلة destroy
+                    if(scaleMaterialChart && typeof scaleMaterialChart.destroy === 'function') {
+                        scaleMaterialChart.destroy();
+                    }
+                    scaleMaterialChart = new Chart(canvas, {type:'bar', data:{labels:materialsArr.slice(0,5).map(m=>m.name), datasets:[{label:'الوزن(طن)', data:materialsArr.slice(0,5).map(m=>m.weight/1000), backgroundColor:'#10b981'}]}});
                 }
                 document.getElementById('scaleSection').style.display = 'block';
                 updateDashboard();
                 showToast("تم تحليل الميزان بنجاح", "success");
-            } catch(err) { showToast("خطأ: "+err.message, "error"); }
+            } catch(err) { 
+                console.error(err);
+                showToast("خطأ في تحليل الميزان: "+err.message, "error"); 
+            }
             showLoading(false);
         };
         
@@ -521,7 +539,7 @@
             showToast("تم تحليل جميع البيانات بنجاح", "success");
         });
         
-        // تصدير Excel بتنسيق رائع باستخدام ExcelJS
+        // تصدير Excel (باستخدام ExcelJS مع تنسيق رائع)
         async function exportAllToExcel() {
             showLoading(true);
             try {
@@ -529,12 +547,10 @@
                 workbook.creator = 'كسارة الحبردي';
                 workbook.views = [{ rightToLeft: true }];
                 
-                // دالة لتنسيق الصفحات بشكل جذاب
                 function styleWorksheet(ws, title) {
                     ws.properties.defaultColWidth = 20;
                     ws.properties.defaultRowHeight = 25;
                     ws.views = [{ rightToLeft: true, state: 'frozen', ySplit: 1 }];
-                    // تنسيق الصف الأول (العناوين)
                     const headerRow = ws.getRow(1);
                     headerRow.eachCell(cell => {
                         cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' }, name: 'Segoe UI' };
@@ -543,7 +559,6 @@
                         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
                     });
                     headerRow.height = 30;
-                    // تنسيق باقي الصفوف بألوان متناوبة
                     ws.eachRow((row, rowNumber) => {
                         if (rowNumber === 1) return;
                         row.eachCell(cell => {
@@ -578,42 +593,37 @@
                 summarySheet.addRow(['إجمالي التجاوزات', document.getElementById('totalViolations').innerText]);
                 styleWorksheet(summarySheet);
                 
-                // المسافات
+                // باقي الأوراق بنفس التنسيق...
                 if(distProcessed.length) {
                     const ws = workbook.addWorksheet('المسافات');
                     ws.addRow(['رقم الشاحنة', 'المسافة (كم)']);
                     distProcessed.forEach(v => ws.addRow([v.vehicle, v.distance]));
                     styleWorksheet(ws);
                 }
-                // الديزل
                 if(Object.keys(dieselDataMap).length) {
                     const ws = workbook.addWorksheet('الديزل');
                     ws.addRow(['المركبة', 'السائق', 'التكلفة', 'الاستهلاك (لتر)', 'المسافة (كم)']);
                     Object.values(dieselDataMap).forEach(x => ws.addRow([x.vehicle, x.driver, x.cost, x.fuel, (x.fuel*AVG_CONSUMPTION).toFixed(0)]));
                     styleWorksheet(ws);
                 }
-                // السرعة
                 if(globalFullData.length) {
                     const ws = workbook.addWorksheet('السرعات الزائدة');
                     ws.addRow(['المركبة', 'السرعة القصوى', 'المسافة (كم)', 'مرات التجاوز']);
                     globalFullData.forEach(v => ws.addRow([v.vehicleCleaned, v.maxSpeed, v.distance, v.occurrences]));
                     styleWorksheet(ws);
                 }
-                // الخمول
                 if(stopGlobalData.length) {
                     const ws = workbook.addWorksheet('الحركة والخمول');
                     ws.addRow(['المركبة', 'السائق', 'تشغيل %', 'خمول %', 'توقف %']);
                     stopGlobalData.forEach(d => ws.addRow([d.vehicle, d.driver, d.runPercent, d.idlePercent, d.stopPercent]));
                     styleWorksheet(ws);
                 }
-                // الميزان
                 if(scaleDrivers.length) {
                     const ws = workbook.addWorksheet('الميزان');
                     ws.addRow(['السائق', 'رقم الشاحنة', 'الرحلات', 'الوزن (كجم)', 'أيام العمل', 'الرودات المطلوبة', 'النسبة %']);
                     scaleDrivers.forEach(d => ws.addRow([d.name, d.truckNumber, d.trips, d.totalWeight, d.workDays, d.requiredRoda, d.percentage]));
                     styleWorksheet(ws);
                 }
-                // التجاوزات
                 if(currentViolRows.length) {
                     const ws = workbook.addWorksheet('التجاوزات');
                     ws.addRow(['المركبة', 'المدة داخل السياج', 'مسافة التجاوز (كم)', 'نقطة البداية', 'الخروج', 'وقت الدخول', 'نوع التجاوز']);
