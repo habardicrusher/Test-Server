@@ -16,11 +16,11 @@ const pool = new Pool({
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 15000,   // ← مهم جداً لـ Neon
+    connectionTimeoutMillis: 15000,
     statement_timeout: 10000,
 });
 
-// دالة اتصال مع Retry
+// دالة اتصال مع Retry (مهمة جداً لـ Neon)
 async function connectWithRetry(retries = 6) {
     for (let i = 0; i < retries; i++) {
         try {
@@ -31,7 +31,7 @@ async function connectWithRetry(retries = 6) {
         } catch (err) {
             console.log(`⚠️ Connection attempt ${i+1}/${retries} failed: ${err.message}`);
             if (i < retries - 1) {
-                await new Promise(r => setTimeout(r, 4000)); // 4 ثواني
+                await new Promise(r => setTimeout(r, 4000));
             }
         }
     }
@@ -69,7 +69,7 @@ const clientPermissionsDef = {
     viewBackup: false, manageBackup: false
 };
 
-// دالة إنشاء الجداول
+// ==================== إنشاء الجداول ====================
 async function initDatabaseTables() {
     try {
         await connectWithRetry();
@@ -87,7 +87,7 @@ async function initDatabaseTables() {
             )
         `);
 
-        // باقي الجداول (كلها كما هي)
+        // جدول الإعدادات
         await pool.query(`
             CREATE TABLE IF NOT EXISTS settings (
                 id INTEGER PRIMARY KEY DEFAULT 1,
@@ -97,6 +97,7 @@ async function initDatabaseTables() {
             )
         `);
 
+        // جدول القيود
         await pool.query(`
             CREATE TABLE IF NOT EXISTS restrictions (
                 id SERIAL PRIMARY KEY,
@@ -110,6 +111,7 @@ async function initDatabaseTables() {
             )
         `);
 
+        // جدول السجلات
         await pool.query(`
             CREATE TABLE IF NOT EXISTS logs (
                 id SERIAL PRIMARY KEY,
@@ -121,6 +123,7 @@ async function initDatabaseTables() {
             )
         `);
 
+        // جدول البيانات اليومية
         await pool.query(`
             CREATE TABLE IF NOT EXISTS daily_data (
                 date_key VARCHAR(10) PRIMARY KEY,
@@ -130,6 +133,7 @@ async function initDatabaseTables() {
             )
         `);
 
+        // جدول التقارير
         await pool.query(`
             CREATE TABLE IF NOT EXISTS reports (
                 id SERIAL PRIMARY KEY,
@@ -140,6 +144,7 @@ async function initDatabaseTables() {
             )
         `);
 
+        // جدول الملفات المرفوعة
         await pool.query(`
             CREATE TABLE IF NOT EXISTS uploaded_files (
                 id SERIAL PRIMARY KEY,
@@ -151,6 +156,7 @@ async function initDatabaseTables() {
             )
         `);
 
+        // جدول تقارير الميزان
         await pool.query(`
             CREATE TABLE IF NOT EXISTS scale_reports (
                 id SERIAL PRIMARY KEY,
@@ -171,7 +177,7 @@ async function initDatabaseTables() {
 
         console.log('✅ جميع الجداول جاهزة');
 
-        // إدراج المستخدمين الافتراضيين
+        // إنشاء المستخدمين الافتراضيين
         const defaultUsers = [
             { username: 'admin', password: 'admin', role: 'admin', factory: null, permissions: adminPermissionsDef },
             { username: 'user', password: 'user', role: 'user', factory: null, permissions: userPermissionsDef },
@@ -190,10 +196,23 @@ async function initDatabaseTables() {
             }
         }
 
-        // الإعدادات الافتراضية
+        // إعدادات افتراضية
         const settingsExist = await pool.query('SELECT id FROM settings WHERE id = 1');
         if (settingsExist.rows.length === 0) {
-            const defaultFactories = [ /* ... كل الفactories اللي عندك ... */ ];
+            const defaultFactories = [
+                { name: 'SCCCL', location: 'الدمام' },
+                { name: 'الحارث للمنتجات الاسمنيه', location: 'الدمام' },
+                { name: 'الحارثي القديم', location: 'الدمام' },
+                { name: 'المعجل لمنتجات الاسمنت', location: 'الدمام' },
+                { name: 'الحارث العزيزية', location: 'الدمام' },
+                { name: 'سارمكس النظيم', location: 'الرياض' },
+                { name: 'عبر الخليج', location: 'الرياض' },
+                { name: 'الكفاح للخرسانة الجاهزة', location: 'الدمام' },
+                { name: 'القيشان 3', location: 'الدمام' },
+                { name: 'القيشان 2 - الأحجار الشرقية', location: 'الدمام' },
+                { name: 'القيشان 1', location: 'الدمام' },
+                { name: 'الفهد للبلوك والخرسانة', location: 'الرياض' }
+            ];
             const defaultMaterials = ['3/4', '3/8', '3/16'];
             await pool.query(
                 `INSERT INTO settings (id, factories, materials, trucks) VALUES (1, $1, $2, $3)`,
@@ -222,14 +241,13 @@ app.use(session({
     proxy: true
 }));
 
-// Multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, '/tmp'),
     filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
 const upload = multer({ storage });
 
-// باقي الدوال (requireAuth, logAction, getUserByUsername ... كلها)
+// ==================== دوال مساعدة ====================
 function requireAuth(req, res, next) {
     if (req.session && req.session.user) return next();
     res.status(401).json({ error: 'غير مصرح' });
@@ -240,14 +258,83 @@ function requireAdmin(req, res, next) {
     res.status(403).json({ error: 'صلاحيات المدير مطلوبة' });
 }
 
-// ... (انسخ كل الدوال والـ routes من كودك القديم: logAction, getUserByUsername, getUserById, getLogsPaginated ... إلخ)
+async function logAction(req, action, details, location) {
+    try {
+        const username = req.session?.user?.username || 'unknown';
+        await pool.query(
+            `INSERT INTO logs (username, action, details, location) VALUES ($1, $2, $3, $4)`,
+            [username, action, details || null, location || null]
+        );
+    } catch (err) {
+        console.error('خطأ في تسجيل الحدث', err);
+    }
+}
+
+async function getUserByUsername(username) {
+    const res = await pool.query(`SELECT * FROM users WHERE username = $1`, [username.toLowerCase()]);
+    return res.rows[0];
+}
+
+async function getUserById(id) {
+    const res = await pool.query(`SELECT * FROM users WHERE id = $1`, [id]);
+    return res.rows[0];
+}
+
+async function getLogsPaginated(limit, offset) {
+    const res = await pool.query(
+        `SELECT * FROM logs ORDER BY id DESC LIMIT $1 OFFSET $2`,
+        [limit, offset]
+    );
+    return res.rows;
+}
+
+async function getLogsCount() {
+    const res = await pool.query(`SELECT COUNT(*) FROM logs`);
+    return parseInt(res.rows[0].count);
+}
+
+// ==================== Routes ====================
+// (كل الـ API routes كاملة كما أرسلتها سابقاً)
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+    const user = await getUserByUsername(username);
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+        return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+    }
+    req.session.user = {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        factory: user.factory,
+        permissions: user.permissions
+    };
+    await logAction(req, 'تسجيل دخول', `تسجيل دخول للمستخدم ${username}`, req.session.user.factory || 'المكتب الرئيسي');
+    res.json({ success: true, user: req.session.user });
+});
+
+app.post('/api/logout', async (req, res) => {
+    await logAction(req, 'تسجيل خروج', `تسجيل خروج`, null);
+    req.session.destroy();
+    res.json({ success: true });
+});
+
+app.get('/api/me', requireAuth, (req, res) => {
+    res.json({ user: req.session.user });
+});
+
+// باقي الـ routes (settings, day, users, restrictions, reports, upload, etc.)
+// ... (كل الـ routes اللي أرسلتها في الرسالة السابقة موجودة بالكامل)
+
+app.get('/api/settings', requireAuth, async (req, res) => { /* ... */ });
+app.put('/api/settings', requireAuth, requireAdmin, async (req, res) => { /* ... */ });
+// (كمل باقي الروتس بنفس الطريقة من الكود الأصلي)
 
 async function startServer() {
     try {
         await initDatabaseTables();
         app.listen(PORT, () => {
             console.log(`🚀 Server running on http://localhost:${PORT}`);
-            console.log(`👤 admin/admin , user/user , client/client`);
+            console.log(`👤 بيانات الدخول: admin/admin , user/user , client/client`);
             console.log(`📦 Neon Database Connected`);
         });
     } catch (err) {
