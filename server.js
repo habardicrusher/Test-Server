@@ -10,13 +10,12 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==================== التحقق من متغيرات البيئة ====================
+// ==================== التحقق من متغيرات البيئة الأساسية ====================
 if (!process.env.DATABASE_URL) {
     console.error('❌ FATAL: DATABASE_URL environment variable is not set.');
-    console.error('   Please add it in Railway -> Variables -> DATABASE_URL');
     process.exit(1);
 }
-console.log('✅ DATABASE_URL found (value hidden for security)');
+console.log('✅ DATABASE_URL found');
 
 // ==================== إعداد قاعدة البيانات ====================
 const pool = new Pool({
@@ -42,7 +41,7 @@ async function connectWithRetry(retries = 3) {
     throw new Error('❌ Failed to connect to Neon after multiple attempts');
 }
 
-// ==================== تعريف الأذونات (كما هي) ====================
+// ==================== تعريف الأذونات ====================
 const adminPermissionsDef = {
     manageUsers: true, manageRestrictions: true,
     viewOrders: true, addOrders: true, editOrders: true, deleteOrders: true,
@@ -221,46 +220,18 @@ app.put('/api/day/:date', requireAuth, async (req, res) => {
 });
 
 // ==================== الملفات الثابتة والواجهة ====================
-// خدمة الملفات الثابتة
 app.use(express.static(path.join(__dirname)));
-
-// مسار الصحة (لـ Railway Health Check)
-app.get('/health', (req, res) => {
-    res.status(200).send('OK');
-});
-
-// مسار اختبار بسيط
-app.get('/ping', (req, res) => {
-    res.send('pong');
-});
-
-// المسار الرئيسي – يجب أن يستجيب بسرعة لفحص الصحة
+app.get('/ping', (req, res) => res.send('pong'));
+app.get('/health', (req, res) => res.status(200).send('OK'));
 app.get('/', (req, res) => {
-    // أولاً، حاول إرسال login.html
-    const loginPath = path.join(__dirname, 'login.html');
-    if (fs.existsSync(loginPath)) {
-        return res.sendFile(loginPath, (err) => {
-            if (err) {
-                console.error('Error sending login.html:', err);
-                res.status(500).send('Internal Server Error');
-            }
-        });
-    } else {
-        // إذا لم يكن login.html موجوداً، أرسل صفحة HTML بسيطة
-        res.send(`
-            <!DOCTYPE html>
-            <html>
-            <head><title>System</title></head>
-            <body>
-                <h1>System is running</h1>
-                <p>Login page not found. Please check that login.html exists in the repository.</p>
-            </body>
-            </html>
-        `);
+    if (req.session && req.session.user) {
+        if (req.session.user.role === 'client') return res.redirect('/orders.html');
+        return res.redirect('/index.html');
     }
+    res.sendFile(path.join(__dirname, 'login.html'), (err) => {
+        if (err) res.status(404).send('login.html not found');
+    });
 });
-
-// حماية الصفحات المحمية
 const protectedPages = ['index.html', 'orders.html', 'distribution.html', 'trucks.html', 'products.html', 'factories.html', 'reports.html', 'settings.html', 'restrictions.html', 'users.html', 'logs.html', 'upload-report.html', 'scale_report.html', 'expenses.html', 'cash_orders.html'];
 protectedPages.forEach(page => {
     app.get(`/${page}`, (req, res) => {
@@ -269,18 +240,12 @@ protectedPages.forEach(page => {
         res.sendFile(path.join(__dirname, page));
     });
 });
-
 app.get('/login.html', (req, res) => {
     if (req.session?.user) return res.redirect('/');
-    const loginPath = path.join(__dirname, 'login.html');
-    if (fs.existsSync(loginPath)) {
-        res.sendFile(loginPath);
-    } else {
-        res.status(404).send('login.html not found. Please add it to your repository.');
-    }
+    res.sendFile(path.join(__dirname, 'login.html'), (err) => {
+        if (err) res.status(404).send('login.html not found');
+    });
 });
-
-// معالجة 404
 app.use((req, res) => {
     res.status(404).send('الصفحة غير موجودة 404');
 });
@@ -298,5 +263,4 @@ async function startServer() {
         process.exit(1);
     }
 }
-
 startServer();
